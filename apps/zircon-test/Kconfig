@@ -10,9 +10,9 @@
 # @TAG(DATA61_BSD)
 #
 
-menuconfig APP_TESTS
-    bool "Tests for sel4test"
+menuconfig APP_ZIRCON_TEST
+    bool "Tester for zircon syscalls"
     default y
-    depends on LIB_SEL4 && LIB_MUSL_C && LIB_SEL4_MUSLC_SYS && LIB_SEL4_PLAT_SUPPORT && LIB_CPIO && LIB_SEL4_ALLOCMAN && LIB_ELF && LIB_SEL4_VSPACE && LIB_SEL4_UTILS && LIB_SEL4_DEBUG && LIB_SEL4_SIMPLE_DEFAULT && LIB_SEL4_SYNC && LIB_SEL4_TESTSUPPORT && LIB_SEL4_SERIAL_SERVER
+    depends on LIB_SEL4 && LIB_MUSL_C
     help
-        Contains all tests to be run in a separate process.
+        Tests for zircon syscalls.
