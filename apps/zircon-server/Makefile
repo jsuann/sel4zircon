@@ -27,19 +27,21 @@ OFILES := archive.o
 ASMFILES := $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/arch/${ARCH}/*.S))
 ASMFILES += $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/plat/${PLAT}/*.S))
 
-HDRFILES := $(wildcard $(SOURCE_DIR)/include/*)
+# HDRFILES := $(wildcard $(SOURCE_DIR)/include/*)
 
 # Libraries required to build the target
-LIBS = c sel4 cpio elf sel4muslcsys sel4vka sel4allocman \
-       platsupport sel4platsupport sel4test sel4vspace \
-       sel4utils sel4simple utils sel4debug
-LIBS += sel4simple-default
+LIBS = c sel4 sel4muslcsys \
+       sel4simple sel4vka sel4allocman sel4vspace \
+       sel4platsupport platsupport \
+       sel4utils \
+       cpio elf \
+       utils sel4simple-default sel4debug
 
 # extra cflag for sel4test
 CFLAGS += -Werror -g
-ifdef CONFIG_X86_64
-CFLAGS += -mno-sse
-endif
+#ifdef CONFIG_X86_64
+#CFLAGS += -mno-sse
+#endif
 
 include $(SEL4_COMMON)/common.mk
 

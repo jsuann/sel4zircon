@@ -10,23 +10,42 @@
  * @TAG(DATA61_BSD)
  */
 
+/*
+ * seL4 tutorial part 4: application to be run in a process
+ */
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #include <sel4/sel4.h>
-#include <sel4/types.h>
+#include <sel4utils/process.h>
 
-int
-main(int argc, char **argv)
-{
-    printf("Zircon test proc!\n");
-    while (1) ;
+/* constants */
+#define EP_CPTR SEL4UTILS_FIRST_FREE // where the cap for the endpoint was placed.
+#define MSG_DATA 0x2 //  arbitrary data to send
+
+int main(int argc, char **argv) {
+    seL4_MessageInfo_t tag;
+    seL4_Word msg;
+
+    printf("timer client: hey hey hey\n");
+
     /*
-    seL4_MessageInfo_t info = seL4_MessageInfo_new(seL4_Fault_NullFault, 0, 0, 1);
-    seL4_SetMR(0, result);
-    seL4_Send(endpoint, info);
-    */
+     * send a message to our parent, and wait for a reply
+     */
+
+    /* set the data to send. We send it in the first message register */
+    tag = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_SetMR(0, MSG_DATA);
+
+    /* send and wait for a reply */
+    tag = seL4_Call(EP_CPTR, tag);
+
+    /* check that we got the expected repy */
+    assert(seL4_MessageInfo_get_length(tag) == 1);
+    msg = seL4_GetMR(0);
+
+    printf("timer client wakes up: got the current timer tick: %u\n", msg);
 
     return 0;
 }
