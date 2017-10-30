@@ -137,7 +137,7 @@ int main(void) {
 
     /* copy the endpont cap and add a badge to the new cap */
     new_ep_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path,
-                                               seL4_AllRights, seL4_CapData_Badge_new(EP_BADGE));
+                                               seL4_AllRights, /*seL4_CapData_Badge_new*/(EP_BADGE));
     assert(new_ep_cap != 0);
 
     /* spawn the process */
@@ -186,7 +186,7 @@ int main(void) {
 
     /* get the message stored in the first message register */
     msg = seL4_GetMR(0);
-    printf("main: got a message from %#x to sleep %u seconds\n", sender_badge, msg);
+    printf("main: got a message from %#lx to sleep %lu seconds\n", sender_badge, msg);
 
     /*
      * TASK 3: Start and configure the timer

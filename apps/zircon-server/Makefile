@@ -39,9 +39,9 @@ LIBS = c sel4 sel4muslcsys \
 
 # extra cflag for sel4test
 CFLAGS += -Werror -g
-#ifdef CONFIG_X86_64
-#CFLAGS += -mno-sse
-#endif
+ifdef CONFIG_X86_64
+CFLAGS += -mno-sse
+endif
 
 include $(SEL4_COMMON)/common.mk
 
