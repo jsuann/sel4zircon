@@ -10,7 +10,7 @@
 # @TAG(DATA61_BSD)
 #
 
-apps-$(CONFIG_APP_ZIRCON_SERVER)        += zircon_server
+apps-$(CONFIG_APP_ZIRCON_SERVER)        += zircon-server
 
 # list of libraries the app needs to build
 zircon-server-y                          = common libsel4 libmuslc libsel4vka libcpio libelf \

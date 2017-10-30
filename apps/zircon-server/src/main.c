@@ -404,7 +404,8 @@ void *main_continued(void *arg UNUSED)
     plat_init(&env);
 
     /* now run the tests */
-    sel4test_run_tests(&env);
+    for (;;) ;
+    //sel4test_run_tests(&env);
 
     return NULL;
 }
