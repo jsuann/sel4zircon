@@ -51,44 +51,10 @@ select-test:
 	sed -i "s/CONFIG_TESTPRINTER_REGEX=\".*\"/CONFIG_TESTPRINTER_REGEX=\"${TEST}\"/" .config
 	@echo "Selected test ${TEST}"
 
-# Some example qemu invocations
-
-# note: this relies on qemu after version 2.0
-simulate-kzm:
-	qemu-system-arm -nographic -M kzm \
-		-kernel images/${apps}-image-arm-imx31
-
-# This relies on a helper script to build a bootable image
-simulate-beagle:
-	beagle_run_elf images/${apps}-image-arm-omap3
-
-simulate-ia32:
-	qemu-system-i386 \
-		-m 512 -nographic -kernel images/kernel-ia32-pc99 \
-		-initrd images/${apps}-image-ia32-pc99
-
 simulate-x86_64:
 	qemu-system-x86_64 \
         -m 512 -nographic -kernel images/kernel-x86_64-pc99 \
-        -initrd images/sel4test-driver-image-x86_64-pc99 -cpu Haswell
-
-simulate-sabre:
-	qemu-system-arm \
-		-machine sabrelite -nographic -m size=1024M \
-		-s -serial null -serial mon:stdio \
-		-kernel images/${apps}-image-arm-imx6
-
-simulate-zynq:
-	qemu-system-arm \
-		-machine xilinx-zynq-a9 -nographic -m size=1024M \
-		-s -serial null -serial mon:stdio \
-		-kernel images/${apps}-image-arm-zynq7000
-
-simulate-wandq:
-	qemu-system-arm \
-		-machine sabrelite -nographic -m size=2048M \
-		-s -serial mon:stdio \
-		-kernel images/${apps}-image-arm-imx6
+        -initrd images/zircon-server-image-x86_64-pc99 -cpu Haswell
 
 # Some example image builds (NOTE: may need to adapt addresses)
 build-binary: images/${apps}-image-${ARCH}-${PLAT}

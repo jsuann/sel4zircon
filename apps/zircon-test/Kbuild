@@ -10,5 +10,5 @@
 # @TAG(DATA61_BSD)
 #
 
-components-$(CONFIG_APP_ZIRCON_TEST)        += zircon_test
-zircon_test: libsel4 libmuslc
+components-$(CONFIG_APP_ZIRCON_TEST)        += zircon-test
+zircon-test: libsel4 libmuslc

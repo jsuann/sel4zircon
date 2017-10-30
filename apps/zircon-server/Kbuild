@@ -16,14 +16,14 @@ apps-$(CONFIG_APP_ZIRCON_SERVER)        += zircon-server
 zircon-server-y                          = common libsel4 libmuslc libsel4vka libcpio libelf \
                                       libsel4allocman \
                                       libplatsupport libsel4platsupport libsel4muslcsys libsel4test \
-                                      libsel4testsupport libsel4simple libsel4vspace libsel4utils libutils \
+                                      libsel4simple libsel4vspace libsel4utils libutils \
                                       libsel4debug
 
 # set up correct simple lib for our kernel
 zircon-server-$(CONFIG_LIB_SEL4_SIMPLE_DEFAULT) += libsel4simple-default
 
 # add the tests app  as a component so that we can elf load it
-zircon-server-components-y += zircon_test
+zircon-server-components-y += zircon-test
 zircon-server-components = $(addprefix $(STAGE_BASE)/bin/, $(zircon-server-components-y))
 
 zircon-server: export COMPONENTS=${zircon-server-components}
