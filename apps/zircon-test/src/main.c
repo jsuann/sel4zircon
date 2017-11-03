@@ -24,11 +24,13 @@
 #define EP_CPTR SEL4UTILS_FIRST_FREE // where the cap for the endpoint was placed.
 #define MSG_DATA 0x2 //  arbitrary data to send
 
+typedef uint32_t zx_handle_t;
+
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
     seL4_Word msg;
 
-    printf("timer client: hey hey hey\n");
+    printf("=== Zircon Test ===\n");
 
     /*
      * send a message to our parent, and wait for a reply
@@ -47,5 +49,16 @@ int main(int argc, char **argv) {
 
     printf("timer client wakes up: got the current timer tick: %u\n", msg);
 
+    tag = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_SetMR(0, MSG_DATA);
+    tag = seL4_Call(EP_CPTR, tag);
+
+    zx_handle_t handle = seL4_GetMR(0);
+    printf("received handle! %u\n", handle);
+
+    tag = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_SetMR(0, 0xff);
+    tag = seL4_Call(handle, tag);
+    
     return 0;
 }

@@ -42,6 +42,8 @@
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
 
+#include "handle.h"
+
 /* constants */
 #define EP_BADGE 0x61 // arbitrary (but unique) number for a badge
 #define MSG_DATA 0x6161 // arbitrary data to send
@@ -58,11 +60,12 @@ vspace_t vspace;
 seL4_timer_t timer;
 
 /* static memory for the allocator to bootstrap with */
-#define ALLOCATOR_STATIC_POOL_SIZE (BIT(seL4_PageBits) * 10)
-UNUSED static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
+#define ALLOCATOR_STATIC_POOL_SIZE (BIT(seL4_PageBits) * 20)
+static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 
 /* dimensions of virtual memory for the allocator to use */
-#define ALLOCATOR_VIRTUAL_POOL_SIZE (BIT(seL4_PageBits) * 100)
+//#define ALLOCATOR_VIRTUAL_POOL_SIZE (BIT(seL4_PageBits) * 100)
+#define ALLOCATOR_VIRTUAL_POOL_SIZE (1*1024*1024)
 
 /* static memory for virtual memory bootstrapping */
 UNUSED static sel4utils_alloc_data_t data;
@@ -74,8 +77,14 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 /* convenience function */
 extern void name_thread(seL4_CPtr tcb, char *name);
 
+/* test */
+
+
+
+
+
 int main(void) {
-    UNUSED int error;
+    int error;
 
     /* get boot info */
     info = platsupport_get_bootinfo();
@@ -110,6 +119,8 @@ int main(void) {
     assert(virtual_reservation.res);
     bootstrap_configure_virtual_pool(allocman, vaddr,
                                      ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
+    error = allocman_fill_reserves(allocman);
+    assert(!error);
 
     /* use sel4utils to make a new process */
     sel4utils_process_t new_process;
@@ -136,44 +147,27 @@ int main(void) {
     vka_cspace_make_path(&vka, ep_object.cptr, &ep_cap_path);
 
     /* copy the endpont cap and add a badge to the new cap */
-    new_ep_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path,
-                                               seL4_AllRights, /*seL4_CapData_Badge_new*/(EP_BADGE));
+    new_ep_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path, seL4_AllRights, EP_BADGE);
     assert(new_ep_cap != 0);
 
     /* spawn the process */
     error = sel4utils_spawn_process_v(&new_process, &vka, &vspace, 0, NULL, 1);
     assert(error == 0);
 
-    /* TASK 1: create a notification endpoint for the timer interrupt */
-    /* hint: vka_alloc_notification()
-     * int vka_alloc_notification(vka_t *vka, vka_object_t *result)
-     * @param vka Pointer to vka interface.
-     * @param result Structure for the Endpoint object.  This gets initialised.
-     * @return 0 on success
-     * https://github.com/seL4/libsel4vka/blob/master/include/vka/object.h#L98
-     */
-
     vka_object_t ntfn_object = {0};
     error = vka_alloc_notification(&vka, &ntfn_object);
     assert(error == 0);
 
-
-    /* TASK 2: call sel4platsupport library to get the default timer */
-    /* hint: sel4platsupport_init_default_timer
-     */
-
     error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
     assert(error == 0);
 
-
-    /* we are done, say hello */
-    printf("main: hello world\n");
+    printf("=== Zircon Server ===\n");
 
     /*
      * now wait for a message from the new process, then send a reply back
      */
 
-    seL4_Word sender_badge;
+    seL4_Word sender_badge = 0;
     seL4_MessageInfo_t tag;
     seL4_Word msg;
 
@@ -213,9 +207,10 @@ int main(void) {
         seL4_Word badge;
         seL4_Wait(ntfn_object.cptr, &badge);
         sel4platsupport_handle_timer_irq(&timer, badge);
+        printf("badge: %lu\n", badge);
 
         count++;
-        if (count == 1000 * msg) {
+        if (count == 10 * msg) {
             break;
         }
     }
@@ -239,7 +234,41 @@ int main(void) {
     seL4_SetMR(0, msg);
 
     /* send the modified message back */
-    seL4_ReplyRecv(ep_cap_path.capPtr, tag, &sender_badge);
+    //seL4_ReplyRecv(ep_cap_path.capPtr, tag, &sender_badge);
+    seL4_Reply(tag);
+
+    // TEST HANDLES
+
+    error = init_handle_arena(&vspace);
+    assert(!error);
+    
+    void *test_obj = malloc(16);
+
+    printf("ok\n");
+    uint32_t handle = allocate_handle(0xff, 0, test_obj);
+    printf("handle val: %u\n", handle);
+    uint32_t handle2 = allocate_handle(0xff, 0, test_obj);
+    printf("handle2 val: %u\n", handle2);
+
+    free_handle(handle);
+
+    printf("handle2 contents: %u %u %p\n", get_handle_process(handle2),
+            get_handle_rights(handle2), get_handle_object(handle2));
+
+    seL4_CPtr handle_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path, seL4_AllRights, handle2);
+    assert(handle_cap != 0);
+    
+    printf("handle cap: %lu\n", handle_cap);
+
+    // test syscall: test invokes on supplied "handle" (a cptr)
+
+    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
+    seL4_SetMR(0, (uint32_t)handle_cap);
+    seL4_Reply(tag);
+
+    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
+    msg = seL4_GetMR(0);
+    printf("received val: %lu\n", msg);
 
     return 0;
 }
