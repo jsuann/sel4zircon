@@ -12,6 +12,6 @@ echo "" >> $DEFS_FILE
 
 cat syscalls.list | while read line
 do
-    echo "void $line(uint32_t);" >> $DEFS_FILE
+    echo "void $line(uint32_t handle);" >> $DEFS_FILE
     echo "${line}," >> $TABLE_FILE
 done
