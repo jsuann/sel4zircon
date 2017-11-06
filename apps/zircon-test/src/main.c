@@ -10,55 +10,37 @@
  * @TAG(DATA61_BSD)
  */
 
-/*
- * seL4 tutorial part 4: application to be run in a process
- */
-
 #include <stdio.h>
 #include <assert.h>
 
 #include <sel4/sel4.h>
 #include <sel4utils/process.h>
 
+#include "syscall.h"
+
 /* constants */
 #define EP_CPTR SEL4UTILS_FIRST_FREE // where the cap for the endpoint was placed.
 #define MSG_DATA 0x2 //  arbitrary data to send
 
-typedef uint32_t zx_handle_t;
-
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
-    seL4_Word msg;
+    //seL4_Word msg;
 
-    printf("=== Zircon Test ===\n");
+    printf(">=== Zircon Test ===\n");
 
-    /*
-     * send a message to our parent, and wait for a reply
-     */
-
-    /* set the data to send. We send it in the first message register */
-    tag = seL4_MessageInfo_new(0, 0, 0, 1);
-    seL4_SetMR(0, MSG_DATA);
-
-    /* send and wait for a reply */
-    tag = seL4_Call(EP_CPTR, tag);
-
-    /* check that we got the expected repy */
-    assert(seL4_MessageInfo_get_length(tag) == 1);
-    msg = seL4_GetMR(0);
-
-    printf("timer client wakes up: got the current timer tick: %u\n", msg);
-
+    // test handle acquire syscall
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, MSG_DATA);
     tag = seL4_Call(EP_CPTR, tag);
 
     zx_handle_t handle = seL4_GetMR(0);
-    printf("received handle! %u\n", handle);
+    printf(">received handle! %u\n", handle);
 
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, 0xff);
     tag = seL4_Call(handle, tag);
-    
+
+    zx_null(handle);
+
     return 0;
 }

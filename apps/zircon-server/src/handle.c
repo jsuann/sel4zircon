@@ -12,17 +12,21 @@
 UNUSED uint32_t vaddr_to_handle_val(void *vaddr)
 {
     uintptr_t val = (uintptr_t)vaddr;
+    val -= (uintptr_t)&handle_arena[0];
     return (uint32_t)val;
 }
 
 int init_handle_arena(vspace_t *vspace)
 {
-    int num_handle_pages = (MAX_NUM_HANDLES * sizeof(handle_t))/BIT(seL4_PageBits);
+    int num_handle_pages = ((MAX_NUM_HANDLES * sizeof(handle_t))+BIT(seL4_PageBits)-1)/BIT(seL4_PageBits);
     handle_arena = (handle_t *)vspace_new_pages(vspace, seL4_AllRights, num_handle_pages, seL4_PageBits);
     assert(handle_arena != NULL);
 
+    printf("%p\n", handle_arena);
+    printf("%lu %d %lu\n", sizeof(handle_t)*MAX_NUM_HANDLES, num_handle_pages, num_handle_pages*BIT(seL4_PageBits));
+
     for (int i = 0; i < MAX_NUM_HANDLES; i++) {
-        handle_arena[i].process = ZX_HANDLE_INVALID;
+        handle_arena[i].process = NULL;
         // use right to store next up handle
         handle_arena[i].rights = i+1;
         // point to next handle for allocation
@@ -31,13 +35,10 @@ int init_handle_arena(vspace_t *vspace)
 
     handle_arena[MAX_NUM_HANDLES-1].rights = 0;
 
-    printf("%p\n", handle_arena);
-    printf("%lu %d %d\n", sizeof(handle_t)*MAX_NUM_HANDLES, num_handle_pages, 1024*4096);
-
     return 0;
 }
 
-uint32_t allocate_handle(uint32_t process, uint32_t rights, void *object)
+uint32_t allocate_handle(void *process, uint32_t rights, void *object)
 {
     // check a handle is available
     if (handle_arena[0].rights == 0) {
@@ -62,7 +63,7 @@ void free_handle(uint32_t val)
 {
     handle_t *handle = &handle_arena[val];
     // invalidate handle
-    handle->process = ZX_HANDLE_INVALID;
+    handle->process = NULL;
     handle->object = NULL;
    
     // put handle at front of stack

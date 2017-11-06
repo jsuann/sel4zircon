@@ -42,6 +42,7 @@
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
 
+#include "sys_table.h"
 #include "handle.h"
 
 /* constants */
@@ -78,10 +79,7 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 extern void name_thread(seL4_CPtr tcb, char *name);
 
 /* test */
-
-
-
-
+void syscall_loop(cspacepath_t ep_cap_path);
 
 int main(void) {
     int error;
@@ -163,46 +161,16 @@ int main(void) {
 
     printf("=== Zircon Server ===\n");
 
-    /*
-     * now wait for a message from the new process, then send a reply back
-     */
-
     seL4_Word sender_badge = 0;
     seL4_MessageInfo_t tag;
     seL4_Word msg;
 
-    /* wait for a message */
-    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
-
-    /* make sure it is what we expected */
-    assert(sender_badge == EP_BADGE);
-    assert(seL4_MessageInfo_get_length(tag) == 1);
-
-    /* get the message stored in the first message register */
-    msg = seL4_GetMR(0);
-    printf("main: got a message from %#lx to sleep %lu seconds\n", sender_badge, msg);
-
-    /*
-     * TASK 3: Start and configure the timer
-     * hint 1: ltimer_set_timeout
-     * hint 2: set period to 1 millisecond
-     */
-
+/*
     error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
     assert(error == 0);
 
-
     int count = 0;
     while (1) {
-        /*
-         * TASK 4: Handle the timer interrupt
-         * hint 1: wait for the incoming interrupt and handle it
-         * The loop runs for (1000 * msg) times, which is basically 1 second * msg.
-         *
-         * hint2: seL4_Wait
-         * hint3: sel4platsupport_handle_timer_irq
-         *
-         */
 
         seL4_Word badge;
         seL4_Wait(ntfn_object.cptr, &badge);
@@ -215,27 +183,15 @@ int main(void) {
         }
     }
 
-    /* get the current time */
     uint64_t time;
     ltimer_get_time(&timer.ltimer, &time);
 
-    /*
-     * TASK 5: Stop the timer
-     *
-     * hint: sel4platsupport_destroy_timer
-     *
-     */
-
-    sel4platsupport_destroy_timer(&timer, &vka);
-
-
-   /* modify the message */
     msg = (uint32_t) time;
     seL4_SetMR(0, msg);
-
-    /* send the modified message back */
-    //seL4_ReplyRecv(ep_cap_path.capPtr, tag, &sender_badge);
     seL4_Reply(tag);
+*/
+
+    sel4platsupport_destroy_timer(&timer, &vka);
 
     // TEST HANDLES
 
@@ -243,16 +199,17 @@ int main(void) {
     assert(!error);
     
     void *test_obj = malloc(16);
+    void *test_proc  = malloc(16);
 
     printf("ok\n");
-    uint32_t handle = allocate_handle(0xff, 0, test_obj);
+    uint32_t handle = allocate_handle(test_proc, 0, test_obj);
     printf("handle val: %u\n", handle);
-    uint32_t handle2 = allocate_handle(0xff, 0, test_obj);
+    uint32_t handle2 = allocate_handle(test_proc, 0, test_obj);
     printf("handle2 val: %u\n", handle2);
 
     free_handle(handle);
 
-    printf("handle2 contents: %u %u %p\n", get_handle_process(handle2),
+    printf("handle2 contents: %p %u %p\n", get_handle_process(handle2),
             get_handle_rights(handle2), get_handle_object(handle2));
 
     seL4_CPtr handle_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path, seL4_AllRights, handle2);
@@ -261,14 +218,39 @@ int main(void) {
     printf("handle cap: %lu\n", handle_cap);
 
     // test syscall: test invokes on supplied "handle" (a cptr)
-
     tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
+    assert(sender_badge == EP_BADGE);
+    assert(seL4_MessageInfo_get_length(tag) == 1);
+
     seL4_SetMR(0, (uint32_t)handle_cap);
     seL4_Reply(tag);
 
     tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
     msg = seL4_GetMR(0);
-    printf("received val: %lu\n", msg);
+    printf("received val: %lu, badge %lu\n", msg, sender_badge);
+    seL4_Reply(tag);
+
+    printf("test sys table\n");
+    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
+   
+    seL4_Word syscall = seL4_MessageInfo_get_label(tag);
+    DO_SYSCALL(syscall, sender_badge);
+    printf("ok\n");
+
+    syscall_loop(ep_cap_path);
 
     return 0;
+}
+
+void syscall_loop(cspacepath_t ep_cap_path)
+{
+    seL4_Word badge = 0;
+    seL4_MessageInfo_t tag;
+
+    printf("Entering syscall loop\n");
+    for (;;) {
+        tag = seL4_Recv(ep_cap_path.capPtr, &badge);
+        seL4_Word syscall = seL4_MessageInfo_get_label(tag);
+        DO_SYSCALL(syscall, badge);
+    }
 }
