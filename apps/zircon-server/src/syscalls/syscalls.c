@@ -1,10 +1,8 @@
 #include "syscalls.h"
 
 zx_syscall_func sys_table[NUM_SYSCALLS] = {
-    sys_null,
-    sys_handle_close,
-    sys_handle_replace,
-    sys_handle_duplicate
+    // generated file containing element of table
+    #include "sys_table.h"
 };
 
 void sys_null(uint32_t handle)
