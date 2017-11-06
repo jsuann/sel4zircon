@@ -42,7 +42,7 @@
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
 
-#include "sys_table.h"
+#include "syscalls.h"
 #include "handle.h"
 
 /* constants */

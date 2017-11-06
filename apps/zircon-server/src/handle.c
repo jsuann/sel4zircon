@@ -9,6 +9,8 @@
 
 #include "handle.h"
 
+handle_t *handle_arena;
+
 UNUSED uint32_t vaddr_to_handle_val(void *vaddr)
 {
     uintptr_t val = (uintptr_t)vaddr;
@@ -31,6 +33,9 @@ int init_handle_arena(vspace_t *vspace)
         handle_arena[i].rights = i+1;
         // point to next handle for allocation
         handle_arena[i].object = NULL;
+        handle_arena[i].handle_cap = 0;
+        handle_arena[i].next = NULL;
+        handle_arena[i].prev = NULL;
     }
 
     handle_arena[MAX_NUM_HANDLES-1].rights = 0;

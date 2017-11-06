@@ -1,7 +1,14 @@
-
 #pragma once
 
-#define MAX_NUM_HANDLES 32768 //(256 * 1024)
+#include <autoconf.h>
+
+#include <stdio.h>
+#include <assert.h>
+
+#include <sel4/sel4.h>
+#include <vspace/vspace.h>
+
+#define MAX_NUM_HANDLES 8192
 
 #define ZX_HANDLE_INVALID (0)
 
@@ -10,9 +17,12 @@ typedef struct handle {
     void *object;
     uint32_t rights;
     uint32_t handle_cap;
+    // linked list for processes
+    struct handle *next;
+    struct handle *prev;
 } handle_t;
 
-handle_t *handle_arena;
+extern handle_t *handle_arena;
 
 /* initialise handle arena */
 int init_handle_arena(vspace_t *vspace);
