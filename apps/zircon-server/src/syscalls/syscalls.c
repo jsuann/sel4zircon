@@ -1,7 +1,7 @@
 #include "syscalls.h"
 
 zx_syscall_func sys_table[NUM_SYSCALLS] = {
-    // generated file containing element of table
+    // generated file containing elements of table
     #include "sys_table.h"
 };
 
