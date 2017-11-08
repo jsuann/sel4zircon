@@ -16,7 +16,7 @@ SYS_NO=0
 
 cat syscalls.list | while read line
 do
-    echo "void $line(uint32_t handle);" >> $DEFS_FILE
+    echo "void $line(seL4_MessageInfo_t tag, uint32_t handle);" >> $DEFS_FILE
     echo "${line}," >> $TABLE_FILE
     UPPER_LINE=`echo ${line} | tr [a-z] [A-Z]`
     echo "#define ZX_${UPPER_LINE} $SYS_NO" >> $SYSNO_FILE
