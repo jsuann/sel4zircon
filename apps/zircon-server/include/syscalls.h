@@ -21,7 +21,7 @@ extern zx_syscall_func sys_table[];
 static inline void
 sys_reply(int32_t res)
 {
-    tag = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, res);
     seL4_Reply(tag);
 }

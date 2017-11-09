@@ -234,7 +234,7 @@ int main(void) {
     tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
    
     seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-    DO_SYSCALL(syscall, sender_badge);
+    DO_SYSCALL(syscall, tag, sender_badge);
     printf("ok\n");
 
     syscall_loop(ep_cap_path);
@@ -251,6 +251,6 @@ void syscall_loop(cspacepath_t ep_cap_path)
     for (;;) {
         tag = seL4_Recv(ep_cap_path.capPtr, &badge);
         seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-        DO_SYSCALL(syscall, badge);
+        DO_SYSCALL(syscall, tag, badge);
     }
 }

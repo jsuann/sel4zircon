@@ -19,7 +19,6 @@
 #include "syscall.h"
 
 /* constants */
-#define EP_CPTR SEL4UTILS_FIRST_FREE // where the cap for the endpoint was placed.
 #define MSG_DATA 0x2 //  arbitrary data to send
 
 int main(int argc, char **argv) {
@@ -41,6 +40,35 @@ int main(int argc, char **argv) {
     tag = seL4_Call(handle, tag);
 
     zx_null(handle);
+
+    zx_status_t err;
+    int a = 0;
+    int b = 1;
+    int c = 2;
+    int d = 3;
+    int e = 4;
+    int f = 5;
+    int g = 6;
+    int h = 7;
+
+    err = syscall_test_0();
+    assert(!err);
+    err = syscall_test_1(a);
+    assert(!err);
+    err = syscall_test_2(a, b); 
+    assert(!err);
+    err = syscall_test_3(a, b, c); 
+    assert(!err);
+    err = syscall_test_4(a, b, c, d); 
+    assert(!err);
+    err = syscall_test_5(a, b, c, d, e); 
+    assert(!err);
+    err = syscall_test_6(a, b, c, d, e, f); 
+    assert(!err);
+    err = syscall_test_7(a, b, c, d, e, f, g); 
+    assert(!err);
+    err = syscall_test_8(a, b, c, d, e, f, g, h); 
+    assert(!err);
 
     return 0;
 }
