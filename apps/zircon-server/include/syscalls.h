@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include <sel4/sel4.h>
+#include <zircon/types.h>
 
 typedef void (*zx_syscall_func)(seL4_MessageInfo_t tag, uint32_t handle);
 
@@ -19,7 +20,7 @@ extern zx_syscall_func sys_table[];
 
 // generic reply function
 static inline void
-sys_reply(int32_t res)
+sys_reply(zx_status_t res)
 {
     seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, res);

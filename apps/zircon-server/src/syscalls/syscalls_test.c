@@ -9,16 +9,14 @@
 
 void sys_null(seL4_MessageInfo_t tag, uint32_t handle)
 {
-    printf("Got null syscall! %u\n", handle);
-    printf("Num args: %lu\n", seL4_MessageInfo_get_length(tag));
-    tag = seL4_MessageInfo_new(0, 0, 0, 0);
-    seL4_Reply(tag);
+    //printf("Got null syscall! %u\n", handle);
+    seL4_Reply(seL4_MessageInfo_new(0, 0, 0, 0));
 }
 
 #define DO_TEST_SYSCALL(n) \
-    printf("sys test %d\n", n); \
+    printf("Test Syscall %d\n", n); \
     if (seL4_MessageInfo_get_length(tag) != n) { \
-        sys_reply(-1); \
+        sys_reply(ZX_ERR_INVALID_ARGS); \
         return; \
     } \
     printf("Args:"); \
@@ -26,7 +24,7 @@ void sys_null(seL4_MessageInfo_t tag, uint32_t handle)
         printf(" %lu", seL4_GetMR(i)); \
     } \
     printf("\n"); \
-    sys_reply(0);
+    sys_reply(ZX_OK);
 
 void sys_test_0(seL4_MessageInfo_t tag, uint32_t handle)
 {

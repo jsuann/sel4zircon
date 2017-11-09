@@ -53,24 +53,30 @@ int main(int argc, char **argv) {
     int g = 6;
     int h = 7;
 
-    err = syscall_test_0();
+    err = zx_syscall_test_0();
     assert(!err);
-    err = syscall_test_1(a);
+    err = zx_syscall_test_1(a);
     assert(!err);
-    err = syscall_test_2(a, b); 
+    err = zx_syscall_test_2(a, b);
     assert(!err);
-    err = syscall_test_3(a, b, c); 
+    err = zx_syscall_test_3(a, b, c);
     assert(!err);
-    err = syscall_test_4(a, b, c, d); 
+    err = zx_syscall_test_4(a, b, c, d);
     assert(!err);
-    err = syscall_test_5(a, b, c, d, e); 
+    err = zx_syscall_test_5(a, b, c, d, e);
     assert(!err);
-    err = syscall_test_6(a, b, c, d, e, f); 
+    err = zx_syscall_test_6(a, b, c, d, e, f);
     assert(!err);
-    err = syscall_test_7(a, b, c, d, e, f, g); 
+    err = zx_syscall_test_7(a, b, c, d, e, f, g);
     assert(!err);
-    err = syscall_test_8(a, b, c, d, e, f, g, h); 
+    err = zx_syscall_test_8(a, b, c, d, e, f, g, h);
     assert(!err);
+
+    // try an invalid syscall no
+    tag = seL4_MessageInfo_new(10000, 0, 0, 0);
+    seL4_Call(handle, tag);
+    err = seL4_GetMR(0);
+    assert(err == ZX_ERR_BAD_SYSCALL);
 
     return 0;
 }

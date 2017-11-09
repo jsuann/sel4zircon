@@ -251,6 +251,11 @@ void syscall_loop(cspacepath_t ep_cap_path)
     for (;;) {
         tag = seL4_Recv(ep_cap_path.capPtr, &badge);
         seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-        DO_SYSCALL(syscall, tag, badge);
+        if (syscall >= NUM_SYSCALLS) {
+            /* syscall doesn't exist */
+            sys_reply(ZX_ERR_BAD_SYSCALL);
+        } else {
+            DO_SYSCALL(syscall, tag, badge);
+        }
     }
 }

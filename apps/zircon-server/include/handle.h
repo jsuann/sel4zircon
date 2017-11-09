@@ -7,10 +7,9 @@
 
 #include <sel4/sel4.h>
 #include <vspace/vspace.h>
+#include <zircon/types.h>
 
 #define MAX_NUM_HANDLES 8192
-
-#define ZX_HANDLE_INVALID (0)
 
 typedef struct handle {
     void *process;
