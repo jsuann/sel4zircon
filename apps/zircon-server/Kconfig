@@ -17,6 +17,6 @@ menuconfig APP_ZIRCON_SERVER
                LIB_SEL4_VKA && LIB_SEL4_ALLOCMAN && LIB_SEL4_VSPACE && \
                LIB_SEL4_PLAT_SUPPORT && LIB_PLATSUPPORT && LIB_SEL4_UTILS && \
                LIB_CPIO && LIB_ELF && LIB_UTILS && LIB_SEL4_SIMPLE_DEFAULT && \
-               LIB_SEL4_DEBUG
+               LIB_SEL4_DEBUG && LIB_ZIRCON
     help
         User-level server for handling Zircon syscalls.
