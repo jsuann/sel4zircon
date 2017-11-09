@@ -1,3 +1,12 @@
+#pragma once
+
+#include <sel4/sel4.h>
+#include <sel4utils/process.h>
+
+#include "sys_def.h"
+
+#define EP_CPTR SEL4UTILS_FIRST_FREE
+
 /*
  * Macros for performing syscalls
  */

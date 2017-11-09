@@ -16,9 +16,11 @@
 #include <sel4/sel4.h>
 #include <sel4utils/process.h>
 
-#include "syscall.h"
+#include <zircon/types.h>
+#include <zircon/syscalls.h>
 
 /* constants */
+#define EP_CPTR SEL4UTILS_FIRST_FREE
 #define MSG_DATA 0x2 //  arbitrary data to send
 
 int main(int argc, char **argv) {

@@ -13,6 +13,6 @@
 menuconfig APP_ZIRCON_TEST
     bool "Tester for zircon syscalls"
     default y
-    depends on LIB_SEL4 && (LIB_MUSL_C || LIB_SEL4_C) && LIB_SEL4_MUSLC_SYS && LIB_UTILS
+    depends on LIB_SEL4 && (LIB_MUSL_C || LIB_SEL4_C) && LIB_SEL4_MUSLC_SYS && LIB_UTILS && LIB_ZIRCON
     help
         Tests for zircon syscalls.

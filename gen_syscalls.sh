@@ -1,8 +1,14 @@
 #!/bin/sh
 
-DEFS_FILE="include/syscall_defs.h"
-TABLE_FILE="src/syscalls/sys_table.h"
-SYSNO_FILE="../zircon-test/src/sys_def.h"
+DEFS_FILE="apps/zircon-server/include/syscall_defs.h"
+TABLE_FILE="apps/zircon-server/src/syscalls/sys_table.h"
+SYSNO_FILE="libzircon/src/sys_def.h"
+
+[ ! -f $DEFS_FILE ] && exit 1
+[ ! -f $TABLE_FILE ] && exit 1
+[ ! -f $SYSNO_FILE ] && exit 1
+
+echo "Generating syscalls from syscalls.list"
 
 NUM_SYSCALLS=`wc -l syscalls.list | cut -f 1 -d " "`
 

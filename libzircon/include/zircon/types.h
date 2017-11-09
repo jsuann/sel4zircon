@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <autoconf.h>
+
 #include "errors.h"
 #include <stdbool.h>
 #include <stddef.h>
