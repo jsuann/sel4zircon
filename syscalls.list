@@ -6,6 +6,11 @@ sys_channel_create
 sys_channel_read
 sys_channel_write
 sys_channel_call
+sys_process_exit
+sys_process_create
+sys_process_start
+sys_process_read_memory
+sys_process_write_memory
 sys_test_0
 sys_test_1
 sys_test_2

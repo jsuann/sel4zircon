@@ -1,4 +1,4 @@
-#define NUM_SYSCALLS 17
+#define NUM_SYSCALLS 22
 
 void sys_null(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_handle_close(seL4_MessageInfo_t tag, uint32_t handle);
@@ -8,6 +8,11 @@ void sys_channel_create(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_channel_read(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_channel_write(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_channel_call(seL4_MessageInfo_t tag, uint32_t handle);
+void sys_process_exit(seL4_MessageInfo_t tag, uint32_t handle);
+void sys_process_create(seL4_MessageInfo_t tag, uint32_t handle);
+void sys_process_start(seL4_MessageInfo_t tag, uint32_t handle);
+void sys_process_read_memory(seL4_MessageInfo_t tag, uint32_t handle);
+void sys_process_write_memory(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_test_0(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_test_1(seL4_MessageInfo_t tag, uint32_t handle);
 void sys_test_2(seL4_MessageInfo_t tag, uint32_t handle);

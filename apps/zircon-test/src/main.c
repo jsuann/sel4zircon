@@ -78,5 +78,9 @@ int main(int argc, char **argv) {
     err = seL4_GetMR(0);
     assert(err == ZX_ERR_BAD_SYSCALL);
 
+    // XXX testing unwrapped caps
+    err = zx_process_start(handle, handle, 0, 0, EP_CPTR, 0);
+    printf("err = %d\n", err);
+
     return 0;
 }
