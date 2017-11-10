@@ -9,19 +9,28 @@
 #include <vspace/vspace.h>
 #include <zircon/types.h>
 
+#include "object.h"
+
 #define MAX_NUM_HANDLES 8192
 
-typedef struct handle {
-    void *process;
-    void *object;
-    uint32_t rights;
-    uint32_t handle_cap;
-    // linked list for processes
-    struct handle *next;
-    struct handle *prev;
-} handle_t;
+#define HANDLE_MASK     0x3ffffu
+#define DEFAULT_MASK    0x40000u
 
-extern handle_t *handle_arena;
+typedef struct zir_handle {
+    // ptr to owning process
+    zir_object_t *process;
+    // ptr to object referred to
+    zir_object_t *object;
+    // rights of handle
+    zx_rights_t rights;
+    // map CPtr to zx_handle_t
+    zx_handle_t handle_cap;
+    // linked list for processes
+    struct zir_handle *next;
+    struct zir_handle *prev;
+} zir_handle_t;
+
+extern zir_handle_t *handle_arena;
 
 /* initialise handle arena */
 int init_handle_arena(vspace_t *vspace);
@@ -44,4 +53,9 @@ static inline uint32_t get_handle_rights(uint32_t handle)
 static inline void *get_handle_object(uint32_t handle)
 {
     return handle_arena[handle].object;
+}
+
+static inline int is_default_handle(uint32_t handle)
+{
+    return (handle & DEFAULT_MASK);
 }

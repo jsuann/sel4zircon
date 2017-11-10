@@ -44,6 +44,7 @@
 
 #include "syscalls.h"
 #include "handle.h"
+#include "process.h"
 
 /* constants */
 #define EP_BADGE 0x61 // arbitrary (but unique) number for a badge
@@ -236,6 +237,10 @@ int main(void) {
     seL4_Word syscall = seL4_MessageInfo_get_label(tag);
     DO_SYSCALL(syscall, tag, sender_badge);
     printf("ok\n");
+
+    printf("try process create\n");
+    zir_process_t *zproc = malloc(sizeof(zir_process_t));
+    init_zir_process(zproc);
 
     syscall_loop(ep_cap_path);
 

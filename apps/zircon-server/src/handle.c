@@ -9,7 +9,7 @@
 
 #include "handle.h"
 
-handle_t *handle_arena;
+zir_handle_t *handle_arena;
 
 UNUSED uint32_t vaddr_to_handle_val(void *vaddr)
 {
@@ -20,12 +20,12 @@ UNUSED uint32_t vaddr_to_handle_val(void *vaddr)
 
 int init_handle_arena(vspace_t *vspace)
 {
-    int num_handle_pages = ((MAX_NUM_HANDLES * sizeof(handle_t))+BIT(seL4_PageBits)-1)/BIT(seL4_PageBits);
-    handle_arena = (handle_t *)vspace_new_pages(vspace, seL4_AllRights, num_handle_pages, seL4_PageBits);
+    int num_handle_pages = ((MAX_NUM_HANDLES * sizeof(zir_handle_t))+BIT(seL4_PageBits)-1)/BIT(seL4_PageBits);
+    handle_arena = (zir_handle_t *)vspace_new_pages(vspace, seL4_AllRights, num_handle_pages, seL4_PageBits);
     assert(handle_arena != NULL);
 
-    printf("%p\n", handle_arena);
-    printf("%lu %d %lu\n", sizeof(handle_t)*MAX_NUM_HANDLES, num_handle_pages, num_handle_pages*BIT(seL4_PageBits));
+    printf("arena ptr: %p, handle size: %lu\n", handle_arena, sizeof(zir_handle_t));
+    printf("%lu %d %lu\n", sizeof(zir_handle_t)*MAX_NUM_HANDLES, num_handle_pages, num_handle_pages*BIT(seL4_PageBits));
 
     for (int i = 0; i < MAX_NUM_HANDLES; i++) {
         handle_arena[i].process = NULL;
@@ -66,7 +66,7 @@ uint32_t allocate_handle(void *process, uint32_t rights, void *object)
 
 void free_handle(uint32_t val)
 {
-    handle_t *handle = &handle_arena[val];
+    zir_handle_t *handle = &handle_arena[val];
     // invalidate handle
     handle->process = NULL;
     handle->object = NULL;
