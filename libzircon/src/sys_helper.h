@@ -36,7 +36,7 @@
 
 #define ZX_SET_CAPS(num_caps, n, ...)   ZX_SET_CAPS_##num_caps(0, n, __VA_ARGS__)
 
-#define ZX_SET_CAPS_1(x, n, cap, ...)   seL4_SetCap(x, cap); ZX_SET_ARGS(n, __VA_ARGS)
+#define ZX_SET_CAPS_1(x, n, cap, ...)   seL4_SetCap(x, cap); ZX_SET_ARGS(n, __VA_ARGS__)
 #define ZX_SET_CAPS_2(x, n, cap, ...)   seL4_SetCap(x, cap); ZX_SET_CAPS_1(INC(x), n, __VA_ARGS__)
 
 

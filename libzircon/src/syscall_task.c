@@ -21,15 +21,7 @@ zx_status_t zx_process_start(zx_handle_t process, zx_handle_t thread,
                             uintptr_t entry, uintptr_t stack,
                             zx_handle_t arg1, uintptr_t arg2)
 {
-    // TODO thread, arg1 handles need to be unwrapped??
-    //ZX_SYSCALL_SEND(process, ZX_SYS_PROCESS_START, 5, thread, entry, stack, arg1, arg2);
-    seL4_MessageInfo_t tag = seL4_MessageInfo_new(ZX_SYS_PROCESS_START, 0, 2, 3);
-    seL4_SetCap(0, thread);
-    seL4_SetCap(1, arg1);
-    seL4_SetMR(0, entry);
-    seL4_SetMR(1, stack);
-    seL4_SetMR(2, arg2);
-    seL4_Call(process, tag);
+    ZX_SYSCALL_SEND_WITH_CAPS(process, ZX_SYS_PROCESS_START, 2, 3, thread, arg1, entry, stack, arg2);
     return seL4_GetMR(0);
 }
 
