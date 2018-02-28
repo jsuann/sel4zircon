@@ -1,0 +1,22 @@
+# The following is a list of completed syscalls. Do not edit.
+sys_handle_close
+sys_handle_replace
+sys_handle_duplicate
+sys_channel_create
+sys_channel_read
+sys_channel_write
+sys_channel_call
+sys_process_exit
+sys_process_create
+sys_process_start
+sys_process_read_memory
+sys_process_write_memory
+sys_test_0
+sys_test_1
+sys_test_2
+sys_test_3
+sys_test_4
+sys_test_5
+sys_test_6
+sys_test_7
+sys_test_8
