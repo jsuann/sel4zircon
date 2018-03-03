@@ -28,7 +28,7 @@ void sys_process_start(seL4_MessageInfo_t tag, uint32_t handle)
             seL4_MessageInfo_get_capsUnwrapped(tag));
     printf("%u\n", handle);
     printf("%lu %lu %lu\n", seL4_GetMR(0), seL4_GetMR(1), seL4_GetMR(2));
-    printf("%lx %lx\n", seL4_GetBadge(0), seL4_GetBadge(1));
+    //printf("%lx %lx\n", seL4_GetBadge(0), seL4_GetBadge(1));
     sys_reply(ZX_ERR_NOT_SUPPORTED);
 }
 
