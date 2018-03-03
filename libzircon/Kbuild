@@ -1,3 +1,3 @@
 
 libs-$(CONFIG_LIB_ZIRCON) += libzircon
-libzircon: common libsel4 libutils $(libc)
+libzircon: common libsel4 libutils libsel4utils $(libc)
