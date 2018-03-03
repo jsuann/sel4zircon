@@ -9,10 +9,13 @@
 #include <sel4/sel4.h>
 #include <zircon/types.h>
 
-typedef void (*zx_syscall_func)(seL4_MessageInfo_t tag, uint32_t handle);
+typedef void (*zx_syscall_func)(seL4_MessageInfo_t tag, uint64_t badge);
 
-// generated file containing server syscall defs
+/* generated file containing implemented syscalls */
 #include "syscall_defs.h"
+
+/* Generic handler for unimplemented syscalls */
+void sys_undefined(seL4_MessageInfo_t tag, uint64_t badge);
 
 extern zx_syscall_func sys_table[];
 
