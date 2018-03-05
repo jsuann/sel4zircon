@@ -108,10 +108,17 @@ do
             arg_type=${arg_type% }
 
             # check if arg type is a pointer, or has leftover abigen info
+            # XXX pci_get_nth_device and vcpu_resume require specific handling!
             if [[ "${arg_type}" =~ \[ ]]; then
                 arg_type="$(cut -f 1 -d '[' <<< "${arg_type}")*"
                 arg_type=${arg_type/any/void}
             elif [[ "${arg_type}" =~ optional|features|handle_acquire ]]; then
+                arg_type="${arg_type% *}*"
+            elif [ "${syscall_name}" = "pci_get_nth_device" ] && \
+                    [ "${arg_name}" = "out_info" ]; then
+                arg_type="${arg_type% *}*"
+            elif [ "${syscall_name}" = "vcpu_resume" ] && \
+                    [ "${arg_name}" = "packet" ]; then
                 arg_type="${arg_type% *}*"
             else
                 arg_type="${arg_type% *}"
