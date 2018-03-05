@@ -681,7 +681,7 @@ zx_status_t zx_set_framebuffer_vmo(zx_handle_t handle, zx_handle_t vmo, uint32_t
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_pci_get_nth_device(zx_handle_t handle, uint32_t index, zx_pcie_device_info_t out_info, zx_handle_t* out_handle)
+zx_status_t zx_pci_get_nth_device(zx_handle_t handle, uint32_t index, zx_pcie_device_info_t* out_info, zx_handle_t* out_handle)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PCI_GET_NTH_DEVICE, 4, handle, index, out_info, out_handle);
     return seL4_GetMR(0);
@@ -783,7 +783,7 @@ zx_status_t zx_vcpu_create(zx_handle_t guest, uint32_t options, zx_vaddr_t entry
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vcpu_resume(zx_handle_t vcpu, zx_port_packet_t packet)
+zx_status_t zx_vcpu_resume(zx_handle_t vcpu, zx_port_packet_t* packet)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VCPU_RESUME, 2, vcpu, packet);
     return seL4_GetMR(0);

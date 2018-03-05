@@ -1,7 +1,7 @@
 #include <sel4/sel4.h>
 #include <sel4utils/process.h>
 
-#include <zircon/types.h>
+#include <zircon/syscalls.h>
 
 #include "sys_def.h"
 

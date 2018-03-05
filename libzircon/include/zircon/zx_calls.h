@@ -228,7 +228,7 @@ extern zx_status_t zx_set_framebuffer(zx_handle_t handle, void* vaddr, uint32_t 
 
 extern zx_status_t zx_set_framebuffer_vmo(zx_handle_t handle, zx_handle_t vmo, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
 
-extern zx_status_t zx_pci_get_nth_device(zx_handle_t handle, uint32_t index, zx_pcie_device_info_t out_info, zx_handle_t* out_handle);
+extern zx_status_t zx_pci_get_nth_device(zx_handle_t handle, uint32_t index, zx_pcie_device_info_t* out_info, zx_handle_t* out_handle);
 
 extern zx_status_t zx_pci_enable_bus_master(zx_handle_t handle, bool enable);
 
@@ -262,7 +262,7 @@ extern zx_status_t zx_guest_set_trap(zx_handle_t guest, uint32_t kind, zx_vaddr_
 
 extern zx_status_t zx_vcpu_create(zx_handle_t guest, uint32_t options, zx_vaddr_t entry, zx_handle_t* out);
 
-extern zx_status_t zx_vcpu_resume(zx_handle_t vcpu, zx_port_packet_t packet);
+extern zx_status_t zx_vcpu_resume(zx_handle_t vcpu, zx_port_packet_t* packet);
 
 extern zx_status_t zx_vcpu_interrupt(zx_handle_t vcpu, uint32_t vector);
 
