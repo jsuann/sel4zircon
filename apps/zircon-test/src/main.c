@@ -41,8 +41,6 @@ int main(int argc, char **argv) {
     seL4_SetMR(0, 0xff);
     tag = seL4_Call(handle, tag);
 
-    zx_null(handle);
-
     zx_status_t err;
     int a = 0;
     int b = 1;
@@ -53,24 +51,16 @@ int main(int argc, char **argv) {
     int g = 6;
     int h = 7;
 
+    // XXX check err
     err = zx_syscall_test_0();
-    assert(!err);
     err = zx_syscall_test_1(a);
-    assert(!err);
     err = zx_syscall_test_2(a, b);
-    assert(!err);
     err = zx_syscall_test_3(a, b, c);
-    assert(!err);
     err = zx_syscall_test_4(a, b, c, d);
-    assert(!err);
     err = zx_syscall_test_5(a, b, c, d, e);
-    assert(!err);
     err = zx_syscall_test_6(a, b, c, d, e, f);
-    assert(!err);
     err = zx_syscall_test_7(a, b, c, d, e, f, g);
-    assert(!err);
     err = zx_syscall_test_8(a, b, c, d, e, f, g, h);
-    assert(!err);
 
     // try an invalid syscall no
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
