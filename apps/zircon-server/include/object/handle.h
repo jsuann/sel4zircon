@@ -5,30 +5,33 @@
 #include <stdio.h>
 #include <assert.h>
 
+extern "C" {
 #include <sel4/sel4.h>
 #include <vspace/vspace.h>
 #include <zircon/types.h>
+}
 
 #include "object.h"
+#include "process.h"
 
 #define MAX_NUM_HANDLES 8192
 
 #define HANDLE_MASK     0x3ffffu
 #define DEFAULT_MASK    0x40000u
 
-typedef struct zir_handle {
-    // ptr to owning process
-    zir_object_t *process;
-    // ptr to object referred to
-    zir_object_t *object;
-    // rights of handle
-    zx_rights_t rights;
-    // map CPtr to zx_handle_t
-    zx_handle_t handle_cap;
-    // linked list for processes
-    struct zir_handle *next;
-    struct zir_handle *prev;
-} zir_handle_t;
+class Handle {
+public:
+    Handle(ZxProcess *owner, ZxObject *obj, zx_rights_t rights, uint32_t value) :
+        owner_{owner}, obj_{obj}, rights_{rights_}, base_value_{value} {}
+
+    ZxProcess *get_owner() const { return owner_; }
+
+private:
+    ZxProcess *owner_;
+    ZxObject *obj_;
+    const zx_rights_t rights_;
+    const uint32_t base_value_;
+};
 
 extern zir_handle_t *handle_arena;
 

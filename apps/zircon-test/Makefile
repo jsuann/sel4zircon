@@ -19,6 +19,9 @@ LDFLAGS += -u __vsyscall_ptr
 
 # Source files required to build the target
 CFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.c))
+CXXFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.cxx))
+
+HDRFILES := $(wildcard $(SOURCE_DIR)/src/*.h)
 
 # Libraries
 LIBS := c sel4 sel4muslcsys utils zircon

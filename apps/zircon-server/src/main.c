@@ -10,11 +10,6 @@
  * @TAG(DATA61_BSD)
  */
 
-/*
- * seL4 tutorial part 4: create a new process and IPC with it
- */
-
-
 /* Include Kconfig variables. */
 #include <autoconf.h>
 

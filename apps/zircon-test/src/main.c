@@ -10,6 +10,7 @@
  * @TAG(DATA61_BSD)
  */
 
+#include <autoconf.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -18,6 +19,8 @@
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
+
+#include "test.h"
 
 /* constants */
 #define EP_CPTR SEL4UTILS_FIRST_FREE
@@ -42,25 +45,33 @@ int main(int argc, char **argv) {
     tag = seL4_Call(handle, tag);
 
     zx_status_t err;
-    int a = 0;
-    int b = 1;
-    int c = 2;
-    int d = 3;
-    int e = 4;
-    int f = 5;
-    int g = 6;
-    int h = 7;
+    int a = 1;
+    int b = 2;
+    int c = 3;
+    int d = 4;
+    int e = 5;
+    int f = 6;
+    int g = 7;
+    int h = 8;
 
-    // XXX check err
     err = zx_syscall_test_0();
+    printf("zx_syscall_test_0 returned %d\n", err);
     err = zx_syscall_test_1(a);
+    printf("zx_syscall_test_1 returned %d\n", err);
     err = zx_syscall_test_2(a, b);
+    printf("zx_syscall_test_2 returned %d\n", err);
     err = zx_syscall_test_3(a, b, c);
+    printf("zx_syscall_test_3 returned %d\n", err);
     err = zx_syscall_test_4(a, b, c, d);
+    printf("zx_syscall_test_4 returned %d\n", err);
     err = zx_syscall_test_5(a, b, c, d, e);
+    printf("zx_syscall_test_5 returned %d\n", err);
     err = zx_syscall_test_6(a, b, c, d, e, f);
+    printf("zx_syscall_test_6 returned %d\n", err);
     err = zx_syscall_test_7(a, b, c, d, e, f, g);
+    printf("zx_syscall_test_7 returned %d\n", err);
     err = zx_syscall_test_8(a, b, c, d, e, f, g, h);
+    printf("zx_syscall_test_8 returned %d\n", err);
 
     // try an invalid syscall no
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
@@ -71,6 +82,8 @@ int main(int argc, char **argv) {
     // XXX testing unwrapped caps
     err = zx_process_start(handle, handle, 0, 0, EP_CPTR, 0);
     printf("err = %d\n", err);
+
+    test_cpp();
 
     return 0;
 }
