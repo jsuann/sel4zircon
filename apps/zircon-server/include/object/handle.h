@@ -19,7 +19,7 @@ extern "C" {
 #define HANDLE_MASK     0x3ffffu
 #define DEFAULT_MASK    0x40000u
 
-class Handle {
+class Handle : public Listable {
 public:
     Handle(ZxProcess *owner, ZxObject *obj, zx_rights_t rights, uint32_t value) :
         owner_{owner}, obj_{obj}, rights_{rights_}, base_value_{value} {}
