@@ -37,9 +37,10 @@
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
 
+#include "debug.h"
 #include "syscalls.h"
-#include "handle.h"
-#include "process.h"
+//#include "handle.h"
+//#include "process.h"
 
 /* constants */
 #define EP_BADGE 0x61 // arbitrary (but unique) number for a badge
@@ -73,6 +74,8 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 
 /* convenience function */
 extern void name_thread(seL4_CPtr tcb, char *name);
+
+extern void do_cpp_test(void);
 
 /* test */
 void syscall_loop(cspacepath_t ep_cap_path);
@@ -155,11 +158,11 @@ int main(void) {
     error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
     assert(error == 0);
 
-    printf("=== Zircon Server ===\n");
+    dprintf(ALWAYS, "=== Zircon Server ===\n");
 
-    seL4_Word sender_badge = 0;
-    seL4_MessageInfo_t tag;
-    seL4_Word msg;
+    //seL4_Word sender_badge = 0;
+    //seL4_MessageInfo_t tag;
+    //seL4_Word msg;
 
 /*
     error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
@@ -190,7 +193,7 @@ int main(void) {
     sel4platsupport_destroy_timer(&timer, &vka);
 
     // TEST HANDLES
-
+/*
     error = init_handle_arena(&vspace);
     assert(!error);
     
@@ -236,6 +239,8 @@ int main(void) {
     printf("try process create\n");
     zir_process_t *zproc = malloc(sizeof(zir_process_t));
     init_zir_process(zproc);
+*/
+    do_cpp_test();
 
     syscall_loop(ep_cap_path);
 
@@ -247,8 +252,9 @@ void syscall_loop(cspacepath_t ep_cap_path)
     seL4_Word badge = 0;
     seL4_MessageInfo_t tag;
 
-    printf("Entering syscall loop\n");
+    dprintf(INFO, "Entering syscall loop\n");
     for (;;) {
+        /* TODO: check badge for syscall/fault */
         tag = seL4_Recv(ep_cap_path.capPtr, &badge);
         seL4_Word syscall = seL4_MessageInfo_get_label(tag);
         if (syscall >= NUM_SYSCALLS) {

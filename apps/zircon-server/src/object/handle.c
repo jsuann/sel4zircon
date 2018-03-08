@@ -1,3 +1,4 @@
+/*
 #include <autoconf.h>
 
 #include <stdio.h>
@@ -75,3 +76,4 @@ void free_handle(uint32_t val)
     handle->rights = handle_arena[0].rights;
     handle_arena[0].rights = val;
 }
+*/

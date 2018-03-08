@@ -6,7 +6,7 @@
 #include <sel4/sel4.h>
 
 #include "syscalls.h"
-#include "process.h"
+//#include "process.h"
 
 void sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
 {

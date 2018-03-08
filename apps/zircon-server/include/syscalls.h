@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+//extern "C" {
+
 #include <sel4/sel4.h>
 #include <zircon/types.h>
 
@@ -29,3 +31,5 @@ sys_reply(zx_status_t res)
     seL4_SetMR(0, res);
     seL4_Reply(tag);
 }
+
+//} /* extern "C" */

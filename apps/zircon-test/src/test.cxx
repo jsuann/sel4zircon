@@ -54,7 +54,7 @@ void operator delete[](void *p, size_t s) {
 class Tester {
 public:
     Tester() : x{99999} {};
-    void y() { printf("%d\n", x); };
+    void y() { printf(">%d\n", x); };
 private:
     int x;
 };
@@ -65,6 +65,6 @@ void test_cpp(void)
     t.y();
     int *n = new int;
     *n = 888;
-    printf("n: %p %d\n", n, *n);
+    printf(">n: %p %d\n", n, *n);
     delete n;
 }

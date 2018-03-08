@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
 
     printf(">=== Zircon Test ===\n");
 
+/*
     // test handle acquire syscall
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, MSG_DATA);
@@ -43,7 +44,7 @@ int main(int argc, char **argv) {
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, 0xff);
     tag = seL4_Call(handle, tag);
-
+*/
     zx_status_t err;
     int a = 1;
     int b = 2;
@@ -74,14 +75,12 @@ int main(int argc, char **argv) {
     printf("zx_syscall_test_8 returned %d\n", err);
 
     // try an invalid syscall no
+    /*
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
     seL4_Call(handle, tag);
     err = seL4_GetMR(0);
     assert(err == ZX_ERR_BAD_SYSCALL);
-
-    // XXX testing unwrapped caps
-    err = zx_process_start(handle, handle, 0, 0, EP_CPTR, 0);
-    printf("err = %d\n", err);
+    */
 
     test_cpp();
 

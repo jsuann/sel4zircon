@@ -6,7 +6,7 @@
 #include <sel4/sel4.h>
 
 #include "syscalls.h"
-#include "handle.h"
+//#include "handle.h"
 
 void sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
 {
