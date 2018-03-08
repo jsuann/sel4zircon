@@ -39,8 +39,7 @@
 
 #include "debug.h"
 #include "syscalls.h"
-//#include "handle.h"
-//#include "process.h"
+#include "sys_helpers.h"
 
 /* constants */
 #define EP_BADGE 0x61 // arbitrary (but unique) number for a badge
