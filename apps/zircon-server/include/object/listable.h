@@ -5,6 +5,7 @@
 #include "object.h"
 
 /* Wrapper class for objects used in linked lists */
+/* Must have a single owner, or a pointer wrapper */
 
 class Listable {
 public:

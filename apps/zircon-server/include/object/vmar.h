@@ -25,10 +25,11 @@ private:
 
     /* List of VMOs mapped in */
     LinkedList<ZxVmo> vmo_list_;
+    /* List of vmo cap mappings */
 
     /* start and end of addr space */
     uintptr_t base_;
     size_t size_;
 
     /* sel4 page structs */
-}
+};
