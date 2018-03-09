@@ -82,6 +82,9 @@ int main(int argc, char **argv) {
     assert(err == ZX_ERR_BAD_SYSCALL);
     */
 
+    err = zx_handle_close(ZX_HANDLE_INVALID);
+    printf("zx_handle_close returned %d\n", err);
+
     test_cpp();
 
     return 0;

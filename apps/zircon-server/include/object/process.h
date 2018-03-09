@@ -14,6 +14,8 @@ extern "C" {
 #include "linkedlist.h"
 #include "handle.h"
 #include "object.h"
+#include "vmar.h"
+#include "thread.h"
 
 class ZxProcess final : public ZxObject {
 public:
@@ -29,8 +31,11 @@ public:
 private:
     /* List of Handles */
     LinkedList<Handle> handle_list_;
-    /* TODO root vmar */
-    /* TODO thread list */
+    /* Root vmar */
+    ZxVmar *root_vmar_;
+    /* Thread list */
+    LinkedList<ZxThread> thread_list_;
+
     /* TODO sel4 specific stuff */
     /*
        Will probably need:

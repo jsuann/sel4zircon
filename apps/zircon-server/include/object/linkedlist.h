@@ -32,7 +32,7 @@ public:
     }
 
     void push_back(T *item) {
-        if (empty()) {
+        if (num_items_ == 0) {
             head_ = item;
             tail_ = item;
         } else {
@@ -44,7 +44,7 @@ public:
     }
 
     void push_front(T *item) {
-        if (empty()) {
+        if (num_items_ == 0) {
             head_ = item;
             tail_ = item;
         } else {
@@ -59,19 +59,23 @@ public:
         T *item = tail_;
         tail_ = item->get_prev();
         --num_items_;
-        if (!empty()) {
+        if (num_items_ > 0) {
             tail_->set_next(NULL);
         }
+        item->set_next(NULL);
+        item->set_prev(NULL);
         return item;
     }
 
-    T *push_front() {
+    T *pop_front() {
         T *item = head_;
         head_ = item->get_next();
         --num_items_;
-        if (!empty()) {
+        if (num_items_ > 0) {
             head_->set_prev(NULL);
         }
+        item->set_next(NULL);
+        item->set_prev(NULL);
         return item;
     }
 
@@ -85,6 +89,8 @@ public:
             if (next != NULL) {
                 next->set_prev(item->prev);
             }
+            item->set_next(NULL);
+            item->set_prev(NULL);
             --num_items_;
             return true;
         }
