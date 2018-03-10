@@ -12,6 +12,12 @@
 
 #define ZX_DEBUGLEVEL   2
 
+#define ZX_PRINT_FLUSH  1
+
+#if ZX_PRINT_FLUSH
+#define zx_printf(x...) printf("[ZX] " x); fflush(stdout);
+#else
 #define zx_printf(x...) printf("[ZX] " x);
+#endif
 
 #define dprintf(level, x...) do { if ((level) <= ZX_DEBUGLEVEL) { zx_printf(x); } } while (0)

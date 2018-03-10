@@ -11,20 +11,30 @@ extern "C" {
 #include <zircon/types.h>
 }
 
+#include "../zxcpp/new.h"
+#include "handle.h"
+
+class Handle;
+
 class ZxObject {
 public:
-    ZxObject(zx_koid_t koid) : koid_{koid},  handle_count_{0}, signals_{0} {}
+    ZxObject();
     virtual ~ZxObject() {}
 
     virtual zx_obj_type_t get_object_type() const { return ZX_OBJ_TYPE_NONE; }
 
     zx_koid_t get_koid() const { return koid_; }
 
-    void increment_handle_count() {
-        ++handle_count_;
+    Handle *create_handle(zx_rights_t rights) {
+        Handle *h = allocate_handle(this, rights);
+        if (h != NULL) {
+            ++handle_count_;
+        }
+        return h;
     }
 
-    bool decrement_handle_count() {
+    bool destroy_handle(Handle *h) {
+        free_handle(h);
         --handle_count_;
         return handle_count_ == 0u;
     }
@@ -33,8 +43,28 @@ public:
         return handle_count_;
     }
 
+    void print_object_info() const {
+        dprintf(INFO, "%lu %u %u\n", koid_, handle_count_, signals_);
+    }
+
 private:
     const zx_koid_t koid_;
     uint32_t handle_count_;
     zx_signals_t signals_;
 };
+
+/* object allocation: use custom allocator? */
+template <typename T, typename ... U>
+T *allocate_object(U ... args)
+{
+    void *p = malloc(sizeof(T));
+    if (p == NULL) {
+        return NULL;
+    }
+    return new (p) T(args...);
+}
+
+void free_object(ZxObject *obj)
+{
+    delete obj;
+}

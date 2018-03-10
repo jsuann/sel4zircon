@@ -28,23 +28,17 @@
 
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
-    //seL4_Word msg;
+    seL4_Word msg;
 
     printf(">=== Zircon Test ===\n");
 
-/*
-    // test handle acquire syscall
-    tag = seL4_MessageInfo_new(0, 0, 0, 1);
-    seL4_SetMR(0, MSG_DATA);
-    tag = seL4_Call(EP_CPTR, tag);
+    /* Get starting handles */
+    tag = seL4_Recv(EP_CPTR, &msg);
+    zx_handle_t vmar_handle = seL4_GetMR(0);
+    zx_handle_t proc_handle = seL4_GetMR(1);
 
-    zx_handle_t handle = seL4_GetMR(0);
-    printf(">received handle! %u\n", handle);
+    printf("> Received handles: %u %u\n", vmar_handle, proc_handle);
 
-    tag = seL4_MessageInfo_new(0, 0, 0, 1);
-    seL4_SetMR(0, 0xff);
-    tag = seL4_Call(handle, tag);
-*/
     zx_status_t err;
     int a = 1;
     int b = 2;

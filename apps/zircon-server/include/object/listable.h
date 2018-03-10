@@ -2,11 +2,12 @@
 
 #include <autoconf.h>
 
-#include "object.h"
-
 /* Wrapper class for objects used in linked lists */
 /* Must have a single owner, or a pointer wrapper */
 
+class ZxObject;
+
+template <typename T>
 class Listable {
 public:
     Listable() : next_{NULL}, prev_{NULL} {};
@@ -16,23 +17,25 @@ public:
         return NULL;
     }
 
-    Listable *get_next() const {
+    virtual void set_owner(ZxObject *) {}
+
+    T *get_next() const {
         return next_;
     }
 
-    Listable *get_prev() const {
+    T *get_prev() const {
         return prev_;
     }
 
-    void set_next(Listable *next) {
+    void set_next(T *next) {
         next_ = next;
     }
 
-    void set_prev(Listable *prev) {
+    void set_prev(T *prev) {
         prev_ = prev;
     }
 
 private:
-    Listable *next_;
-    Listable *prev_;
+    T *next_;
+    T *prev_;
 };

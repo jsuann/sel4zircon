@@ -35,14 +35,3 @@ void operator delete(void *p, size_t s) {
 void operator delete[](void *p, size_t s) {
     return ::free(p);
 }
-
-/* malloc & new wrapper */
-template <typename T, typename ... U>
-T *allocate(U ... args)
-{
-    void *p = malloc(sizeof(T));
-    if (p == NULL) {
-        return NULL;
-    }
-    return new (p) T(args...);
-}

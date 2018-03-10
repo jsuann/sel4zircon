@@ -75,6 +75,7 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 extern void name_thread(seL4_CPtr tcb, char *name);
 
 extern void do_cpp_test(void);
+extern void init_zircon_test(seL4_CPtr ep_cap);
 
 /* test */
 void syscall_loop(cspacepath_t ep_cap_path);
@@ -117,6 +118,13 @@ int main(void) {
                                      ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
     error = allocman_fill_reserves(allocman);
     assert(!error);
+
+
+    /* ---- HERE ONWARDS ---- */
+
+    /* Use zircon structures! */
+
+
 
     /* use sel4utils to make a new process */
     sel4utils_process_t new_process;
@@ -191,55 +199,8 @@ int main(void) {
 
     sel4platsupport_destroy_timer(&timer, &vka);
 
-    // TEST HANDLES
-/*
-    error = init_handle_arena(&vspace);
-    assert(!error);
-    
-    void *test_obj = malloc(16);
-    void *test_proc  = malloc(16);
-
-    printf("ok\n");
-    uint32_t handle = allocate_handle(test_proc, 0, test_obj);
-    printf("handle val: %u\n", handle);
-    uint32_t handle2 = allocate_handle(test_proc, 0, test_obj);
-    printf("handle2 val: %u\n", handle2);
-
-    free_handle(handle);
-
-    printf("handle2 contents: %p %u %p\n", get_handle_process(handle2),
-            get_handle_rights(handle2), get_handle_object(handle2));
-
-    seL4_CPtr handle_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path, seL4_AllRights, seL4_CapData_Badge_new(handle2));
-    assert(handle_cap != 0);
-    
-    printf("handle cap: %lu\n", handle_cap);
-
-    // test syscall: test invokes on supplied "handle" (a cptr)
-    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
-    //assert(sender_badge == EP_BADGE);
-    assert(seL4_MessageInfo_get_length(tag) == 1);
-
-    seL4_SetMR(0, (uint32_t)handle_cap);
-    seL4_Reply(tag);
-
-    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
-    msg = seL4_GetMR(0);
-    printf("received val: %lu, badge %lu\n", msg, sender_badge);
-    seL4_Reply(tag);
-
-    printf("test sys table\n");
-    tag = seL4_Recv(ep_cap_path.capPtr, &sender_badge);
-   
-    seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-    DO_SYSCALL(syscall, tag, sender_badge);
-    printf("ok\n");
-
-    printf("try process create\n");
-    zir_process_t *zproc = malloc(sizeof(zir_process_t));
-    init_zir_process(zproc);
-*/
     do_cpp_test();
+    init_zircon_test(ep_cap_path.capPtr);
 
     syscall_loop(ep_cap_path);
 

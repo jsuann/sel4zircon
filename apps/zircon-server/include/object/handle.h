@@ -3,6 +3,7 @@
 #include <autoconf.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 
 extern "C" {
@@ -11,20 +12,20 @@ extern "C" {
 #include <zircon/types.h>
 }
 
+#include "../zxcpp/new.h"
 #include "listable.h"
-
-#define MAX_NUM_HANDLES 8192
 
 class ZxObject;
 class ZxProcess;
 
-class Handle : public Listable {
+class Handle : public Listable<Handle> {
 public:
-    Handle(ZxProcess *owner, ZxObject *obj, zx_rights_t rights, uint32_t value) :
-        owner_{owner}, obj_{obj}, rights_{rights_}, base_value_{value} {}
+    Handle(ZxObject *obj, zx_rights_t rights, uint32_t base_value) :
+        owner_{NULL}, obj_{obj}, rights_{rights}, base_value_{base_value} {}
 
     /* override for listable */
     ZxObject *get_owner() const override { return (ZxObject *)owner_; }
+    void set_owner(ZxObject *o) override { owner_ = (ZxProcess *)o; }
 
     ZxObject *get_object() const { return obj_; }
     const zx_rights_t get_rights() const { return rights_; }
@@ -36,3 +37,21 @@ private:
     const zx_rights_t rights_;
     const uint32_t base_value_;
 };
+
+uint32_t get_new_base_value(void *p);
+
+/* FIXME handles should use arena allocation */
+Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)
+{
+    void *p = malloc(sizeof(Handle));
+    if (p == NULL) {
+        return NULL;
+    }
+    Handle *h = new (p) Handle(obj, rights, get_new_base_value(p));
+    return h;
+}
+
+void free_handle(Handle *h)
+{
+    delete h;
+}
