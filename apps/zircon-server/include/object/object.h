@@ -53,7 +53,8 @@ private:
     zx_signals_t signals_;
 };
 
-/* object allocation: use custom allocator? */
+/* generic object allocation */
+/* override this with a template specialisation! */
 template <typename T, typename ... U>
 T *allocate_object(U ... args)
 {

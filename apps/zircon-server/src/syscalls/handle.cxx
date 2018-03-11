@@ -22,6 +22,7 @@ void sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
         sys_reply(ZX_OK);
         return;
     }
+
     /* Get the calling process */
 
     /* Attempt to remove handle from process */

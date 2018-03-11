@@ -10,6 +10,8 @@ constexpr uint32_t kHandleGenerationMask = ~kHandleIndexMask & ~(3 << 30);
 //constexpr uint32_t kHandleGenerationShift = 14;
 constexpr uint32_t kHandleGenerationShift = 24;
 
+StackAlloc handle_table;
+
 uint32_t get_new_base_value(void *p)
 {
     /* For now, just cast addr to val */

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <autoconf.h>
 #include <stdlib.h>
 
 /* 
