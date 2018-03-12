@@ -79,6 +79,12 @@ int main(int argc, char **argv) {
     err = zx_handle_close(ZX_HANDLE_INVALID);
     printf("zx_handle_close returned %d\n", err);
 
+    err = zx_handle_close(1231231313);
+    printf("zx_handle_close returned %d\n", err);
+
+    err = zx_handle_close(vmar_handle);
+    printf("zx_handle_close returned %d\n", err);
+
     test_cpp();
 
     return 0;

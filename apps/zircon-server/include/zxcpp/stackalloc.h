@@ -1,9 +1,11 @@
 #pragma once
 
 #include <autoconf.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
-constexpr stackAllocMaxNumElems = (1 << 31);
+constexpr size_t stackAllocMaxNumElems = (1 << 31);
 
 template <typename T>
 class StackAlloc {
@@ -15,17 +17,17 @@ private:
 
 public:
     StackAlloc() = default;
-    ~StackAlloc();
+    ~StackAlloc() {}
 
-    bool init(T *pool, size_t count) {
+    bool init(void *pool, size_t count) {
         if (count > stackAllocMaxNumElems) {
             return false;
         }
-        free_list_ = malloc(sizeof(struct FreeListNode) * count);
+        free_list_ = (FreeListNode *)malloc(sizeof(struct FreeListNode) * count);
         if (free_list_ == NULL) {
             return false;
         }
-        for (int i = 0; i < count - 1; i++) {
+        for (size_t i = 0; i < count - 1; ++i) {
             free_list_[i].next = i+1;
             free_list_[i].is_free = 1;
         }
@@ -33,10 +35,11 @@ public:
         free_list_[count-1].is_free = 1;
 
         /* init other vals */
-        pool_ = pool;
+        pool_ = (T *)pool;
         count_ = count;
         num_alloc_ = 0;
         next_free_ = 0;
+        return true;
     }
 
     void destroy() {
@@ -55,6 +58,10 @@ public:
         return true;
     }
 
+    bool is_alloc(uint32_t index) {
+        return (free_list_[index].is_free == 0);
+    }
+
     T *get(uint32_t index) {
         assert(index < stackAllocMaxNumElems);
         assert(!free_list_[index].is_free);
@@ -67,7 +74,7 @@ public:
         free_list_[index].next = next_free_;
         free_list_[index].is_free = 1;
         next_free_ = index;
-        --num_alloc;
+        --num_alloc_;
     }
 
 private:
@@ -75,5 +82,5 @@ private:
     size_t count_;
     uint32_t next_free_;
     uint32_t num_alloc_;
-    struct FreeList *free_list_;
+    struct FreeListNode *free_list_;
 };

@@ -38,20 +38,7 @@ private:
     const uint32_t base_value_;
 };
 
-uint32_t get_new_base_value(void *p);
-
-/* FIXME handles should use arena allocation */
-Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)
-{
-    void *p = malloc(sizeof(Handle));
-    if (p == NULL) {
-        return NULL;
-    }
-    Handle *h = new (p) Handle(obj, rights, get_new_base_value(p));
-    return h;
-}
-
-void free_handle(Handle *h)
-{
-    delete h;
-}
+void init_handle_table();
+Handle *allocate_handle(ZxObject *obj, zx_rights_t rights);
+void free_handle(Handle *h);
+Handle *base_value_to_addr(uint32_t base_value);

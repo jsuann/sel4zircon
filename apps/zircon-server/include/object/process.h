@@ -20,8 +20,8 @@ extern "C" {
 
 class ZxProcess final : public ZxObject {
 public:
-    ZxProcess(ZxVmar *root_vmar) : handle_list_(this), root_vmar_{root_vmar}
-            /*, thread_list_(this) */{
+    ZxProcess(ZxVmar *root_vmar, seL4_Word badge_val) : handle_list_(this),
+            root_vmar_{root_vmar}, badge_val_{badge_val}/*, thread_list_(this) */{
         memset(name_, 0, ZX_MAX_NAME_LEN);
         /* FIXME gen better rand val */
         handle_rand_ = get_koid();
@@ -36,7 +36,7 @@ public:
         strncpy(name_, name, ZX_MAX_NAME_LEN-1);
     }
 
-    char *get_name() {
+    const char *get_name() const {
         return name_;
     }
 
@@ -45,15 +45,20 @@ public:
         handle_list_.push_back(h);
     }
 
-    zx_handle_t get_handle_user_val(Handle *h) {
+    zx_handle_t get_handle_user_val(Handle *h) const {
         return (h->get_value() ^ handle_rand_);
     }
 
-    uint32_t get_handle_kernel_val(zx_handle_t user_val) {
+    Handle *get_handle(zx_handle_t user_val) const {
+        Handle *h = base_value_to_addr(user_val ^ handle_rand_);
+        return (h != NULL && h->get_owner() == this) ? h : NULL;
+    }
+
+    uint32_t get_handle_kernel_val(zx_handle_t user_val) const {
         return (user_val ^ handle_rand_);
     }
 
-    bool has_handle(Handle *h) {
+    bool has_handle(Handle *h) const {
         return (h->get_owner() == this);
     }
 
@@ -71,6 +76,10 @@ public:
         handle_list_.for_each(print_func);
     }
 
+    uint64_t get_badge_val() const {
+        return badge_val_;
+    }
+
 private:
     /* List of Handles */
     LinkedList<Handle> handle_list_;
@@ -86,6 +95,8 @@ private:
 
     char name_[ZX_MAX_NAME_LEN];
 
+    uint64_t badge_val_;
+
     /* Owning Job */
     /* State */
     /* Exception port */
@@ -98,3 +109,11 @@ private:
        - badge value?
     */
 };
+
+void init_proc_table();
+ZxProcess *get_proc_from_badge(uint64_t badge);
+
+template <>
+ZxProcess *allocate_object<ZxProcess>(ZxVmar *root_vmar);
+template <>
+void free_object<ZxProcess>(ZxProcess *obj);

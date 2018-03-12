@@ -23,15 +23,25 @@ void sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
         return;
     }
 
-    /* Get the calling process */
+    ZxProcess *proc = get_proc_from_badge(badge);
 
-    /* Attempt to remove handle from process */
-
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    Handle *h = proc->get_handle(handle_value);
+    if (h == NULL) {
+        sys_reply(ZX_ERR_BAD_HANDLE);
+    } else {
+        proc->remove_handle(h);
+        ZxObject *o = h->get_object();
+        if (o->destroy_handle(h)) {
+            destroy_object(o);
+        }
+        sys_reply(ZX_OK);
+    }
 }
 
 static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t badge)
 {
+    //zx_handle_t handle_value = seL4_GetMR(0);
+    //zx_rights_t rights = seL4_GetMR(1);
     sys_reply(ZX_ERR_NOT_SUPPORTED);
 }
 

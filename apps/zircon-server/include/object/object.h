@@ -54,18 +54,10 @@ private:
 };
 
 /* generic object allocation */
-/* override this with a template specialisation! */
 template <typename T, typename ... U>
-T *allocate_object(U ... args)
-{
-    void *p = malloc(sizeof(T));
-    if (p == NULL) {
-        return NULL;
-    }
-    return new (p) T(args...);
-}
+T *allocate_object(U ... args);
 
-void free_object(ZxObject *obj)
-{
-    delete obj;
-}
+template <typename T>
+void free_object(T *obj);
+
+void destroy_object(ZxObject *obj);
