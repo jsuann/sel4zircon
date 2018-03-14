@@ -15,7 +15,11 @@ template <typename T>
 class LinkedList {
 public:
     LinkedList(ZxObject *owner) : head_{NULL}, tail_{NULL},
-            num_items_{0}, owner_{owner} {}
+            num_items_{0}, list_owner_{owner} {
+#if ZX_LL_SANITY_CHECK
+        assert(list_owner_ != NULL);
+#endif
+    }
 
     /* Assume list will be empty before destruction */
     ~LinkedList() {}
@@ -37,7 +41,7 @@ public:
     }
 
     bool contains(T *item) {
-        return (item->get_owner() == owner_);
+        return (item->owner_ == list_owner_);
     }
 
     void push_back(T *item) {
@@ -48,11 +52,12 @@ public:
             head_ = item;
             tail_ = item;
         } else {
-            tail_->set_next(item);
-            item->set_prev(tail_);
+            tail_->next_ = item;
+            item->prev_ = tail_;
             tail_ = item;
         }
         ++num_items_;
+        item->owner_ = list_owner_;
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, true);
 #endif
@@ -66,11 +71,12 @@ public:
             head_ = item;
             tail_ = item;
         } else {
-            head_->set_prev(item);
-            item->set_next(head_);
+            head_->prev_ = item;
+            item->next_ = head_;
             head_ = item;
         }
         ++num_items_;
+        item->owner_ = list_owner_;
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, true);
 #endif
@@ -81,13 +87,14 @@ public:
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, true);
 #endif
-        tail_ = item->get_prev();
+        tail_ = item->prev_;
         --num_items_;
         if (num_items_ > 0) {
-            tail_->set_next(NULL);
+            tail_->next_ = NULL;
         }
-        item->set_next(NULL);
-        item->set_prev(NULL);
+        item->next_ = NULL;
+        item->prev_ = NULL;
+        item->owner_ = NULL;
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, false);
 #endif
@@ -99,13 +106,14 @@ public:
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, true);
 #endif
-        head_ = item->get_next();
+        head_ = item->next_;
         --num_items_;
         if (num_items_ > 0) {
-            head_->set_prev(NULL);
+            head_->prev_ = NULL;
         }
-        item->set_next(NULL);
-        item->set_prev(NULL);
+        item->next_ = NULL;
+        item->prev_ = NULL;
+        item->owner_ = NULL;
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, false);
 #endif
@@ -116,22 +124,23 @@ public:
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, true);
 #endif
-        T *prev = item->get_prev();
-        T *next = item->get_next();
+        T *prev = item->prev_;
+        T *next = item->next_;
         if (prev != NULL) {
-            prev->set_next(item->get_next());
+            prev->next_ = item->next_;
         }
         if (next != NULL) {
-            next->set_prev(item->get_prev());
+            next->prev_ = item->prev_;
         }
         if (head_ == item) {
-            head_ = item->get_next();
+            head_ = item->next_;
         }
         if (tail_ == item) {
-            tail_ = item->get_prev();
+            tail_ = item->prev_;
         }
-        item->set_next(NULL);
-        item->set_prev(NULL);
+        item->next_ = NULL;
+        item->prev_ = NULL;
+        item->owner_ = NULL;
         --num_items_;
 #if ZX_LL_SANITY_CHECK
         sanity_check(item, false);
@@ -143,7 +152,7 @@ public:
         T *item = head_;
         while (item != NULL) {
             func(item, args...);
-            item = item->get_next();
+            item = item->next_;
         }
     }
 
@@ -151,12 +160,18 @@ public:
     void sanity_check(T *item, bool in_list) {
         dprintf(INFO, "LL sanity check on %p, in list: %s\n",
                 item, ((in_list) ? "true" : "false"));
-        int item_count = 0;
+        /* Check ownership of item */
+        if (in_list)
+            assert(item->owner_ == list_owner_);
+        else
+            assert(item->owner_ == NULL);
+
         /* Check forward */
+        int item_count = 0;
         int i = 0;
         T *t = head_;
         while (t != NULL) {
-            assert(t->get_owner() == owner_);
+            assert(t->owner_ == list_owner_);
             if (!in_list)
                 assert(t != item);
             else if (t == item)
@@ -164,7 +179,7 @@ public:
             ++i;
             if (i > num_items_)
                 break;
-            t = t->get_next();
+            t = t->next_;
         }
         assert(i == num_items_);
         if (in_list)
@@ -174,7 +189,7 @@ public:
         i = item_count = 0;
         t = tail_;
         while (t != NULL) {
-            assert(t->get_owner() == owner_);
+            assert(t->owner_ == list_owner_);
             if (!in_list)
                 assert(t != item);
             else if (t == item)
@@ -182,7 +197,7 @@ public:
             ++i;
             if (i > num_items_)
                 break;
-            t = t->get_prev();
+            t = t->prev_;
         }
         assert(i == num_items_);
         if (in_list)
@@ -194,6 +209,6 @@ private:
     T *head_;
     T *tail_;
     int num_items_;
-    /* Sanity checking: linked lists are linked to an owning object */
-    ZxObject * const owner_;
+    /* Linked lists have a single owning object */
+    ZxObject * const list_owner_;
 };

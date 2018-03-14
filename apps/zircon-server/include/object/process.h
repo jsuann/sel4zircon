@@ -41,7 +41,6 @@ public:
     }
 
     void add_handle(Handle *h) {
-        h->set_owner(this);
         handle_list_.push_back(h);
     }
 
@@ -64,7 +63,6 @@ public:
 
     void remove_handle(Handle *h) {
         handle_list_.remove(h);
-        h->set_owner(NULL);
     }
 
     void print_handles() {

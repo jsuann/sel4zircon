@@ -21,18 +21,13 @@ class ZxProcess;
 class Handle : public Listable<Handle> {
 public:
     Handle(ZxObject *obj, zx_rights_t rights, uint32_t base_value) :
-        owner_{NULL}, obj_{obj}, rights_{rights}, base_value_{base_value} {}
-
-    /* override for listable */
-    ZxObject *get_owner() const override { return (ZxObject *)owner_; }
-    void set_owner(ZxObject *o) override { owner_ = (ZxProcess *)o; }
+            obj_{obj}, rights_{rights}, base_value_{base_value} {}
 
     ZxObject *get_object() const { return obj_; }
     const zx_rights_t get_rights() const { return rights_; }
     const uint32_t get_value() const { return base_value_; }
 
 private:
-    ZxProcess *owner_;
     ZxObject *obj_;
     const zx_rights_t rights_;
     const uint32_t base_value_;
