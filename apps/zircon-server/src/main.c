@@ -75,7 +75,7 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 extern void name_thread(seL4_CPtr tcb, char *name);
 
 extern void do_cpp_test(void);
-void init_zircon_server(void);
+void init_zircon_server(vka_t *vka, vspace_t *vspace);
 uint64_t init_zircon_test(void);
 void send_zircon_test_data(seL4_CPtr ep_cap);
 
@@ -142,7 +142,7 @@ int main(void) {
     error = vka_alloc_endpoint(&vka, &ep_object);
     assert(error == 0);
 
-    init_zircon_server();
+    init_zircon_server(&vka, &vspace);
     uint64_t badge_val = init_zircon_test();
 
     /*

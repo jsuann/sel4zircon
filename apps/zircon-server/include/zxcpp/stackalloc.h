@@ -23,7 +23,7 @@ public:
         if (count > stackAllocMaxNumElems) {
             return false;
         }
-        free_list_ = (FreeListNode *)malloc(sizeof(struct FreeListNode) * count);
+        free_list_ = (FreeListNode *)malloc(sizeof(FreeListNode) * count);
         if (free_list_ == NULL) {
             return false;
         }
@@ -65,7 +65,7 @@ public:
     T *get(uint32_t index) {
         assert(index < stackAllocMaxNumElems);
         assert(!free_list_[index].is_free);
-        return &pool_[index];
+        return pool_ + index;
     }
 
     void free(uint32_t index) {
@@ -82,5 +82,5 @@ private:
     size_t count_;
     uint32_t next_free_;
     uint32_t num_alloc_;
-    struct FreeListNode *free_list_;
+    FreeListNode *free_list_;
 };

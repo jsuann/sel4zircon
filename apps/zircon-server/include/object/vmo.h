@@ -10,15 +10,16 @@ extern "C" {
 #include <zircon/types.h>
 }
 
-class VmoMapping {
-
+struct VmoMapping {
+    uintptr_t start_addr;
+    /* caps to page frames */
+    seL4_CPtr caps[];
 };
 
 class ZxVmo final : public ZxObject {
 public:
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
 private:
-    /* VMOs can be big up to a limit (i.e. mappable in the server addr space) */
     uint64_t size_;
     uint32_t num_pages_;
 
@@ -26,6 +27,10 @@ private:
     ZxVmo *parent_;
     /* Linkedlist of children? */
 
-    /* seL4 structs */
-    VmoMapping *kmapping;
+    /* server mapping of the vmo */
+    VmoMapping kmap_;
+
+    /* process mapping of the vmo */
+    // TODO vector?
+    VmoMapping *proc_map_;
 };

@@ -30,13 +30,12 @@ int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
     seL4_Word msg;
 
-    printf(">=== Zircon Test ===\n");
-
     /* Get starting handles */
     tag = seL4_Recv(EP_CPTR, &msg);
     zx_handle_t vmar_handle = seL4_GetMR(0);
     zx_handle_t proc_handle = seL4_GetMR(1);
 
+    printf(">=== Zircon Test ===\n");
     printf("> Received handles: %u %u\n", vmar_handle, proc_handle);
 
     zx_status_t err;
@@ -86,6 +85,10 @@ int main(int argc, char **argv) {
     printf("zx_handle_close returned %d\n", err);
 
     test_cpp();
+
+    int *addr = (int *)0;
+    *addr = 0;
+    printf("yaaaah\n");
 
     return 0;
 }

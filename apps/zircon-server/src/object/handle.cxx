@@ -1,31 +1,52 @@
 #include "object/handle.h"
 #include "zxcpp/stackalloc.h"
+#include "addrspace.h"
 
-constexpr size_t kMaxHandleCount = 8 * 1024u;
+constexpr size_t kMaxHandleCount = 32 * 1024u;
 
 constexpr uint32_t kHandleIndexMask = kMaxHandleCount - 1;
 
 constexpr uint32_t kHandleGenerationMask = ~kHandleIndexMask & ~(3 << 30);
 
-/* Must be floor(log2(kMaxHandleCount)) */
-//constexpr uint32_t kHandleGenerationShift = 14;
-constexpr uint32_t kHandleGenerationShift = 24;
+/* Max 1 << 20 handles */
+constexpr uint32_t kHandleGenerationShift = 20;
 
 constexpr size_t kHandleTableSize = sizeof(Handle) * kMaxHandleCount;
+constexpr size_t kHandleTableNumPages = (kHandleTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 StackAlloc<Handle> handle_table;
 
-void init_handle_table()
+void init_handle_table(vspace_t *vspace)
 {
-    void *handle_pool = malloc(kHandleTableSize);
+    /* Configure pages for handle pool */
+    vspace_new_pages_config_t config;
+    default_vspace_new_pages_config(kHandleTableNumPages, seL4_PageBits, &config);
+    vspace_new_pages_config_set_vaddr((void *)ZX_HANDLE_TABLE_START, &config);
+
+    /* Allocate handle pool */
+    void *handle_pool = vspace_new_pages_with_config(vspace, &config, seL4_AllRights);
     assert(handle_pool != NULL);
+    memset(handle_pool, 0, kHandleTableSize);
+
+    /* Create alloc object */
     assert(handle_table.init(handle_pool, kMaxHandleCount));
+
+    dprintf(ALWAYS, "Handle table created at %p, %lu pages\n", handle_pool, kHandleTableNumPages);
+    dprintf(ALWAYS, "End of handle table at %p\n", (void *)(((uintptr_t)handle_pool)
+            + (kHandleTableNumPages * BIT(seL4_PageBits))));
 }
 
-uint32_t get_new_base_value(uint32_t index)
+uint32_t get_new_base_value(void *p, uint32_t index)
 {
-    /* For now, just use index. Will need to add gen shifting! */
-    return index;
+    /* Check if this handle slot has been used before */
+    Handle *h = (Handle *)p;
+    uint32_t old_gen = 0;
+    if (h->get_value() != 0) {
+        dprintf(SPEW, "Handle at %p has been used before! Bumping gen.\n", p);
+        old_gen = (h->get_value() & kHandleGenerationMask) >> kHandleGenerationShift;
+    }
+    uint32_t new_gen = (((old_gen + 1) << kHandleGenerationShift) & kHandleGenerationMask);
+    return (index | new_gen);
 }
 
 Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)
@@ -35,7 +56,8 @@ Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)
         return NULL;
     }
     void *p = (void *)handle_table.get(index);
-    return new (p) Handle(obj, rights, get_new_base_value(index));
+    uint32_t base_value = get_new_base_value(p, index);
+    return new (p) Handle(obj, rights, base_value);
 }
 
 void free_handle(Handle *h)

@@ -8,6 +8,9 @@
 
 extern "C" {
 #include <sel4/sel4.h>
+#include <vka/object.h>
+#include <vspace/vspace.h>
+#include <sel4utils/vspace.h>
 #include <sel4utils/process.h>
 #include <zircon/types.h>
 }
@@ -16,12 +19,12 @@ extern "C" {
 #include "handle.h"
 #include "object.h"
 #include "vmar.h"
-//#include "thread.h"
+#include "thread.h"
 
-class ZxProcess final : public ZxObject {
+class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, seL4_Word badge_val) : handle_list_(this),
-            root_vmar_{root_vmar}, badge_val_{badge_val}/*, thread_list_(this) */{
+            root_vmar_{root_vmar}, thread_list_(this), badge_val_{badge_val} {
         memset(name_, 0, ZX_MAX_NAME_LEN);
         /* FIXME gen better rand val */
         handle_rand_ = get_koid();
@@ -30,6 +33,10 @@ public:
     ~ZxProcess() final {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_PROCESS; }
+
+    /* Init & destroy seL4 proc data */
+    bool init(vka_t *vka, vspace_t *server_vspace);
+    void destroy(vka_t *vka);
 
     void set_name(const char *name) {
         /* Silently truncate name */
@@ -68,8 +75,8 @@ public:
     void print_handles() {
         auto print_func = [] (Handle *h) {
             dprintf(INFO, "Handle at %p:\n", h);
-            dprintf(INFO, "%p %p %u %u\n", h->get_owner(), h->get_object(),
-                    h->get_rights(), h->get_value());
+            dprintf(INFO, "proc: %p\tobj: %p\trights: %u\tvalue: %u\n",
+                    h->get_owner(), h->get_object(), h->get_rights(), h->get_value());
         };
         handle_list_.for_each(print_func);
     }
@@ -84,7 +91,7 @@ private:
     /* Root vmar */
     ZxVmar *root_vmar_;
     /* Thread list */
-    //LinkedList<ZxThread> thread_list_;
+    LinkedList<ZxThread> thread_list_;
 
     /* Mask for ID-ing handle */
     uint32_t handle_rand_ = 0;
@@ -99,16 +106,25 @@ private:
     /* State */
     /* Exception port */
 
-    /* TODO sel4 specific stuff */
-    /*
-       Will probably need:
-       - cspace
-       - capptr to process endpoint
-       - badge value?
-    */
+    /* seL4 specific data */
+    struct seL4_ProcData {
+        /* vspace */
+        vka_object_t pd;
+        vspace_t vspace;
+        sel4utils_alloc_data_t data;
+
+        /* cspace */
+        vka_object_t cspace;
+        uint32_t cspace_next_free;
+
+        /* fault ep */
+        vka_object_t fault_ep;
+    };
+
+    struct seL4_ProcData *proc_data_;
 };
 
-void init_proc_table();
+void init_proc_table(vspace_t *vspace);
 ZxProcess *get_proc_from_badge(uint64_t badge);
 
 template <>

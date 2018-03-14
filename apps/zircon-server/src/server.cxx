@@ -1,12 +1,16 @@
 #include <autoconf.h>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <assert.h>
 
+#include "addrspace.h"
 #include "zxcpp/new.h"
 
 extern "C" {
+#include <vka/object.h>
 #include <zircon/types.h>
+#include <vspace/vspace.h>
 #include "debug.h"
 }
 
@@ -15,17 +19,26 @@ extern "C" {
 #include "object/vmar.h"
 
 extern "C" void do_cpp_test(void);
-extern "C" void init_zircon_server(void);
+extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace);
 extern "C" uint64_t init_zircon_test(void);
 extern "C" void send_zircon_test_data(seL4_CPtr ep_cap);
 
+/* seL4 interfaces used by server */
+vka_t *server_vka;
+vspace_t *server_vspace;
+
+/* Base zx objects for zircon test */
 ZxProcess *test_proc;
 ZxVmar *test_vmar;
 
-void init_zircon_server(void)
+void init_zircon_server(vka_t *vka, vspace_t *vspace)
 {
-    init_proc_table();
-    init_handle_table();
+    server_vka = vka;
+    server_vspace = vspace;
+
+    init_handle_table(server_vspace);
+    init_proc_table(server_vspace);
+    init_vmo_kmap();
 }
 
 uint64_t init_zircon_test(void)
@@ -55,12 +68,14 @@ void send_zircon_test_data(seL4_CPtr ep_cap)
     /* Add handles to process */
     test_proc->add_handle(vmar_handle);
     test_proc->add_handle(proc_handle);
+    test_proc->print_handles();
 
     /* Get user handle values */
     zx_handle_t vmar_uval = test_proc->get_handle_user_val(vmar_handle);
     zx_handle_t proc_uval = test_proc->get_handle_user_val(proc_handle);
 
     /* Send handles to zircon test */
+    dprintf(SPEW, "Sending test data to zircon test!\n");
     seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, vmar_uval);
     seL4_SetMR(1, proc_uval);
@@ -71,6 +86,30 @@ void do_cpp_test(void)
 {
     dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", root_base, root_size, (root_base+root_size));
 
+    /* Test allocation */
+    void *ptr;
+    ptr = malloc(10000);
+    dprintf(SPEW, "malloc ptr at %p\n", ptr);
+    free(ptr);
+
+    vspace_new_pages_config_t config;
+    default_vspace_new_pages_config(1, seL4_PageBits, &config);
+    vspace_new_pages_config_set_vaddr((void *)ZX_VMO_SERVER_MAP_START, &config);
+
+    ptr = vspace_new_pages_with_config(server_vspace, &config, seL4_AllRights);
+    dprintf(SPEW, "vspace page ptr at %p\n", ptr);
+    vspace_unmap_pages(server_vspace, (void *)ZX_VMO_SERVER_MAP_START, 1, seL4_PageBits, VSPACE_FREE);
+
+    ptr = vspace_new_pages_with_config(server_vspace, &config, seL4_AllRights);
+    dprintf(SPEW, "vspace page ptr at %p\n", ptr);
+    vspace_unmap_pages(server_vspace, (void *)ZX_VMO_SERVER_MAP_START, 1, seL4_PageBits, VSPACE_FREE);
+
+    dprintf(SPEW, "address of ptr at %p\n", &ptr);
+
+    uintptr_t vmo_kmap = alloc_vmo_kmap();
+    free_vmo_kmap(vmo_kmap);
+
+/*
     ZxVmar *vmar1 = allocate_object<ZxVmar>();
     assert(vmar1 != NULL);
     ZxProcess *p1 = allocate_object<ZxProcess>(vmar1);
@@ -106,9 +145,10 @@ void do_cpp_test(void)
 
     p1->remove_handle(h2);
     if (p1->destroy_handle(h2)) {
-        dprintf(SPEW, "Destroy vmar!\n");
+        dprintf(SPEW, "Destroy process!\n");
         free_object(p1);
     }
+*/
 }
 
 /*

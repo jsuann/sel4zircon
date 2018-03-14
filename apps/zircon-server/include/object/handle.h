@@ -33,7 +33,7 @@ private:
     const uint32_t base_value_;
 };
 
-void init_handle_table();
+void init_handle_table(vspace_t *vspace);
 Handle *allocate_handle(ZxObject *obj, zx_rights_t rights);
 void free_handle(Handle *h);
 Handle *base_value_to_addr(uint32_t base_value);
