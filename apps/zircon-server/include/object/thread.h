@@ -15,7 +15,7 @@ extern "C" {
 
 class ZxThread final : public ZxObject, public Listable<ZxProcess> {
 public:
-    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_PROCESS; }
+    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_THREAD; }
 private:
     /* TODO */
     uintptr_t user_entry_ = 0;
