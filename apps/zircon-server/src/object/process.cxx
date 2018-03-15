@@ -1,12 +1,18 @@
 #include "object/process.h"
 #include "zxcpp/stackalloc.h"
 
+/* If 1024 or greater, we need to create more ASID pools */
 constexpr size_t kMaxProcCount = 512u;
+
 constexpr uint32_t kProcIndexMask = kMaxProcCount - 1;
 constexpr size_t kProcTableSize = sizeof(ZxProcess) * kMaxProcCount;
 constexpr size_t kProcTableNumPages = (kProcTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 StackAlloc<ZxProcess> proc_table;
+
+/* Limit for threads per process */
+constexpr size_t kMaxThreadPerProc = 256u;
+constexpr size_t kProcThreadAllocSize = kMaxThreadPerProc / 8;
 
 /*
  *  ZxProcess non-member functions
@@ -65,10 +71,13 @@ bool ZxProcess::init(vka_t *vka, vspace_t *server_vspace)
 {
     (void)vka;
     (void)server_vspace;
+    if (thrd_alloc_.init(kProcThreadAllocSize))
+        return false;
     return true;
 }
 
 void ZxProcess::destroy(vka_t *vka)
 {
     (void)vka;
+    thrd_alloc_.destroy();
 }

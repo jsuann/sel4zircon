@@ -43,7 +43,8 @@ public:
     }
 
     void destroy() {
-        free(free_list_);
+        /* Make sure we don't use StackAlloc's free! */
+        ::free(free_list_);
     }
 
     bool alloc(uint32_t &index) {

@@ -20,6 +20,7 @@ extern "C" {
 #include "object.h"
 #include "vmar.h"
 #include "thread.h"
+#include "../zxcpp/bitalloc.h"
 
 class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
@@ -93,6 +94,9 @@ private:
     /* Thread list */
     LinkedList<ZxThread> thread_list_;
 
+    /* Thread index allocator */
+    BitAlloc thrd_alloc_;
+
     /* Mask for ID-ing handle */
     uint32_t handle_rand_ = 0;
 
@@ -121,7 +125,7 @@ private:
         vka_object_t fault_ep;
     };
 
-    struct seL4_ProcData *proc_data_;
+    seL4_ProcData *proc_data_;
 };
 
 void init_proc_table(vspace_t *vspace);

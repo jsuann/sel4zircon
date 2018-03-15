@@ -84,7 +84,8 @@ void send_zircon_test_data(seL4_CPtr ep_cap)
 
 void do_cpp_test(void)
 {
-    dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", root_base, root_size, (root_base+root_size));
+    dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", ZX_USER_ASPACE_BASE, ZX_USER_ASPACE_SIZE,
+            (ZX_USER_ASPACE_BASE+ZX_USER_ASPACE_SIZE));
 
     /* Test allocation */
     void *ptr;
@@ -109,6 +110,8 @@ void do_cpp_test(void)
     uintptr_t vmo_kmap = alloc_vmo_kmap();
     free_vmo_kmap(vmo_kmap);
 
+    dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",
+            sizeof(seL4_IPCBuffer), sizeof(seL4_MessageInfo_t));
 /*
     ZxVmar *vmar1 = allocate_object<ZxVmar>();
     assert(vmar1 != NULL);

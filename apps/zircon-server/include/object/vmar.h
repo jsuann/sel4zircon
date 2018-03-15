@@ -12,22 +12,23 @@ extern "C" {
 
 #include "linkedlist.h"
 #include "object.h"
-
-constexpr uintptr_t root_base = (1024 * 1024);
-constexpr ssize_t root_size = ((1ull << 47) - root_base);
+#include "../addrspace.h"
 
 class ZxVmar;
 
 class ZxVmar final : public ZxObject, public Listable<ZxVmar> {
 public:
     /* Root vmar constructor */
-    ZxVmar() : parent_{NULL}, children_{this}, base_{root_base},
-            size_{root_size} {}
+    ZxVmar() : children_{this}, base_{ZX_USER_ASPACE_BASE},
+            size_{ZX_USER_ASPACE_SIZE} {}
+
+    /* Child vmar constructor */
+    ZxVmar(uintptr_t base, ssize_t size) : children_{this},
+            base_{base}, size_{size} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
 private:
     /* Parent, child vmars */
-    ZxVmar *parent_;
     LinkedList<ZxVmar> children_;
 
     /* List of VMOs mapped in */
