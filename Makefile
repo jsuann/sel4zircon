@@ -53,7 +53,7 @@ select-test:
 
 simulate-x86_64:
 	qemu-system-x86_64 \
-        -m 4096 -nographic -kernel images/kernel-x86_64-pc99 \
+        -m 2048 -nographic -kernel images/kernel-x86_64-pc99 \
         -initrd images/zircon-server-image-x86_64-pc99 -cpu Haswell
 
 # Some example image builds (NOTE: may need to adapt addresses)

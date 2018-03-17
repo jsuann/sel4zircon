@@ -1,0 +1,90 @@
+From 406043642eae78c3c01a19ce581567d6577ba676 Mon Sep 17 00:00:00 2001
+From: Jack Suann <jacksuann@hotmail.com>
+Date: Sat, 17 Mar 2018 23:35:58 +1100
+Subject: [PATCH] libsel4simple-default: Fixes to cap info funcs
+
+- Get nth cap was making incorrect assumptions about region layout.
+- Cap count did not match final nth cap when not all init caps defined.
+- Fixed get nth untyped incorrect assert condition.
+---
+ libsel4simple-default/src/libsel4simple-default.c | 35 +++++++++++++----------
+ 1 file changed, 20 insertions(+), 15 deletions(-)
+
+diff --git a/libsel4simple-default/src/libsel4simple-default.c b/libsel4simple-default/src/libsel4simple-default.c
+index 3908eb0..ff7288e 100644
+--- a/libsel4simple-default/src/libsel4simple-default.c
++++ b/libsel4simple-default/src/libsel4simple-default.c
+@@ -68,27 +68,38 @@ int simple_default_cap_count(void *data) {
+ 
+     seL4_BootInfo * bi = data;
+ 
+-    return   (bi->sharedFrames.end - bi->sharedFrames.start)
++    int num = (bi->sharedFrames.end - bi->sharedFrames.start)
+            + (bi->userImageFrames.end - bi->userImageFrames.start)
+            + (bi->userImagePaging.end - bi->userImagePaging.start)
+            + (bi->untyped.end - bi->untyped.start)
+            + seL4_NumInitialCaps; //Include all the init caps
++#if defined(CONFIG_ARCH_ARM)
++    --num;
++#endif
++#ifndef CONFIG_IOMMU
++    --num;
++#endif
++    return num;
+ }
+ 
+ seL4_CPtr simple_default_nth_cap(void *data, int n) {
+     assert(data);
+ 
+     seL4_BootInfo * bi = data;
+-    size_t shared_frame_range = bi->sharedFrames.end - bi->sharedFrames.start + seL4_NumInitialCaps;
+-    size_t user_img_frame_range = bi->userImageFrames.end - bi->userImageFrames.start + shared_frame_range;
+-    size_t user_img_paging_range = bi->userImagePaging.end - bi->userImagePaging.start + user_img_frame_range;
+-    size_t untyped_range = bi->untyped.end - bi->untyped.start + user_img_paging_range;
++    size_t num_init_caps = seL4_NumInitialCaps;
++#if defined(CONFIG_ARCH_ARM)
++    --num_init_caps;
++#endif
++#ifndef CONFIG_IOMMU
++    --num_init_caps;
++#endif
++    size_t cap_range = bi->untyped.end - seL4_NumInitialCaps + num_init_caps;
+ 
+     seL4_CPtr true_return = seL4_CapNull;
+ 
+     if (n < seL4_CapInitThreadASIDPool) {
+         true_return = (seL4_CPtr) n+1;
+-    } else if (n < seL4_NumInitialCaps) {
++    } else if (n < num_init_caps) {
+         true_return = (seL4_CPtr) n+1;
+ #if defined(CONFIG_ARCH_ARM)
+         true_return++;
+@@ -98,14 +109,8 @@ seL4_CPtr simple_default_nth_cap(void *data, int n) {
+             true_return++;
+         }
+ #endif
+-    } else if (n < shared_frame_range) {
+-        return bi->sharedFrames.start + (n - seL4_NumInitialCaps);
+-    } else if (n < user_img_frame_range) {
+-        return bi->userImageFrames.start + (n - shared_frame_range);
+-    } else if (n < user_img_paging_range) {
+-        return bi->userImagePaging.start + (n - user_img_frame_range);
+-    } else if (n < untyped_range) {
+-        return bi->untyped.start + (n - user_img_paging_range);
++    } else if (n < cap_range) {
++        return seL4_NumInitialCaps + (n - num_init_caps + 1);
+     }
+ 
+     return true_return;
+@@ -128,7 +133,7 @@ int simple_default_untyped_count(void *data) {
+ }
+ 
+ seL4_CPtr simple_default_nth_untyped(void *data, int n, size_t *size_bits, uintptr_t *paddr, bool *device) {
+-    assert(data && size_bits && paddr);
++    assert(data);
+ 
+     seL4_BootInfo *bi = data;
+ 
+-- 
+2.16.2
+

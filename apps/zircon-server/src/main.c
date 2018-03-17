@@ -26,6 +26,7 @@
 #include <allocman/allocman.h>
 #include <allocman/bootstrap.h>
 #include <allocman/vka.h>
+#include <allocman/cspaceops.h>
 
 #include <vspace/vspace.h>
 
@@ -55,6 +56,10 @@ vka_t vka;
 allocman_t *allocman;
 vspace_t vspace;
 seL4_timer_t timer;
+
+/* Use a two level cspace to allow for higher memory usage */
+/* A patch for libsel4simple-default is required for this to work */
+#define ZX_USE_TWO_LEVEL_CSPACE     1
 
 /* static memory for the allocator to bootstrap with */
 #define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 40)
@@ -96,19 +101,44 @@ int main(void) {
     simple_default_init_bootinfo(&simple, info);
 
     /* print out bootinfo and other info about simple */
-    simple_print(&simple);
+    //simple_print(&simple);
 
+    dprintf(ALWAYS, "cap count: %d\n", simple_get_cap_count(&simple));
+    dprintf(ALWAYS, "empty: %lu, %lu\n", info->empty.start, info->empty.end);
+    dprintf(ALWAYS, "shared frames: %lu, %lu\n", info->sharedFrames.start, info->sharedFrames.end);
+    dprintf(ALWAYS, "io space caps: %lu, %lu\n", info->ioSpaceCaps.start, info->ioSpaceCaps.end);
+    dprintf(ALWAYS, "user img frames: %lu, %lu\n", info->userImageFrames.start, info->userImageFrames.end);
+    dprintf(ALWAYS, "user img paging: %lu, %lu\n", info->userImagePaging.start, info->userImagePaging.end);
+    dprintf(ALWAYS, "Extra boot info frames: %lu, %lu\n", info->extraBIPages.start, info->extraBIPages.end);
+    dprintf(ALWAYS, "untyped: %lu, %lu\n", info->untyped.start, info->untyped.end);
+
+    size_t cap_count = simple_get_cap_count(&simple);
+    for (size_t i = 0; i < cap_count; ++i) {
+        seL4_CPtr pos = simple_get_nth_cap(&simple,i);
+        if (pos < i)
+            dprintf(ALWAYS, "BAD: %luth cap, cap pos: %lu\n", i, pos);
+    }
+
+#if ZX_USE_TWO_LEVEL_CSPACE
+    allocman = bootstrap_new_2level_simple(&simple, 14, 14, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
+    assert(allocman);
+
+    allocman_make_vka(&vka, allocman);
+
+    error = sel4utils_bootstrap_vspace_with_bootinfo_leaky(&vspace, &data, seL4_CapInitThreadPD, &vka, info);
+    assert(!error);
+#else
     /* create an allocator */
-    allocman = bootstrap_use_current_simple(&simple, ALLOCATOR_STATIC_POOL_SIZE,
-                                            allocator_mem_pool);
+    allocman = bootstrap_use_current_simple(&simple, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
     assert(allocman);
 
     /* create a vka (interface for interacting with the underlying allocator) */
     allocman_make_vka(&vka, allocman);
 
     /* create a vspace object to manage our vspace */
-    error = sel4utils_bootstrap_vspace_with_bootinfo_leaky(&vspace,
-                                                           &data, simple_get_pd(&simple), &vka, info);
+    error = sel4utils_bootstrap_vspace_with_bootinfo_leaky(&vspace, &data, simple_get_pd(&simple), &vka, info);
+    assert(!error);
+#endif
 
     /* fill the allocator with virtual memory */
     void *vaddr = (void *)ALLOCATOR_VIRTUAL_POOL_START;
