@@ -57,12 +57,12 @@ vspace_t vspace;
 seL4_timer_t timer;
 
 /* static memory for the allocator to bootstrap with */
-#define ALLOCATOR_STATIC_POOL_SIZE (BIT(seL4_PageBits) * 20)
+#define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 40)
 static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 
 /* dimensions of virtual memory for the allocator to use */
-//#define ALLOCATOR_VIRTUAL_POOL_SIZE (BIT(seL4_PageBits) * 100)
-#define ALLOCATOR_VIRTUAL_POOL_SIZE (1*1024*1024)
+#define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 32000)
+#define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
 
 /* static memory for virtual memory bootstrapping */
 UNUSED static sel4utils_alloc_data_t data;
@@ -111,10 +111,9 @@ int main(void) {
                                                            &data, simple_get_pd(&simple), &vka, info);
 
     /* fill the allocator with virtual memory */
-    void *vaddr;
+    void *vaddr = (void *)ALLOCATOR_VIRTUAL_POOL_START;
     UNUSED reservation_t virtual_reservation;
-    virtual_reservation = vspace_reserve_range(&vspace,
-                                               ALLOCATOR_VIRTUAL_POOL_SIZE, seL4_AllRights, 1, &vaddr);
+    virtual_reservation = vspace_reserve_range_at(&vspace, vaddr, ALLOCATOR_VIRTUAL_POOL_SIZE, seL4_AllRights, 1);
     assert(virtual_reservation.res);
     bootstrap_configure_virtual_pool(allocman, vaddr,
                                      ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
@@ -126,6 +125,7 @@ int main(void) {
 
     /* Use zircon structures! */
 
+    init_zircon_server(&vka, &vspace);
 
 
     /* use sel4utils to make a new process */
@@ -142,7 +142,6 @@ int main(void) {
     error = vka_alloc_endpoint(&vka, &ep_object);
     assert(error == 0);
 
-    init_zircon_server(&vka, &vspace);
     uint64_t badge_val = init_zircon_test();
 
     /*

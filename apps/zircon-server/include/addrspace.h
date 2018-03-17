@@ -1,13 +1,13 @@
 #pragma once
 
 /* Zircon server address space allocation */
-#define ZX_HANDLE_TABLE_START       0x01000000ul
-#define ZX_PROCESS_TABLE_START      0x04000000ul
+#define ZX_HANDLE_TABLE_START       0x20000000ul
+#define ZX_PROCESS_TABLE_START      0x30000000ul
 
 #define ZX_VMO_SERVER_MAP_START     0x400000000ul
 
-/* VMOs can be max 16gb */
-#define ZX_VMO_SERVER_MAP_SIZE      0x400000000ul
+/* VMOs can be max 8gb (incl guard page) */
+#define ZX_VMO_SERVER_MAP_SIZE      0x200000000ul
 
 /* End of low vaddr space */
 #define ZX_VMO_SERVER_MAP_END       0x800000000000ul

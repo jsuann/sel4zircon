@@ -2,7 +2,7 @@
 #include "zxcpp/stackalloc.h"
 #include "addrspace.h"
 
-constexpr size_t kMaxHandleCount = 32 * 1024u;
+constexpr size_t kMaxHandleCount = 64 * 1024u;
 
 constexpr uint32_t kHandleIndexMask = kMaxHandleCount - 1;
 
