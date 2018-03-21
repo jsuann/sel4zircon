@@ -49,14 +49,6 @@
 #define APP_PRIORITY seL4_MaxPrio
 #define APP_IMAGE_NAME "zircon-test"
 
-/* global environment variables */
-seL4_BootInfo *info;
-simple_t simple;
-vka_t vka;
-allocman_t *allocman;
-vspace_t vspace;
-seL4_timer_t timer;
-
 /* Use a two level cspace to allow for higher memory usage */
 /* A patch for libsel4simple-default is required for this to work */
 #define ZX_USE_TWO_LEVEL_CSPACE     1
@@ -79,16 +71,21 @@ UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
 /* convenience function */
 extern void name_thread(seL4_CPtr tcb, char *name);
 
+/* zircon server calls */
 extern void do_cpp_test(void);
-void init_zircon_server(vka_t *vka, vspace_t *vspace);
-uint64_t init_zircon_test(void);
-void send_zircon_test_data(seL4_CPtr ep_cap);
-
-/* test */
-void syscall_loop(cspacepath_t ep_cap_path);
+extern void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
+extern uint64_t init_zircon_test(void);
+extern void send_zircon_test_data(seL4_CPtr ep_cap);
+extern void syscall_loop(void);
 
 int main(void) {
     int error;
+    seL4_BootInfo *info;
+    simple_t simple;
+    vka_t vka;
+    allocman_t *allocman;
+    vspace_t vspace;
+    seL4_timer_t timer;
 
     /* get boot info */
     info = platsupport_get_bootinfo();
@@ -155,7 +152,6 @@ int main(void) {
 
     /* Use zircon structures! */
 
-    init_zircon_server(&vka, &vspace);
 
 
     /* use sel4utils to make a new process */
@@ -172,6 +168,7 @@ int main(void) {
     error = vka_alloc_endpoint(&vka, &ep_object);
     assert(error == 0);
 
+    init_zircon_server(&vka, &vspace, ep_object.cptr);
     uint64_t badge_val = init_zircon_test();
 
     /*
@@ -236,26 +233,7 @@ int main(void) {
     do_cpp_test();
     send_zircon_test_data(ep_cap_path.capPtr);
 
-    syscall_loop(ep_cap_path);
+    syscall_loop();
 
     return 0;
-}
-
-void syscall_loop(cspacepath_t ep_cap_path)
-{
-    seL4_Word badge = 0;
-    seL4_MessageInfo_t tag;
-
-    dprintf(INFO, "Entering syscall loop\n");
-    for (;;) {
-        /* TODO: check badge for syscall/fault */
-        tag = seL4_Recv(ep_cap_path.capPtr, &badge);
-        seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-        if (syscall >= NUM_SYSCALLS) {
-            /* syscall doesn't exist */
-            sys_reply(ZX_ERR_BAD_SYSCALL);
-        } else {
-            DO_SYSCALL(syscall, tag, badge);
-        }
-    }
 }

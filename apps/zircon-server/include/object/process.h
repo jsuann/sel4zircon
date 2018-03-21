@@ -9,6 +9,7 @@
 extern "C" {
 #include <sel4/sel4.h>
 #include <vka/object.h>
+#include <vka/capops.h>
 #include <vspace/vspace.h>
 #include <sel4utils/vspace.h>
 #include <sel4utils/process.h>
@@ -24,8 +25,8 @@ extern "C" {
 
 class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
-    ZxProcess(ZxVmar *root_vmar, seL4_Word badge_val) : handle_list_(this),
-            root_vmar_{root_vmar}, thread_list_(this), badge_val_{badge_val} {
+    ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
+            root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
         memset(name_, 0, ZX_MAX_NAME_LEN);
         /* FIXME gen better rand val */
         handle_rand_ = get_koid();
@@ -35,9 +36,9 @@ public:
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_PROCESS; }
 
-    /* Init & destroy seL4 proc data */
-    bool init(vka_t *vka, vspace_t *server_vspace);
-    void destroy(vka_t *vka);
+    /* Init & destroy seL4 data */
+    bool init();
+    void destroy();
 
     void set_name(const char *name) {
         /* Silently truncate name */
@@ -82,9 +83,15 @@ public:
         handle_list_.for_each(print_func);
     }
 
-    uint64_t get_badge_val() const {
-        return badge_val_;
+    uint32_t get_proc_index() const {
+        return proc_index_;
     }
+
+    bool alloc_thread_index(uint32_t &index) {
+        return thrd_alloc_.alloc(index);
+    }
+
+    bool add_thread(ZxThread *thrd);
 
 private:
     /* List of Handles */
@@ -104,28 +111,17 @@ private:
 
     char name_[ZX_MAX_NAME_LEN];
 
-    uint64_t badge_val_;
+    uint32_t proc_index_;
 
     /* Owning Job */
     /* State */
     /* Exception port */
 
-    /* seL4 specific data */
-    struct seL4_ProcData {
-        /* vspace */
-        vka_object_t pd;
-        vspace_t vspace;
-        sel4utils_alloc_data_t data;
-
-        /* cspace */
-        vka_object_t cspace;
-        uint32_t cspace_next_free;
-
-        /* fault ep */
-        vka_object_t fault_ep;
-    };
-
-    seL4_ProcData *proc_data_;
+    /* vspace */
+    vka_object_t pd_;
+    vspace_t vspace_;
+    sel4utils_alloc_data_t data_;
+    seL4_CPtr asid_pool_;
 };
 
 void init_proc_table(vspace_t *vspace);

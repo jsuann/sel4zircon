@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include "server.h"
 #include "addrspace.h"
 #include "zxcpp/new.h"
 
@@ -12,6 +13,8 @@ extern "C" {
 #include <zircon/types.h>
 #include <vspace/vspace.h>
 #include "debug.h"
+#include "syscalls.h"
+#include "sys_helpers.h"
 }
 
 #include "object/handle.h"
@@ -19,22 +22,41 @@ extern "C" {
 #include "object/vmar.h"
 
 extern "C" void do_cpp_test(void);
-extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace);
+extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
 extern "C" uint64_t init_zircon_test(void);
 extern "C" void send_zircon_test_data(seL4_CPtr ep_cap);
+extern "C" void syscall_loop(void);
 
-/* seL4 interfaces used by server */
+/* seL4 stuff used by server */
 vka_t *server_vka;
 vspace_t *server_vspace;
+seL4_CPtr server_ep;
+
+vspace_t *get_server_vspace()
+{
+    return server_vspace;
+}
+
+vka_t *get_server_vka()
+{
+    return server_vka;
+}
+
+seL4_CPtr get_server_ep()
+{
+    return server_ep;
+}
 
 /* Base zx objects for zircon test */
-ZxProcess *test_proc;
 ZxVmar *test_vmar;
+ZxProcess *test_proc;
+ZxThread *test_thread;
 
-void init_zircon_server(vka_t *vka, vspace_t *vspace)
+void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
 {
     server_vka = vka;
     server_vspace = vspace;
+    server_ep = new_ep;
 
     init_handle_table(server_vspace);
     init_proc_table(server_vspace);
@@ -47,16 +69,24 @@ uint64_t init_zircon_test(void)
     test_vmar = allocate_object<ZxVmar>();
     assert(test_vmar != NULL);
 
-    /* Create a thread */
-
     /* Create a process */
     test_proc = allocate_object<ZxProcess>(test_vmar);
     test_proc->set_name("zircon-test");
+    test_proc->init();
+
+    /* Create a thread */
+    uint32_t thrd_index;
+    uint32_t proc_index = test_proc->get_proc_index();
+    assert(test_proc->alloc_thread_index(thrd_index));
+    test_thread = allocate_object<ZxThread>(proc_index, thrd_index);
+    test_thread->set_name("zircon-test-thread");
+    test_thread->init();
+    test_proc->add_thread(test_thread);
 
     /* Create VMOs */
 
     /* Return badge value for process */
-    return test_proc->get_badge_val();
+    return test_proc->get_proc_index();
 }
 
 void send_zircon_test_data(seL4_CPtr ep_cap)
@@ -154,6 +184,30 @@ void do_cpp_test(void)
 */
 }
 
+void syscall_loop(void)
+{
+    seL4_Word badge = 0;
+    seL4_MessageInfo_t tag;
+
+    dprintf(INFO, "Entering syscall loop\n");
+    for (;;) {
+        tag = seL4_Recv(server_ep, &badge);
+        /* Check for fault, irq, syscall */
+        if (badge & ZxFaultBadge) {
+            seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
+            dprintf(INFO, "Received fault, type %lu\n", fault_type);
+        } else {
+            seL4_Word syscall = seL4_MessageInfo_get_label(tag);
+            if (syscall >= NUM_SYSCALLS) {
+                /* syscall doesn't exist */
+                sys_reply(ZX_ERR_BAD_SYSCALL);
+            } else {
+                DO_SYSCALL(syscall, tag, badge);
+            }
+        }
+    }
+}
+
 /*
  * We need to include other cxx files in subdirs, rather than compile
  * them separately. This is due to enums defined in sel4/sel4.h causing
@@ -162,6 +216,7 @@ void do_cpp_test(void)
 #include "object/handle.cxx"
 #include "object/object.cxx"
 #include "object/process.cxx"
+#include "object/thread.cxx"
 
 #include "syscalls/channel.cxx"
 #include "syscalls/handle.cxx"
