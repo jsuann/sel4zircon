@@ -73,6 +73,11 @@ int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
     return error;
 }
 
+void vka_obj_alloc_func(void *cookie, vka_object_t object)
+{
+    dprintf(ALWAYS, "Alloc'd an object, type: %lu, size: %lu\n", object.type, object.size_bits);
+}
+
 /*
  *  ZxProcess member functions
  */
@@ -96,9 +101,8 @@ bool ZxProcess::init()
     error = assign_asid_pool(pd_.cptr, &asid_pool_);
     assert(!error);
 
-    /* Create a vspace */
-    /* TODO: add allocated object fn */
-    error = sel4utils_get_vspace(server_vspace, &vspace_, &data_, vka, pd_.cptr, NULL, NULL);
+    /* Create a vspace TODO do own management */
+    error = sel4utils_get_vspace(server_vspace, &vspace_, &data_, vka, pd_.cptr, vka_obj_alloc_func, NULL);
     assert(!error);
 
     return true;
