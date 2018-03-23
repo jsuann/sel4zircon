@@ -17,6 +17,9 @@ TARGETS := $(notdir $(SOURCE_DIR)).bin
 # whoever loads us will
 LDFLAGS += -u __vsyscall_ptr
 
+# Move start of elf sections to after USER_ASPACE_BASE
+LDFLAGS += -Wl,--section-start=.init=1000120
+
 # Source files required to build the target
 CFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.c))
 CXXFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.cxx))

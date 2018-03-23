@@ -74,8 +74,9 @@ int ZxThread::configure_tcb(seL4_CNode pd)
 {
     seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0, seL4_WordBits - kThreadCspaceBits);
     seL4_CapData_t null_cap_data = {{0}};
-    return seL4_TCB_Configure(tcb_.cptr, get_server_ep(), seL4_PrioProps_new(0,0), cspace_.cptr,
-                        cspace_root_data, pd, null_cap_data, (seL4_Word)ipc_buffer_addr_, ipc_buffer_);
+    return seL4_TCB_Configure(tcb_.cptr, get_server_ep(), seL4_PrioProps_new(0,0),
+                            cspace_.cptr, cspace_root_data, pd, null_cap_data,
+                            (seL4_Word)ipc_buffer_addr_, ipc_buffer_frame_.cptr);
 }
 
 void ZxThread::destroy()

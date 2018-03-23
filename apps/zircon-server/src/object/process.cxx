@@ -83,7 +83,6 @@ void vka_obj_alloc_func(void *cookie, vka_object_t object)
  */
 bool ZxProcess::init()
 {
-    /* TODO proper error handling, cleanup */
     int error;
     vka_t *vka = get_server_vka();
     vspace_t *server_vspace = get_server_vspace();
@@ -99,10 +98,6 @@ bool ZxProcess::init()
 
     /* Assign ASID pool */
     error = assign_asid_pool(pd_.cptr, &asid_pool_);
-    assert(!error);
-
-    /* Create a vspace TODO do own management */
-    error = sel4utils_get_vspace(server_vspace, &vspace_, &data_, vka, pd_.cptr, vka_obj_alloc_func, NULL);
     assert(!error);
 
     return true;
@@ -124,20 +119,45 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     uint32_t thrd_index = thrd->get_thread_index();
     uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd_index * 2);
 
-    /* Create IPC buffer */
-    vspace_new_pages_config_t config;
-    default_vspace_new_pages_config(1, seL4_PageBits, &config);
-    vspace_new_pages_config_set_vaddr((void *)ipc_buf_addr, &config);
-    void *ipc_buf = vspace_new_pages_with_config(&vspace_, &config, seL4_AllRights);
-    assert(ipc_buf != NULL);
+    /* Create IPC buffer frame */
+    vka_object_t ipc_frame;
+    error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
+    assert(!error);
 
-    /* Get cap to IPC buffer */
-    seL4_CPtr ipc_buf_cap = vspace_get_cap(&vspace_, ipc_buf);
+    /* Map IPC frame into vspace */
+    /* TODO make this a separate function? Common usage! */
+    vka_object_t objects[3];
+    int num_obj = 3;
+    error = sel4utils_map_page(vka, pd_.cptr, ipc_frame.cptr, (void *)ipc_buf_addr,
+                                seL4_AllRights, 1, objects, &num_obj);
+    assert(!error);
+
+    /* Store allocated PT objects */
+    for (int i = 0; i < num_obj; ++i) {
+        VkaObjectNode *head = new_vka_node(pt_list_, objects[i]);
+        assert(head != NULL);
+        pt_list_ = head;
+    }
+
+    /* XXX */
+    /*
+    free_vka_nodes(vka, pt_list_);
+    seL4_X86_Page_Unmap(ipc_frame.cptr);
+
+    vka_object_t ipc_frame2;
+    error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame2);
+    assert(!error);
+    error = sel4utils_map_page(vka, pd_.cptr, ipc_frame.cptr, (void *)(ipc_buf_addr),
+                                seL4_AllRights, 1, objects, &num_obj);
+    assert(!error);
+    dprintf(SPEW, "num objects: %d\n", num_obj);
+    */
 
     /* Assign IPC buffer to thread */
-    thrd->set_ipc_buffer(ipc_buf_cap, ipc_buf);
+    thrd->set_ipc_buffer(ipc_frame, ipc_buf_addr);
 
     /* Configure TCB */
+    dprintf(SPEW, "Conf tcb\n");
     error = thrd->configure_tcb(pd_.cptr);
     assert(!error);
 

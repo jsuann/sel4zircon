@@ -13,6 +13,7 @@ extern "C" {
 #include <vspace/vspace.h>
 #include <sel4utils/vspace.h>
 #include <sel4utils/process.h>
+#include <sel4utils/mapping.h>
 #include <zircon/types.h>
 }
 
@@ -22,6 +23,7 @@ extern "C" {
 #include "vmar.h"
 #include "thread.h"
 #include "../zxcpp/bitalloc.h"
+#include "vkaobjectnode.h"
 
 class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
@@ -119,9 +121,12 @@ private:
 
     /* vspace */
     vka_object_t pd_;
-    vspace_t vspace_;
-    sel4utils_alloc_data_t data_;
+    //vspace_t vspace_;
+    //sel4utils_alloc_data_t data_;
     seL4_CPtr asid_pool_;
+
+    /* Store any PT objects not stored in VMOs (e.g. for IPC buffers) */
+    VkaObjectNode *pt_list_ = NULL;
 };
 
 void init_proc_table(vspace_t *vspace);

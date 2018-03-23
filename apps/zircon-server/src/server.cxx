@@ -138,6 +138,7 @@ void do_cpp_test(void)
     dprintf(SPEW, "address of ptr at %p\n", &ptr);
 
     uintptr_t vmo_kmap = alloc_vmo_kmap();
+    /* TODO test page table funkiness */
     free_vmo_kmap(vmo_kmap);
 
     dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",

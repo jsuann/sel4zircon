@@ -45,8 +45,8 @@ public:
         return thread_index_;
     }
 
-    void set_ipc_buffer(seL4_CPtr ipc_buf, void *ipc_buf_addr) {
-        ipc_buffer_ = ipc_buf;
+    void set_ipc_buffer(vka_object_t ipc_buf, uintptr_t ipc_buf_addr) {
+        ipc_buffer_frame_ = ipc_buf;
         ipc_buffer_addr_ = ipc_buf_addr;
     }
 
@@ -72,7 +72,7 @@ private:
     /* TCB */
     vka_object_t tcb_;
     vka_object_t sched_context_;
-    seL4_CPtr ipc_buffer_;
-    void *ipc_buffer_addr_;
+    vka_object_t ipc_buffer_frame_;
+    uintptr_t ipc_buffer_addr_;
     seL4_CPtr reply_cap_;   // vka object for RT kernel
 };

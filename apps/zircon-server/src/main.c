@@ -187,6 +187,7 @@ int main(void) {
 
     /* spawn the process */
     error = sel4utils_spawn_process_v(&new_process, &vka, &vspace, 0, NULL, 1);
+    //error = sel4utils_spawn_process(&new_process, &vka, &vspace, 0, NULL, 1);
     assert(error == 0);
 
     vka_object_t ntfn_object = {0};

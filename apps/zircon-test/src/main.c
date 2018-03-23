@@ -84,11 +84,11 @@ int main(int argc, char **argv) {
     err = zx_handle_close(vmar_handle);
     printf("zx_handle_close returned %d\n", err);
 
-    test_cpp();
-
-    int *addr = (int *)0;
-    *addr = 0;
-    printf("yaaaah\n");
+    int stk = 0;
+    void *ptr = malloc(4);
+    int *ptr2 = (int *)0x100000;
+    printf("&stk: %p, ptr: %p\n", &stk, ptr);
+    printf("ptr2: %d\n", *ptr2);
 
     return 0;
 }
