@@ -12,14 +12,16 @@ extern "C" {
 
 #include "linkedlist.h"
 #include "object.h"
+#include "vm_region.h"
+#include "../zxcpp/vector.h"
 #include "../addrspace.h"
 
-class ZxVmar;
+class ZxProcess;
 
-class ZxVmar final : public ZxObject, public Listable<ZxVmar> {
+class ZxVmar final : public ZxObject, public VmRegion {
 public:
     /* Root vmar constructor */
-    ZxVmar() : children_{this}, base_{ZX_USER_ASPACE_BASE},
+    ZxVmar() : parent{NULL}, base_{ZX_USER_ASPACE_BASE},
             size_{ZX_USER_ASPACE_SIZE} {}
 
     /* Child vmar constructor */
@@ -27,17 +29,20 @@ public:
             base_{base}, size_{size} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
+    uintptr_t get_start_address() const override { return base_; }
+    bool is_vmar() const override { return true; }
+    bool is_vmo_mapping() const override { return false; }
 private:
-    /* Parent, child vmars */
-    LinkedList<ZxVmar> children_;
+    /* Owning process */
+    ZxProcess *proc_;
 
-    /* List of VMOs mapped in */
-    //LinkedList<ZxVmo> vmo_list_;
-    /* List of vmo cap mappings */
+    /* Parent vmar */
+    ZxVmar *parent_;
+
+    /* List of child vmars & mapped vmos */
+    Vector<VmRegion*> children_;
 
     /* start and end of addr space */
     uintptr_t base_;
     ssize_t size_;
-
-    /* sel4 page structs */
 };

@@ -10,26 +10,29 @@ extern "C" {
 #include <zircon/types.h>
 }
 
+#include "linkedlist.h"
 #include "object.h"
-#include "vkaobjectnode.h"
+#include "vmar.h"
+
+class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
+    uintptr_t get_start_address() const override { return start_address_; }
+    bool is_vmar() const override { return false; }
+    bool is_vmo_mapping() const override { return true; }
+private:
+    /* start address of vmo in process */
+    uintptr_t start_addr_;
+    /* caps to page frames */
+    seL4_CPtr caps_[];
+    /* ptr back to owning vmar */
+    ZxVmar *vmar_;
+};
+
 
 class ZxVmo final : public ZxObject {
 public:
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
 
 private:
-    struct VmoMapping;
-
-    /* Struct for maintaining mapping of VMOs */
-    struct VmoMapping {
-        /* start address of vmo in process */
-        uintptr_t start_addr;
-        /* caps to page frames */
-        seL4_CPtr caps[];
-        /* list of backing objects */
-        struct VkaObjectNode *pt_list;
-    };
-
     uint64_t size_;
     uint32_t num_pages_;
 
@@ -41,9 +44,8 @@ private:
 
     /* Server mapping info */
     uintptr_t kaddr_;
-    struct VkaObjectNode *kpt_list_; // XXX not needed? just leak server VMO backings
 
     /* process mapping of the vmo */
-    // TODO vector?
-    VmoMapping *proc_map_;
+    LinkedList<VmoMapping> proc_map_;
+    size_t num_mappings_ = 0;
 };

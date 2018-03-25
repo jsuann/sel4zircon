@@ -121,11 +121,9 @@ private:
 
     /* vspace */
     vka_object_t pd_;
-    //vspace_t vspace_;
-    //sel4utils_alloc_data_t data_;
     seL4_CPtr asid_pool_;
 
-    /* Store any PT objects not stored in VMOs (e.g. for IPC buffers) */
+    /* Used to store PT objects */
     VkaObjectNode *pt_list_ = NULL;
 };
 
