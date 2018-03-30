@@ -1,10 +1,15 @@
 #include "object/object.h"
 
+namespace ObjectCxx {
+
 zx_koid_t global_koid = 1024ULL;
 
-ZxObject::ZxObject() : koid_{global_koid},  handle_count_{0}, signals_{0}
+}
+
+ZxObject::ZxObject() : koid_{ObjectCxx::global_koid},
+    handle_count_{0}, signals_{0}
 {
-    ++global_koid;
+    ++ObjectCxx::global_koid;
 }
 
 template <typename T, typename ... U>

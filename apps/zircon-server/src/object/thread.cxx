@@ -1,6 +1,8 @@
 #include "object/thread.h"
 #include "server.h"
 
+namespace ThreadCxx {
+
 /* Thread cspace size. Should be as small as possible */
 constexpr size_t kThreadCspaceBits = 4;
 constexpr size_t kThreadBadgeShift = 12;
@@ -12,11 +14,15 @@ void set_dest_slot(cspacepath_t *dest, seL4_CPtr root, seL4_CPtr slot)
     dest->capDepth = kThreadCspaceBits;
 }
 
+} /* namespace ThreadCxx */
+
 /*
  *  ZxThread member functions
  */
 int ZxThread::copy_cap_to_thread(cspacepath_t *src, seL4_CPtr slot)
 {
+    using namespace ThreadCxx;
+
     cspacepath_t dest = {0};
     set_dest_slot(&dest, cspace_.cptr, slot);
     return vka_cnode_copy(&dest, src, seL4_AllRights);
@@ -24,6 +30,8 @@ int ZxThread::copy_cap_to_thread(cspacepath_t *src, seL4_CPtr slot)
 
 bool ZxThread::init()
 {
+    using namespace ThreadCxx;
+
     /* TODO proper error handling, cleanup */
     int error;
     vka_t *vka = get_server_vka();
@@ -72,6 +80,8 @@ bool ZxThread::init()
 
 int ZxThread::configure_tcb(seL4_CNode pd)
 {
+    using namespace ThreadCxx;
+
     seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0, seL4_WordBits - kThreadCspaceBits);
     seL4_CapData_t null_cap_data = {{0}};
     return seL4_TCB_Configure(tcb_.cptr, get_server_ep(), seL4_PrioProps_new(0,0),
@@ -81,4 +91,5 @@ int ZxThread::configure_tcb(seL4_CNode pd)
 
 void ZxThread::destroy()
 {
+    using namespace ThreadCxx;
 }

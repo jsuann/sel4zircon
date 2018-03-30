@@ -21,11 +21,11 @@ class ZxProcess;
 class ZxVmar final : public ZxObject, public VmRegion {
 public:
     /* Root vmar constructor */
-    ZxVmar() : parent{NULL}, base_{ZX_USER_ASPACE_BASE},
+    ZxVmar() : parent_{NULL}, base_{ZX_USER_ASPACE_BASE},
             size_{ZX_USER_ASPACE_SIZE} {}
 
     /* Child vmar constructor */
-    ZxVmar(uintptr_t base, ssize_t size) : children_{this},
+    ZxVmar(ZxVmar *parent, uintptr_t base, ssize_t size) : parent_{parent},
             base_{base}, size_{size} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }

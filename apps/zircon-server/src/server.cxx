@@ -27,33 +27,39 @@ extern "C" uint64_t init_zircon_test(void);
 extern "C" void send_zircon_test_data(seL4_CPtr ep_cap);
 extern "C" void syscall_loop(void);
 
+/* Wrap globals in a namespace to prevent access outside this file */
+namespace ServerCxx {
+
 /* seL4 stuff used by server */
 vka_t *server_vka;
 vspace_t *server_vspace;
 seL4_CPtr server_ep;
-
-vspace_t *get_server_vspace()
-{
-    return server_vspace;
-}
-
-vka_t *get_server_vka()
-{
-    return server_vka;
-}
-
-seL4_CPtr get_server_ep()
-{
-    return server_ep;
-}
-
 /* Base zx objects for zircon test */
 ZxVmar *test_vmar;
 ZxProcess *test_proc;
 ZxThread *test_thread;
 
+} /* namespace ServerCxx */
+
+vspace_t *get_server_vspace()
+{
+    return ServerCxx::server_vspace;
+}
+
+vka_t *get_server_vka()
+{
+    return ServerCxx::server_vka;
+}
+
+seL4_CPtr get_server_ep()
+{
+    return ServerCxx::server_ep;
+}
+
 void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
 {
+    using namespace ServerCxx;
+
     server_vka = vka;
     server_vspace = vspace;
     server_ep = new_ep;
@@ -65,6 +71,8 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
 
 uint64_t init_zircon_test(void)
 {
+    using namespace ServerCxx;
+
     /* Create a root vmar */
     test_vmar = allocate_object<ZxVmar>();
     assert(test_vmar != NULL);
@@ -91,6 +99,8 @@ uint64_t init_zircon_test(void)
 
 void send_zircon_test_data(seL4_CPtr ep_cap)
 {
+    using namespace ServerCxx;
+
     /* Get handles to test objects */
     Handle *vmar_handle = test_vmar->create_handle(ZX_RIGHTS_IO);
     Handle *proc_handle = test_proc->create_handle(ZX_RIGHTS_BASIC);
@@ -114,6 +124,8 @@ void send_zircon_test_data(seL4_CPtr ep_cap)
 
 void do_cpp_test(void)
 {
+    using namespace ServerCxx;
+
     dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", ZX_USER_ASPACE_BASE, ZX_USER_ASPACE_SIZE,
             (ZX_USER_ASPACE_BASE+ZX_USER_ASPACE_SIZE));
 
@@ -143,6 +155,7 @@ void do_cpp_test(void)
 
     dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",
             sizeof(seL4_IPCBuffer), sizeof(seL4_MessageInfo_t));
+
 /*
     ZxVmar *vmar1 = allocate_object<ZxVmar>();
     assert(vmar1 != NULL);
@@ -187,6 +200,8 @@ void do_cpp_test(void)
 
 void syscall_loop(void)
 {
+    using namespace ServerCxx;
+
     seL4_Word badge = 0;
     seL4_MessageInfo_t tag;
 
@@ -212,7 +227,7 @@ void syscall_loop(void)
 /*
  * We need to include other cxx files in subdirs, rather than compile
  * them separately. This is due to enums defined in sel4/sel4.h causing
- * linker issues.
+ * linker issues. Namespaces are used to provided inter-file safety.
  */
 #include "object/handle.cxx"
 #include "object/object.cxx"

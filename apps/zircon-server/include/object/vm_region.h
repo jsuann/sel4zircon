@@ -8,7 +8,6 @@
 class VmRegion {
 public:
     /* Pure virtual */
-    virtual void VmRegion() = 0;
     virtual uintptr_t get_start_address() const = 0;
     virtual bool is_vmar() const = 0;
     virtual bool is_vmo_mapping() const = 0;

@@ -2,6 +2,8 @@
 #include "zxcpp/stackalloc.h"
 #include "server.h"
 
+namespace ProcessCxx {
+
 /* If 1024 or greater, we need to create more ASID pools */
 constexpr size_t kMaxProcCount = 512u;
 
@@ -15,11 +17,26 @@ StackAlloc<ZxProcess> proc_table;
 constexpr size_t kMaxThreadPerProc = 256u;
 constexpr size_t kProcThreadAllocSize = kMaxThreadPerProc / 8;
 
+int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
+{
+    /* XXX just use init asid pool for now */
+    int error = seL4_X86_ASIDPool_Assign(seL4_CapInitThreadASIDPool, pd);
+    if (error) {
+        dprintf(CRITICAL, "Failed to assign asid pool to process!\n");
+    }
+    *ret_pool = seL4_CapInitThreadASIDPool;
+    return error;
+}
+
+} /* namespace ProcessCxx */
+
 /*
  *  ZxProcess non-member functions
  */
 void init_proc_table(vspace_t *vspace)
 {
+    using namespace ProcessCxx;
+
     /* Configure pages for proc pool */
     vspace_new_pages_config_t config;
     default_vspace_new_pages_config(kProcTableNumPages, seL4_PageBits, &config);
@@ -40,6 +57,8 @@ void init_proc_table(vspace_t *vspace)
 
 ZxProcess *get_proc_from_badge(uint64_t badge)
 {
+    using namespace ProcessCxx;
+
     uint32_t index = (badge & kProcIndexMask);
     return proc_table.get(index);
 }
@@ -47,6 +66,8 @@ ZxProcess *get_proc_from_badge(uint64_t badge)
 template <>
 ZxProcess *allocate_object<ZxProcess>(ZxVmar *root_vmar)
 {
+    using namespace ProcessCxx;
+
     uint32_t index;
     if (!proc_table.alloc(index)) {
         return NULL;
@@ -58,24 +79,10 @@ ZxProcess *allocate_object<ZxProcess>(ZxVmar *root_vmar)
 template <>
 void free_object<ZxProcess>(ZxProcess *obj)
 {
+    using namespace ProcessCxx;
+
     uint32_t index = obj->get_proc_index();
     proc_table.free(index);
-}
-
-int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
-{
-    /* XXX just use init asid pool for now */
-    int error = seL4_X86_ASIDPool_Assign(seL4_CapInitThreadASIDPool, pd);
-    if (error) {
-        dprintf(CRITICAL, "Failed to assign asid pool to process!\n");
-    }
-    *ret_pool = seL4_CapInitThreadASIDPool;
-    return error;
-}
-
-void vka_obj_alloc_func(void *cookie, vka_object_t object)
-{
-    dprintf(ALWAYS, "Alloc'd an object, type: %lu, size: %lu\n", object.type, object.size_bits);
 }
 
 /*
@@ -83,6 +90,8 @@ void vka_obj_alloc_func(void *cookie, vka_object_t object)
  */
 bool ZxProcess::init()
 {
+    using namespace ProcessCxx;
+
     int error;
     vka_t *vka = get_server_vka();
     vspace_t *server_vspace = get_server_vspace();
@@ -105,6 +114,8 @@ bool ZxProcess::init()
 
 bool ZxProcess::add_thread(ZxThread *thrd)
 {
+    using namespace ProcessCxx;
+
     /* TODO proper error handling, cleanup */
     int error;
     cspacepath_t src;
@@ -168,5 +179,7 @@ bool ZxProcess::add_thread(ZxThread *thrd)
 
 void ZxProcess::destroy()
 {
+    using namespace ProcessCxx;
+
     thrd_alloc_.destroy();
 }

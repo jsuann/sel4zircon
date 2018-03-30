@@ -51,17 +51,17 @@ public:
         /* Find insert location */
         size_t i = 0;
         for (; i < num_items_; ++i) {
-            if (cmp(item,vec[i])) {
+            if (cmp(item, vec_[i])) {
                 break;
             }
         }
         assert(i <= num_items_);
 
         /* Make space for item at i */
-        memmove((&vec[i] + 1), &vec[i], ((num_items_ - i) * sizeof(T)));
+        memmove((&vec_[i] + 1), &vec_[i], ((num_items_ - i) * sizeof(T)));
 
         /* Insert item at i */
-        vec[i] = item;
+        vec_[i] = item;
         ++num_items_;
         return true;
     }
@@ -70,16 +70,16 @@ public:
         /* Find index of item */
         size_t i = 0;
         for (; i < num_items_; ++i) {
-            if (item == vec[i]) {
+            if (item == vec_[i]) {
                 break;
             }
         }
         if (i == num_items_) {
             return false;
         }
-        
+
         /* Memmove over item */
-        memmove(&vec[i], (&vec[i] + 1), ((num_items_ - i) * sizeof(T)));
+        memmove(&vec_[i], (&vec_[i] + 1), ((num_items_ - i) * sizeof(T)));
         --num_items_;
         return true;
     }
