@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include "../zxcpp/vector.h"
 
 class VmRegion {
 public:
@@ -13,7 +14,8 @@ public:
     virtual bool is_vmo_mapping() const = 0;
 };
 
-bool cmp(VmRegion *a, VmRegion *b)
+template <>
+bool cmp<VmRegion>(VmRegion *a, VmRegion *b)
 {
     return (a->get_start_address() < b->get_start_address());
 }

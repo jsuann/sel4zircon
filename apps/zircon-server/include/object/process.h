@@ -29,7 +29,6 @@ class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
             root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
-        memset(name_, 0, ZX_MAX_NAME_LEN);
         /* FIXME gen better rand val */
         handle_rand_ = get_koid();
     }
@@ -111,7 +110,7 @@ private:
 
     int retcode_ = 0;
 
-    char name_[ZX_MAX_NAME_LEN];
+    char name_[ZX_MAX_NAME_LEN] = {0};
 
     uint32_t proc_index_;
 

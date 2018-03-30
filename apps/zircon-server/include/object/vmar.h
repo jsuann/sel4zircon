@@ -13,7 +13,6 @@ extern "C" {
 #include "linkedlist.h"
 #include "object.h"
 #include "vm_region.h"
-#include "../zxcpp/vector.h"
 #include "../addrspace.h"
 
 class ZxProcess;
@@ -32,6 +31,10 @@ public:
     uintptr_t get_start_address() const override { return base_; }
     bool is_vmar() const override { return true; }
     bool is_vmo_mapping() const override { return false; }
+
+    bool init();
+    void destroy();
+
 private:
     /* Owning process */
     ZxProcess *proc_;

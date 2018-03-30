@@ -21,9 +21,7 @@ extern "C" {
 class ZxThread final : public ZxObject, public Listable<ZxThread> {
 public:
     ZxThread(uint32_t proc_index, uint32_t thread_index) :
-            proc_index_{proc_index}, thread_index_{thread_index} {
-        memset(name_, 0, ZX_MAX_NAME_LEN);
-    }
+            proc_index_{proc_index}, thread_index_{thread_index} {}
 
     ~ZxThread() final {}
 
@@ -64,7 +62,7 @@ private:
     /* State */
     /* Exception port */
 
-    char name_[ZX_MAX_NAME_LEN];
+    char name_[ZX_MAX_NAME_LEN] = {0};
 
     /* cspace */
     vka_object_t cspace_;
