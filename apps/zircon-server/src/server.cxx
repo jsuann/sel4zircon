@@ -13,9 +13,10 @@ extern "C" {
 #include <zircon/types.h>
 #include <vspace/vspace.h>
 #include "debug.h"
+}
+
 #include "syscalls.h"
 #include "sys_helpers.h"
-}
 
 #include "object/handle.h"
 #include "object/process.h"
@@ -234,6 +235,7 @@ void syscall_loop(void)
 #include "object/process.cxx"
 #include "object/thread.cxx"
 
+#include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
 #include "syscalls/handle.cxx"
 #include "syscalls/other.cxx"

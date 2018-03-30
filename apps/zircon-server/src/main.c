@@ -39,8 +39,6 @@
 #include <platsupport/plat/timer.h>
 
 #include "debug.h"
-#include "syscalls.h"
-#include "sys_helpers.h"
 
 /* constants */
 #define EP_BADGE 0x61 // arbitrary (but unique) number for a badge

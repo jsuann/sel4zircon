@@ -6,8 +6,10 @@
 #include <stdint.h>
 #include <assert.h>
 
+extern "C" {
 #include <sel4/sel4.h>
 #include <zircon/types.h>
+}
 
 typedef void (*zx_syscall_func)(seL4_MessageInfo_t tag, uint64_t badge);
 

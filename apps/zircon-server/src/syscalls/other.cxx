@@ -4,11 +4,10 @@
 #include <assert.h>
 
 extern "C" {
-#include "sys_helpers.h"
 #include "debug.h"
 }
 
-extern "C" void sys_undefined(seL4_MessageInfo_t tag, uint64_t badge);
+#include "sys_helpers.h"
 
 void sys_undefined(seL4_MessageInfo_t tag, uint64_t badge)
 {

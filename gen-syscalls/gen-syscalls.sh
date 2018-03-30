@@ -8,7 +8,7 @@ SYSCALL_ABIGEN=system/public/zircon/syscalls.abigen
 ABIGEN_FLAT=abigen-flat
 
 DEFS_FILE=../apps/zircon-server/include/syscall_defs.h
-TABLE_FILE=../apps/zircon-server/src/syscalls/sys_table.c
+TABLE_FILE=../apps/zircon-server/src/syscalls/sys_table.cxx
 SYSNO_FILE=../libzircon/src/sys_def.h
 
 DEFINED_LIST=syscalls.list

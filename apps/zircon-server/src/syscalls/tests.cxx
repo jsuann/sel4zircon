@@ -4,22 +4,10 @@
 #include <assert.h>
 
 extern "C" {
-#include "sys_helpers.h"
 #include "debug.h"
 }
 
-extern "C" {
-void sys_syscall_test_0(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_1(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_2(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_3(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_4(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_5(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_6(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_7(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_8(seL4_MessageInfo_t tag, uint64_t badge);
-void sys_syscall_test_wrapper(seL4_MessageInfo_t tag, uint64_t badge);
-}
+#include "sys_helpers.h"
 
 /* Test syscalls return sum of args */
 #define DO_TEST_SYSCALL(n) \

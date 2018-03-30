@@ -1,8 +1,11 @@
 #pragma once
 
 #include <autoconf.h>
+
+extern "C" {
 #include <sel4/sel4.h>
 #include <zircon/types.h>
+}
 
 /* generic reply function */
 static inline void sys_reply(zx_status_t res)
