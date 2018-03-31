@@ -94,7 +94,6 @@ bool ZxProcess::init()
 
     int error;
     vka_t *vka = get_server_vka();
-    vspace_t *server_vspace = get_server_vspace();
 
     /* Create thread id allocator */
     if (!thrd_alloc_.init(kProcThreadAllocSize)) {
@@ -149,20 +148,6 @@ bool ZxProcess::add_thread(ZxThread *thrd)
         assert(head != NULL);
         pt_list_ = head;
     }
-
-    /* XXX */
-    /*
-    free_vka_nodes(vka, pt_list_);
-    seL4_X86_Page_Unmap(ipc_frame.cptr);
-
-    vka_object_t ipc_frame2;
-    error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame2);
-    assert(!error);
-    error = sel4utils_map_page(vka, pd_.cptr, ipc_frame.cptr, (void *)(ipc_buf_addr),
-                                seL4_AllRights, 1, objects, &num_obj);
-    assert(!error);
-    dprintf(SPEW, "num objects: %d\n", num_obj);
-    */
 
     /* Assign IPC buffer to thread */
     thrd->set_ipc_buffer(ipc_frame, ipc_buf_addr);

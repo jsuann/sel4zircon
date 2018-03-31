@@ -130,7 +130,7 @@ void do_cpp_test(void)
     dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", ZX_USER_ASPACE_BASE, ZX_USER_ASPACE_SIZE,
             (ZX_USER_ASPACE_BASE+ZX_USER_ASPACE_SIZE));
 
-    /* Test allocation */
+    // Test allocation
     void *ptr;
     ptr = malloc(10000);
     dprintf(SPEW, "malloc ptr at %p\n", ptr);
@@ -151,12 +151,16 @@ void do_cpp_test(void)
     dprintf(SPEW, "address of ptr at %p\n", &ptr);
 
     uintptr_t vmo_kmap = alloc_vmo_kmap();
-    /* TODO test page table funkiness */
+    // TODO test page table funkiness
     free_vmo_kmap(vmo_kmap);
 
     dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",
             sizeof(seL4_IPCBuffer), sizeof(seL4_MessageInfo_t));
 
+    vka_object_t test_vka = {0};
+    test_vka.size_bits = 12;
+    test_vka = {0};
+    assert(test_vka.size_bits == 0);
 /*
     ZxVmar *vmar1 = allocate_object<ZxVmar>();
     assert(vmar1 != NULL);

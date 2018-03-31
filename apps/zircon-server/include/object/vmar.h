@@ -24,16 +24,19 @@ public:
             size_{ZX_USER_ASPACE_SIZE} {}
 
     /* Child vmar constructor */
-    ZxVmar(ZxVmar *parent, uintptr_t base, ssize_t size) : parent_{parent},
+    ZxVmar(ZxVmar *parent, uintptr_t base, size_t size) : parent_{parent},
             base_{base}, size_{size} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
-    uintptr_t get_start_address() const override { return base_; }
+
+    uintptr_t get_base() const override { return base_; }
+    size_t get_size() const override { return size_; }
+    VmRegion *get_parent() const override { return parent_; }
     bool is_vmar() const override { return true; }
     bool is_vmo_mapping() const override { return false; }
 
-    bool init();
-    void destroy();
+    bool check_vm_region(uintptr_t child_base, size_t child_size);
+    bool add_vm_region(VmRegion *child);
 
 private:
     /* Owning process */
@@ -47,5 +50,5 @@ private:
 
     /* start and end of addr space */
     uintptr_t base_;
-    ssize_t size_;
+    size_t size_;
 };

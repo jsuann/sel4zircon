@@ -8,7 +8,7 @@
 
 constexpr size_t vectorBaseSize = 4;
 
-template <typename T> bool cmp(T *a, T *b);
+template <typename T> bool cmp(T a, T b);
 
 template <typename T>
 class Vector {
@@ -38,6 +38,15 @@ public:
 
     T *get() {
         return vec_;
+    }
+
+    bool contains(T item) {
+        for (size_t i = 0; i < num_items_; ++i) {
+            if (vec_[i] == item) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool insert(T item) {
