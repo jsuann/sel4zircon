@@ -61,10 +61,12 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
 {
     using namespace ServerCxx;
 
+    /* store server globals */
     server_vka = vka;
     server_vspace = vspace;
     server_ep = new_ep;
 
+    /* init allocators */
     init_handle_table(server_vspace);
     init_proc_table(server_vspace);
     init_vmo_kmap();

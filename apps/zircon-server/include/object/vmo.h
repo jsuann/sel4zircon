@@ -14,8 +14,8 @@ extern "C" {
 #include "object.h"
 #include "vmar.h"
 
+/* Class representing the mapping of vmo in a vmar */
 class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
-    friend class ZxVmo;
 public:
     VmoMapping(uintptr_t start_addr, ZxVmar *parent) :
             start_addr_{start_addr}, parent_{parent} {}
@@ -25,9 +25,6 @@ public:
     VmRegion *get_parent() const override { return parent_; }
     bool is_vmar() const override { return false; }
     bool is_vmo_mapping() const override { return true; }
-
-    bool init();
-    void destroy();
 
 private:
     /* start address of vmo in process */
@@ -39,6 +36,7 @@ private:
 };
 
 class ZxVmo final : public ZxObject {
+    friend class VmoMapping;
 public:
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
 
@@ -51,6 +49,8 @@ public:
     void destroy();
 
     VmoMapping *create_mapping(uintptr_t start_addr, ZxVmar *vmar);
+
+    bool commit_page(uintptr_t addr, VmoMapping *vmap);
 
 private:
     /* Server mapping address */
