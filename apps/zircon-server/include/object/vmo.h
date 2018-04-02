@@ -15,10 +15,11 @@ extern "C" {
 #include "vmar.h"
 
 /* Class representing the mapping of vmo in a vmar */
+/* TODO mapping rights! */
 class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
 public:
-    VmoMapping(uintptr_t start_addr, ZxVmar *parent) :
-            start_addr_{start_addr}, parent_{parent} {}
+    VmoMapping(uintptr_t start_addr, seL4_CPtr *caps, ZxVmar *parent) :
+            start_addr_{start_addr}, caps_{caps}, parent_{parent} {}
 
     uintptr_t get_base() const override { return start_addr_; }
     size_t get_size() const override { return ((ZxVmo*)get_owner())->size_; }
@@ -30,7 +31,7 @@ private:
     /* start address of vmo in process */
     uintptr_t start_addr_;
     /* caps to page frames */
-    seL4_CPtr *caps_ = NULL;
+    seL4_CPtr *caps_;
     /* ptr back to owning vmar */
     ZxVmar *parent_;
 };
@@ -66,5 +67,4 @@ private:
 
     /* process mappings of the vmo */
     LinkedList<VmoMapping> map_list_;
-    uint32_t num_mappings_ = 0;
 };
