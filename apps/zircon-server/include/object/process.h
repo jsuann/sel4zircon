@@ -93,6 +93,8 @@ public:
     }
 
     bool add_thread(ZxThread *thrd);
+    int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
+            seL4_CapRights_t rights, int cacheable);
 
 private:
     /* List of Handles */

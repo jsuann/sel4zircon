@@ -240,6 +240,8 @@ void syscall_loop(void)
 #include "object/object.cxx"
 #include "object/process.cxx"
 #include "object/thread.cxx"
+#include "object/vmar.cxx"
+#include "object/vmo.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"

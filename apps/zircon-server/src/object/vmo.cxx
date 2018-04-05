@@ -4,10 +4,8 @@
 bool ZxVmo::init()
 {
     /* Create array of uninitialised frame objects */
-    frames_ = calloc(num_pages_, sizeof(vka_object_t));
-    if (frames_ == NULL) {
-        return false;
-    }
+    frames_ = (vka_object_t *)calloc(num_pages_, sizeof(vka_object_t));
+    return (frames_ != NULL);
 }
 
 void ZxVmo::destroy()
@@ -25,7 +23,7 @@ void ZxVmo::destroy()
     free(frames_);
 }
 
-VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar)
+VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags)
 {
     /* Alloc mem for vmap */
     void *vmap_mem = malloc(sizeof(VmoMapping));
@@ -34,13 +32,26 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar)
     }
 
     /* Alloc mem for cap array */
-    seL4_CPtr *caps = calloc(num_pages_, sizeof(seL4_CPtr));
+    seL4_CPtr *caps = (seL4_CPtr *)calloc(num_pages_, sizeof(seL4_CPtr));
     if (caps == NULL) {
         free(vmap_mem);
         return NULL;
     }
 
-    VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, caps, vmar);
+    /* get frame access rights from mapping flags (should be valid by this point!) */
+    seL4_CapRights_t rights;
+    seL4_Word can_read = 0;
+    seL4_Word can_write = 0;
+    if (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE) {
+        can_read = 1;
+    }
+    if (flags & ZX_VM_FLAG_PERM_WRITE) {
+        can_write = 1;
+    }
+    rights = seL4_CapRights_new(0, can_read, can_write);
+
+    /* Create mapping */
+    VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, caps, rights, vmar);
     map_list_.push_back(vmap);
     return vmap;
 }
@@ -67,24 +78,26 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
 }
 
 /* TODO cache attributes? */
-bool commit_page(uint32_t index, VmoMapping *vmap, uint32_t flags)
+bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 {
+    int err;
     vka_t *vka = get_server_vka();
     assert(index < num_pages_);
 
     /* If frame not yet allocated, alloc & map into server */
     if (frames_[index].cptr == 0) {
         /* TODO at paddr, maybe device? */
-        int err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
+        err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
         if (err) {
             return false;
         }
         uintptr_t kvaddr = kaddr_ + (index * (1 << seL4_PageBits));
         /* vmo kmap is likely to be reused so leak PTs */
-        int err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
+        err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
                 frames_[index].cptr, (void *)kvaddr, seL4_AllRights, 1);
         if (err) {
-            /* TODO delete frame */
+            vka_free_object(vka, &frames_[index]);
+            memset(&frames_[index], 0, sizeof(vka_object_t));
             return false;
         }
     }
@@ -96,13 +109,57 @@ bool commit_page(uint32_t index, VmoMapping *vmap, uint32_t flags)
         if (vmap->caps_[index] != 0) {
             cspacepath_t src, dest;
             /* src is kmap slot, dest is vmap slot */
-            int err = vka_cspace_alloc(vka, &dest);
+            err = vka_cspace_alloc_path(vka, &dest);
             if (err) {
                 return false;
             }
-            vka_cspace_make_path(vka, frames_[index].cptr, &dest);
+            vka_cspace_make_path(vka, frames_[index].cptr, &src);
+            /* Copy to dest slot */
+            err = vka_cnode_copy(&dest, &src, seL4_AllRights);
+            if (err) {
+                vka_cspace_free_path(vka, dest);
+                return false;
+            }
+            /* Map into proc addrspace */
+            ZxProcess *proc = vmap->parent_->get_proc();
+            uintptr_t vaddr = vmap->start_addr_ + (index * (1 << seL4_PageBits));
+            err = proc->map_page_in_vspace(frames_[index].cptr,
+                    (void *)vaddr, vmap->rights_, 1);
+            if (err) {
+                vka_cnode_delete(&dest);
+                vka_cspace_free_path(vka, dest);
+                return false;
+            }
         }
     }
 
     return true;
+}
+
+void ZxVmo::decommit_page(uint32_t index)
+{
+    vka_t *vka = get_server_vka();
+    assert(index < num_pages_);
+
+    /* For each mapping, unmap page and delete cap */
+    auto unmap_func = [&vka, &index] (VmoMapping *vmap) {
+        if (vmap->caps_[index] != 0) {
+            cspacepath_t path;
+            vka_cspace_make_path(vka, vmap->caps_[index], &path);
+            seL4_X86_Page_Unmap(vmap->caps_[index]);
+            vka_cnode_delete(&path);
+            vka_cspace_free_path(vka, path);
+            /* Reset cptr */
+            vmap->caps_[index] = 0;
+        }
+    };
+    map_list_.for_each(unmap_func);
+
+    /* Unmap page from kmap and free frame object */
+    if (frames_[index].cptr != 0) {
+        seL4_X86_Page_Unmap(frames_[index].cptr);
+        vka_free_object(vka, &frames_[index]);
+        /* Reset frame object */
+        memset(&frames_[index], 0, sizeof(vka_object_t));
+    }
 }

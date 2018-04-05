@@ -15,7 +15,7 @@ class Vector {
 private:
     bool resize() {
         size_t new_size = (size_ == 0) ? vectorBaseSize : (size_ * 2);
-        T *mem = malloc(new_size * sizeof(T));
+        T *mem = (T *)malloc(new_size * sizeof(T));
         if (mem == NULL) {
             return false;
         }

@@ -135,19 +135,8 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     assert(!error);
 
     /* Map IPC frame into vspace */
-    /* TODO make this a separate function? Common usage! */
-    vka_object_t objects[3];
-    int num_obj = 3;
-    error = sel4utils_map_page(vka, pd_.cptr, ipc_frame.cptr, (void *)ipc_buf_addr,
-                                seL4_AllRights, 1, objects, &num_obj);
+    error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights, 1);
     assert(!error);
-
-    /* Store allocated PT objects */
-    for (int i = 0; i < num_obj; ++i) {
-        VkaObjectNode *head = new_vka_node(pt_list_, objects[i]);
-        assert(head != NULL);
-        pt_list_ = head;
-    }
 
     /* Assign IPC buffer to thread */
     thrd->set_ipc_buffer(ipc_frame, ipc_buf_addr);
@@ -160,6 +149,55 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     /* Add thread to list */
     thread_list_.push_back(thrd);
     return true;
+}
+
+int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
+        void *vaddr, seL4_CapRights_t rights, int cacheable)
+{
+    int error;
+    vka_object_t objects[3];
+    int num_obj = 3;
+    vka_t *vka = get_server_vka();
+
+    /* Attempt page mapping */
+    error = sel4utils_map_page(vka, pd_.cptr, frame_cap, vaddr,
+            rights, cacheable, objects, &num_obj);
+    if (error) {
+        return error;
+    }
+
+    /* Store allocated PT objects */
+    VkaObjectNode *head = pt_list_;
+    int num_alloc = 0;
+    for (int i = 0; i < num_obj; ++i) {
+        head = new_vka_node(pt_list_, objects[i]);
+        if (head == NULL) {
+            break;
+        }
+        ++num_alloc;
+    }
+
+    /* If nodes successfully allocated, return */
+    if (num_alloc == num_obj) {
+        pt_list_ = head;
+        return 0;
+    }
+
+    /* Otherwise we need to clean up */
+    /* Unmap the page */
+    seL4_X86_Page_Unmap(frame_cap);
+
+    /* Free nodes & PT objects */
+    VkaObjectNode *curr = head;
+    for (int i = 0; i < num_alloc; ++i) {
+        head = curr;
+        curr = curr->next;
+        vka_free_object(vka, &head->obj);
+        free(head);
+    }
+    assert(curr == pt_list_);
+
+    return -1;
 }
 
 void ZxProcess::destroy()
