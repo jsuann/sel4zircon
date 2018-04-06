@@ -17,7 +17,6 @@ void init_vmo_kmap(void);
 uintptr_t alloc_vmo_kmap(void);
 void free_vmo_kmap(uintptr_t kmap);
 
-
 /* Zircon userspace address space allocation */
 /* taken from zircon/kernel/arch/x86/rules.mk */
 #define ZX_USER_ASPACE_BASE         0x1000000ul

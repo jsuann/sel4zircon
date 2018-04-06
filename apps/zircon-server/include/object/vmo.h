@@ -20,8 +20,7 @@ class ZxVmo final : public ZxObject {
 public:
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
 
-    ZxVmo(uintptr_t kaddr, uint32_t num_pages) : kaddr_{kaddr},
-            num_pages_{num_pages}, map_list_{this} {
+    ZxVmo(uint32_t num_pages) : num_pages_{num_pages}, map_list_{this} {
         size_ = num_pages * (1 << seL4_PageBits);
     }
 
@@ -31,6 +30,14 @@ public:
 
     bool init();
     void destroy();
+
+    /* read & write assume args are valid! */
+    void read(uint64_t offset, size_t len, uintptr_t dest) {
+        memcpy((void *)dest, (void *)(kaddr_ + offset), len);
+    }
+    void write(uint64_t offset, size_t len, uintptr_t src) {
+        memcpy((void *)(kaddr_ + offset), (void *)src, len);
+    }
 
     VmoMapping *create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags);
     void delete_mapping(VmoMapping *vmap);
@@ -49,7 +56,7 @@ public:
 
 private:
     /* Server mapping address */
-    uintptr_t kaddr_;
+    uintptr_t kaddr_ = 0;
 
     uint32_t num_pages_;
     size_t size_;

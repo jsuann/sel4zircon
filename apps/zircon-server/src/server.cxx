@@ -11,6 +11,7 @@
 extern "C" {
 #include <vka/object.h>
 #include <zircon/types.h>
+#include <zircon/rights.h>
 #include <vspace/vspace.h>
 #include "debug.h"
 }
@@ -21,6 +22,8 @@ extern "C" {
 #include "object/handle.h"
 #include "object/process.h"
 #include "object/vmar.h"
+
+#include "test/elf.h"
 
 extern "C" void do_cpp_test(void);
 extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
@@ -94,7 +97,11 @@ uint64_t init_zircon_test(void)
     test_thread->init();
     test_proc->add_thread(test_thread);
 
-    /* Create VMOs */
+    /* Create VMOs for elf segments */
+    uintptr_t entry = load_elf_segments(test_proc, "zircon-test");
+    assert(entry != 0);
+
+    /* Create stack VMO */
 
     /* Return badge value for process */
     return test_proc->get_proc_index();
@@ -105,23 +112,27 @@ void send_zircon_test_data(seL4_CPtr ep_cap)
     using namespace ServerCxx;
 
     /* Get handles to test objects */
-    Handle *vmar_handle = test_vmar->create_handle(ZX_RIGHTS_IO);
-    Handle *proc_handle = test_proc->create_handle(ZX_RIGHTS_BASIC);
+    Handle *vmar_handle = test_vmar->create_handle(ZX_DEFAULT_VMAR_RIGHTS);
+    Handle *proc_handle = test_proc->create_handle(ZX_DEFAULT_PROCESS_RIGHTS);
+    Handle *thrd_handle = test_thread->create_handle(ZX_DEFAULT_THREAD_RIGHTS);
 
     /* Add handles to process */
     test_proc->add_handle(vmar_handle);
     test_proc->add_handle(proc_handle);
+    test_proc->add_handle(thrd_handle);
     test_proc->print_handles();
 
     /* Get user handle values */
     zx_handle_t vmar_uval = test_proc->get_handle_user_val(vmar_handle);
     zx_handle_t proc_uval = test_proc->get_handle_user_val(proc_handle);
+    zx_handle_t thrd_uval = test_proc->get_handle_user_val(thrd_handle);
 
     /* Send handles to zircon test */
     dprintf(SPEW, "Sending test data to zircon test!\n");
-    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 3);
     seL4_SetMR(0, vmar_uval);
     seL4_SetMR(1, proc_uval);
+    seL4_SetMR(2, thrd_uval);
     seL4_Send(ep_cap, tag);
 }
 
@@ -249,3 +260,5 @@ void syscall_loop(void)
 #include "syscalls/other.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"
+
+#include "test/elf.cxx"

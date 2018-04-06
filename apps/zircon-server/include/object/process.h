@@ -54,6 +54,10 @@ public:
         handle_list_.push_back(h);
     }
 
+    ZxVmar *get_root_vmar() const {
+        return root_vmar_;
+    }
+
     zx_handle_t get_handle_user_val(Handle *h) const {
         return (h->get_value() ^ handle_rand_);
     }

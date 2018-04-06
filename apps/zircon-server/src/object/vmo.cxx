@@ -1,8 +1,15 @@
+#include "addrspace.h"
 #include "object/vmo.h"
 #include "object/process.h"
 
 bool ZxVmo::init()
 {
+    /* Get a kmap & set kaddr */
+    kaddr_ = alloc_vmo_kmap();
+    if (kaddr_ == 0) {
+        return false;
+    }
+
     /* Create array of uninitialised frame objects */
     frames_ = (vka_object_t *)calloc(num_pages_, sizeof(vka_object_t));
     return (frames_ != NULL);
@@ -12,15 +19,24 @@ void ZxVmo::destroy()
 {
     vka_t *vka = get_server_vka();
 
+    /* TODO Destroy vmo mappings: remove from vmar, then delete */
+
     /* Free any allocated frame objects */
-    for (size_t i = 0; i < num_pages_; ++i) {
-        if (frames_[i].cptr != 0) {
-            vka_free_object(vka, &frames_[i]);
+    if (frames_ != NULL) {
+        for (size_t i = 0; i < num_pages_; ++i) {
+            if (frames_[i].cptr != 0) {
+                vka_free_object(vka, &frames_[i]);
+            }
         }
     }
 
     /* Free frame array */
     free(frames_);
+
+    /* Free kmap */
+    if (kaddr_ != 0) {
+        free_vmo_kmap(kaddr_);
+    }
 }
 
 VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags)
@@ -40,14 +56,8 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
 
     /* get frame access rights from mapping flags (should be valid by this point!) */
     seL4_CapRights_t rights;
-    seL4_Word can_read = 0;
-    seL4_Word can_write = 0;
-    if (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE) {
-        can_read = 1;
-    }
-    if (flags & ZX_VM_FLAG_PERM_WRITE) {
-        can_write = 1;
-    }
+    bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
+    bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
     rights = seL4_CapRights_new(0, can_read, can_write);
 
     /* Create mapping */

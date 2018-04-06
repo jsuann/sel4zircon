@@ -34,9 +34,10 @@ int main(int argc, char **argv) {
     tag = seL4_Recv(EP_CPTR, &msg);
     zx_handle_t vmar_handle = seL4_GetMR(0);
     zx_handle_t proc_handle = seL4_GetMR(1);
+    zx_handle_t thrd_handle = seL4_GetMR(2);
 
     printf(">=== Zircon Test ===\n");
-    printf("> Received handles: %u %u\n", vmar_handle, proc_handle);
+    printf("> Received handles: %u %u %u\n", vmar_handle, proc_handle, thrd_handle);
 
     zx_status_t err;
     int a = 1;
@@ -68,12 +69,10 @@ int main(int argc, char **argv) {
     printf("zx_syscall_test_8 returned %d\n", err);
 
     // try an invalid syscall no
-    /*
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
-    seL4_Call(handle, tag);
+    seL4_Call(EP_CPTR, tag);
     err = seL4_GetMR(0);
     assert(err == ZX_ERR_BAD_SYSCALL);
-    */
 
     err = zx_handle_close(ZX_HANDLE_INVALID);
     printf("zx_handle_close returned %d\n", err);
@@ -81,8 +80,8 @@ int main(int argc, char **argv) {
     err = zx_handle_close(1231231313);
     printf("zx_handle_close returned %d\n", err);
 
-    err = zx_handle_close(vmar_handle);
-    printf("zx_handle_close returned %d\n", err);
+    //err = zx_handle_close(vmar_handle);
+    //printf("zx_handle_close returned %d\n", err);
 
     int stk = 0;
     void *ptr = malloc(4);

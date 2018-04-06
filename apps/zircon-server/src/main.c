@@ -145,13 +145,23 @@ int main(void) {
     error = allocman_fill_reserves(allocman);
     assert(!error);
 
+    /* Create an endpoint for zircon server to wait on */
+    vka_object_t ep_object = {0};
+    error = vka_alloc_endpoint(&vka, &ep_object);
+    assert(error == 0);
 
-    /* ---- HERE ONWARDS ---- */
+    /* TODO use this for zircon timer objects, waiting, etc. */
+    vka_object_t ntfn_object = {0};
+    error = vka_alloc_notification(&vka, &ntfn_object);
+    assert(error == 0);
+    error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
+    assert(error == 0);
 
-    /* Use zircon structures! */
+    /* Init the zircon server */
+    init_zircon_server(&vka, &vspace, ep_object.cptr);
+    uint64_t badge_val = init_zircon_test();
 
-
-
+    /* XXX Replace with zircon objects */
     /* use sel4utils to make a new process */
     sel4utils_process_t new_process;
     sel4utils_process_config_t config = process_config_default_simple(&simple, APP_IMAGE_NAME, APP_PRIORITY);
@@ -160,19 +170,6 @@ int main(void) {
 
     /* give the new process's thread a name */
     name_thread(new_process.thread.tcb.cptr, "zircon-test");
-
-    /* create an endpoint */
-    vka_object_t ep_object = {0};
-    error = vka_alloc_endpoint(&vka, &ep_object);
-    assert(error == 0);
-
-    init_zircon_server(&vka, &vspace, ep_object.cptr);
-    uint64_t badge_val = init_zircon_test();
-
-    /*
-     * make a badged endpoint in the new process's cspace.  This copy
-     * will be used to send an IPC to the original cap
-     */
 
     /* make a cspacepath for the new endpoint cap */
     cspacepath_t ep_cap_path;
@@ -185,21 +182,10 @@ int main(void) {
 
     /* spawn the process */
     error = sel4utils_spawn_process_v(&new_process, &vka, &vspace, 0, NULL, 1);
-    //error = sel4utils_spawn_process(&new_process, &vka, &vspace, 0, NULL, 1);
     assert(error == 0);
-
-    vka_object_t ntfn_object = {0};
-    error = vka_alloc_notification(&vka, &ntfn_object);
-    assert(error == 0);
-
-    error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
-    assert(error == 0);
+    /* XXX */
 
     dprintf(ALWAYS, "=== Zircon Server ===\n");
-
-    //seL4_Word sender_badge = 0;
-    //seL4_MessageInfo_t tag;
-    //seL4_Word msg;
 
 /*
     error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
