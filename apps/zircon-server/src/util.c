@@ -18,6 +18,7 @@
 #include <autoconf.h>
 
 #include <sel4/sel4.h>
+#include <elf/elf.h>
 
 /* avoid main falling off the end of the world */
 void abort(void) {
@@ -38,4 +39,28 @@ void name_thread(seL4_CPtr tcb, char *name) {
 #endif
 }
 
+uint16_t get_num_elf_headers(void *elf_file)
+{
+    return elf_getNumProgramHeaders(elf_file);
+}
 
+uint32_t get_elf_header_type(void *elf_file, uint16_t i)
+{
+    return elf_getProgramHeaderType(elf_file, i);
+}
+
+uint64_t get_elf_entry_point(void *elf_file)
+{
+    return elf_getEntryPoint(elf_file);
+}
+
+void get_elf_file_info(char *elf_file, uint16_t i,
+        char **source_addr, uint64_t *file_size,
+        uint64_t *segment_size, uint64_t *vaddr, uint64_t *flags)
+{
+    *source_addr = elf_file + elf_getProgramHeaderOffset(elf_file, i);
+    *file_size = elf_getProgramHeaderFileSize(elf_file, i);
+    *segment_size = elf_getProgramHeaderMemorySize(elf_file, i);
+    *vaddr = elf_getProgramHeaderVaddr(elf_file, i);
+    *flags = elf_getProgramHeaderFlags(elf_file, i);
+}

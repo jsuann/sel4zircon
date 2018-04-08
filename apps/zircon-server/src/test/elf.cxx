@@ -5,11 +5,20 @@
 
 extern "C" {
 #include <sel4/sel4.h>
-//#include <sel4utils/elf.h>
-//#include <elf.h>
-#include <elf/elf.h>
 #include <cpio/cpio.h>
+//#include <sel4utils/elf.h>
+//#include <elf/elf.h>
+#include <elf.h>
 #include "debug.h"
+}
+
+extern "C" {
+uint16_t get_num_elf_headers(void *elf_file);
+uint32_t get_elf_header_type(void *elf_file, uint16_t i);
+uint64_t get_elf_entry_point(void *elf_file);
+void get_elf_file_info(char *elf_file, uint16_t i,
+        char **source_addr, uint64_t *file_size,
+        uint64_t *segment_size, uint64_t *vaddr, uint64_t *flags);
 }
 
 namespace ElfCxx {
@@ -68,9 +77,9 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name)
     }
 
     ZxVmar *root_vmar = proc->get_root_vmar();
-    uint16_t num_headers = elf_getNumProgramHeaders(elf_file);
+    uint16_t num_headers = get_num_elf_headers(elf_file);
 
-    uint64_t entry_point = elf_getEntryPoint(elf_file);
+    uint64_t entry_point = get_elf_entry_point(elf_file);
     assert(entry_point != 0);
 
     for (uint16_t i = 0; i < num_headers; ++i) {
@@ -78,14 +87,13 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name)
         unsigned long flags, file_size, segment_size, vaddr;
 
         /* Skip non-loadable segments */
-        if (elf_getProgramHeaderType(elf_file, i) == PT_LOAD) {
+        if (get_elf_header_type(elf_file, i) == PT_LOAD) {
             /* Fetch segment info */
-            source_addr = elf_file + elf_getProgramHeaderOffset(elf_file, i);
-            file_size = elf_getProgramHeaderFileSize(elf_file, i);
-            segment_size = elf_getProgramHeaderMemorySize(elf_file, i);
-            vaddr = elf_getProgramHeaderVaddr(elf_file, i);
-            flags = elf_getProgramHeaderFlags(elf_file, i);
+            get_elf_file_info(elf_file, i, &source_addr, &file_size,
+                    &segment_size, &vaddr, &flags);
 
+            dprintf(INFO, "elf info: %p %lx %lx %lx %lu\n", source_addr,
+                    file_size, segment_size, vaddr, flags);
             /* Make a VMO for this segment */
             ZxVmo *vmo = create_elf_vmo(root_vmar, vaddr, segment_size, flags);
             if (vmo == NULL) {

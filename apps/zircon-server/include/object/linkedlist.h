@@ -4,6 +4,10 @@
 
 #include <assert.h>
 
+extern "C" {
+#include "../debug.h"
+}
+
 #include "listable.h"
 
 /* Template for managing listable objects */

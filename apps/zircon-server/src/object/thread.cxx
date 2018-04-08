@@ -1,6 +1,10 @@
 #include "object/thread.h"
 #include "server.h"
 
+extern "C" {
+#include <sel4utils/process.h>
+}
+
 namespace ThreadCxx {
 
 /* Thread cspace size. Should be as small as possible */

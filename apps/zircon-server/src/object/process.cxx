@@ -2,6 +2,10 @@
 #include "zxcpp/stackalloc.h"
 #include "server.h"
 
+extern "C" {
+#include <sel4utils/process.h>
+}
+
 namespace ProcessCxx {
 
 /* If 1024 or greater, we need to create more ASID pools */

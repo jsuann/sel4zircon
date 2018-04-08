@@ -143,30 +143,6 @@ void do_cpp_test(void)
     dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", ZX_USER_ASPACE_BASE, ZX_USER_ASPACE_SIZE,
             (ZX_USER_ASPACE_BASE+ZX_USER_ASPACE_SIZE));
 
-    // Test allocation
-    void *ptr;
-    ptr = malloc(10000);
-    dprintf(SPEW, "malloc ptr at %p\n", ptr);
-    free(ptr);
-
-    vspace_new_pages_config_t config;
-    default_vspace_new_pages_config(1, seL4_PageBits, &config);
-    vspace_new_pages_config_set_vaddr((void *)ZX_VMO_SERVER_MAP_START, &config);
-
-    ptr = vspace_new_pages_with_config(server_vspace, &config, seL4_AllRights);
-    dprintf(SPEW, "vspace page ptr at %p\n", ptr);
-    vspace_unmap_pages(server_vspace, (void *)ZX_VMO_SERVER_MAP_START, 1, seL4_PageBits, VSPACE_FREE);
-
-    ptr = vspace_new_pages_with_config(server_vspace, &config, seL4_AllRights);
-    dprintf(SPEW, "vspace page ptr at %p\n", ptr);
-    vspace_unmap_pages(server_vspace, (void *)ZX_VMO_SERVER_MAP_START, 1, seL4_PageBits, VSPACE_FREE);
-
-    dprintf(SPEW, "address of ptr at %p\n", &ptr);
-
-    uintptr_t vmo_kmap = alloc_vmo_kmap();
-    // TODO test page table funkiness
-    free_vmo_kmap(vmo_kmap);
-
     dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",
             sizeof(seL4_IPCBuffer), sizeof(seL4_MessageInfo_t));
 

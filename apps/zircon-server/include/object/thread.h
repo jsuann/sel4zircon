@@ -12,7 +12,6 @@ extern "C" {
 #include <vka/capops.h>
 #include <vspace/vspace.h>
 #include <sel4utils/vspace.h>
-#include <sel4utils/process.h>
 }
 
 #include "listable.h"
