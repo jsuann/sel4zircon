@@ -1,14 +1,12 @@
 #include "test/elf.h"
 #include "server.h"
 #include "addrspace.h"
-#include "object/vmo.h"
 
 extern "C" {
 #include <sel4/sel4.h>
 #include <cpio/cpio.h>
-//#include <sel4utils/elf.h>
-//#include <elf/elf.h>
 #include <elf.h>
+#include <sel4utils/elf.h>
 #include "debug.h"
 }
 
@@ -65,9 +63,13 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
 extern "C" char _cpio_archive[];
 
 /* creates required VMOs and loads elf segments into them */
-uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name)
+uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
+        int &num_vmos, ZxVmo **&vmos)
 {
     using namespace ElfCxx;
+
+    num_vmos = 0;
+    vmos = NULL;
 
     unsigned long elf_size;
     char *elf_file = (char *)cpio_get_file(_cpio_archive, image_name, &elf_size);
@@ -82,6 +84,18 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name)
     uint64_t entry_point = get_elf_entry_point(elf_file);
     assert(entry_point != 0);
 
+    /* Figure out how many VMOs we need, make array */
+    for (uint16_t i = 0; i < num_headers; ++i) {
+        if (get_elf_header_type(elf_file, i) == PT_LOAD) {
+            ++num_vmos;
+        }
+    }
+    vmos = (ZxVmo **)calloc(num_vmos, sizeof(ZxVmo*));
+    if (vmos == NULL) {
+        return 0;
+    }
+
+    int vmo_index = 0;
     for (uint16_t i = 0; i < num_headers; ++i) {
         char *source_addr;
         unsigned long flags, file_size, segment_size, vaddr;
@@ -95,15 +109,19 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name)
             dprintf(INFO, "elf info: %p %lx %lx %lx %lu\n", source_addr,
                     file_size, segment_size, vaddr, flags);
             /* Make a VMO for this segment */
-            ZxVmo *vmo = create_elf_vmo(root_vmar, vaddr, segment_size, flags);
-            if (vmo == NULL) {
+            ZxVmo *elf_vmo = create_elf_vmo(root_vmar, vaddr, segment_size, flags);
+            if (elf_vmo == NULL) {
                 dprintf(INFO, "Failed to create vmo for segment %u\n", i);
                 return 0;
             }
 
             /* Copy segment to vmo */
             uint64_t offset = vaddr - (vaddr & kPageMask);
-            vmo->write(offset, file_size, (uintptr_t)source_addr);
+            elf_vmo->write(offset, file_size, (uintptr_t)source_addr);
+
+            /* Store vmo ptr */
+            vmos[vmo_index] = elf_vmo;
+            ++vmo_index;
         }
     }
     return entry_point;

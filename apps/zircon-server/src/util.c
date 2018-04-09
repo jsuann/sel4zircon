@@ -19,6 +19,7 @@
 
 #include <sel4/sel4.h>
 #include <elf/elf.h>
+#include <sel4utils/elf.h>
 
 /* avoid main falling off the end of the world */
 void abort(void) {

@@ -42,6 +42,8 @@ seL4_CPtr server_ep;
 ZxVmar *test_vmar;
 ZxProcess *test_proc;
 ZxThread *test_thread;
+ZxVmo **elf_vmos;
+ZxVmo *stack_vmo;
 
 } /* namespace ServerCxx */
 
@@ -85,23 +87,36 @@ uint64_t init_zircon_test(void)
 
     /* Create a process */
     test_proc = allocate_object<ZxProcess>(test_vmar);
+    assert(test_proc != NULL);
     test_proc->set_name("zircon-test");
-    test_proc->init();
+    assert(test_proc->init());
 
     /* Create a thread */
     uint32_t thrd_index;
     uint32_t proc_index = test_proc->get_proc_index();
     assert(test_proc->alloc_thread_index(thrd_index));
     test_thread = allocate_object<ZxThread>(proc_index, thrd_index);
+    assert(test_thread != NULL);
     test_thread->set_name("zircon-test-thread");
-    test_thread->init();
+    assert(test_thread->init());
     test_proc->add_thread(test_thread);
 
     /* Create VMOs for elf segments */
-    uintptr_t entry = load_elf_segments(test_proc, "zircon-test");
+    int num_vmos;
+    uintptr_t entry = load_elf_segments(test_proc, "zircon-test", num_vmos, elf_vmos);
     assert(entry != 0);
+    assert(elf_vmos != NULL);
+    for (int i = 0; i < num_vmos; ++i) {
+        assert(elf_vmos[i] != NULL);
+    }
 
-    /* Create stack VMO */
+    /* Create stack VMO TODO: define constants */
+    stack_vmo = allocate_object<ZxVmo>(15);
+    assert(stack_vmo->init());
+    VmoMapping *stack_map = stack_vmo->create_mapping(0x30000000, test_vmar,
+            ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+    assert(stack_map != NULL);
+    stack_vmo->commit_all_pages(stack_map);
 
     /* Return badge value for process */
     return test_proc->get_proc_index();
