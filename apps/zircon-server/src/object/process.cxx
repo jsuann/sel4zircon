@@ -115,6 +115,13 @@ bool ZxProcess::init()
     return true;
 }
 
+void ZxProcess::destroy()
+{
+    using namespace ProcessCxx;
+
+    thrd_alloc_.destroy();
+}
+
 bool ZxProcess::add_thread(ZxThread *thrd)
 {
     using namespace ProcessCxx;
@@ -204,9 +211,22 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
     return -1;
 }
 
-void ZxProcess::destroy()
+/* Get server vaddr from user vaddr. Perform length check in process */
+void *ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len)
 {
-    using namespace ProcessCxx;
+    /* Get the VMO mapping of uvaddr */
+    VmoMapping *vmap = root_vmar_->get_vmap_from_addr(uvaddr);
+    if (vmap == NULL) {
+        return NULL;
+    }
 
-    thrd_alloc_.destroy();
+    /* Ensure that addr + len won't exceed vmo end */
+    if (uvaddr + len > vmap->get_base() + vmap->get_size()) {
+        return NULL;
+    }
+
+    /* Return kvaddr */
+    ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
+    uintptr_t kvaddr = vmo->get_base() + (uvaddr - vmap->get_base());
+    return (void *)kvaddr;
 }

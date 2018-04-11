@@ -24,6 +24,10 @@ public:
         size_ = num_pages * (1 << seL4_PageBits);
     }
 
+    uintptr_t get_base() const {
+        return kaddr_;
+    }
+
     size_t get_size() const {
         return size_;
     }

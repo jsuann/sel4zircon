@@ -16,6 +16,7 @@ extern "C" {
 #include "../addrspace.h"
 
 class ZxProcess;
+class VmoMapping;
 
 class ZxVmar final : public ZxObject, public VmRegion {
 public:
@@ -37,6 +38,8 @@ public:
 
     bool check_vm_region(uintptr_t child_base, size_t child_size);
     bool add_vm_region(VmRegion *child);
+
+    VmoMapping *get_vmap_from_addr(uintptr_t addr);
 
     void set_proc(ZxProcess *proc) {
         proc_ = proc;

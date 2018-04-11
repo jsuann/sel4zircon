@@ -96,13 +96,15 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 
     /* If frame not yet allocated, alloc & map into server */
     if (frames_[index].cptr == 0) {
+        /* Allocate a frame object */
         /* TODO at paddr, maybe device? */
         err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
         if (err) {
             return false;
         }
+
+        /* Map frame into kmap. We leak backing PTs for server */
         uintptr_t kvaddr = kaddr_ + (index * (1 << seL4_PageBits));
-        /* vmo kmap is likely to be reused so leak PTs */
         err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
                 frames_[index].cptr, (void *)kvaddr, seL4_AllRights, 1);
         if (err) {
@@ -117,29 +119,32 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
         assert(map_list_.contains(vmap));
         assert(frames_[index].cptr != 0);
         if (vmap->caps_[index] == 0) {
-            cspacepath_t src, dest;
             /* src is kmap slot, dest is vmap slot */
+            cspacepath_t src, dest;
             err = vka_cspace_alloc_path(vka, &dest);
             if (err) {
                 return false;
             }
             vka_cspace_make_path(vka, frames_[index].cptr, &src);
+
             /* Copy to dest slot */
             err = vka_cnode_copy(&dest, &src, seL4_AllRights);
             if (err) {
                 vka_cspace_free_path(vka, dest);
                 return false;
             }
+
             /* Map into proc addrspace */
             ZxProcess *proc = vmap->parent_->get_proc();
             uintptr_t vaddr = vmap->start_addr_ + (index * (1 << seL4_PageBits));
-            dprintf(INFO, "Mapping page at %lx for proc %p\n", vaddr, proc);
+            dprintf(SPEW, "Mapping page at %lx for proc %s\n", vaddr, proc->get_name());
             err = proc->map_page_in_vspace(dest.capPtr, (void *)vaddr, vmap->rights_, 1);
             if (err) {
                 vka_cnode_delete(&dest);
                 vka_cspace_free_path(vka, dest);
                 return false;
             }
+
             /* Set vmap cap */
             vmap->caps_[index] = dest.capPtr;
         }

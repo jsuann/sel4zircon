@@ -100,6 +100,8 @@ public:
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
 
+    void *uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len);
+
 private:
     /* List of Handles */
     LinkedList<Handle> handle_list_;

@@ -58,15 +58,16 @@ bool ZxThread::init()
 
     /* Create badge val */
     uint64_t badge_val = (thread_index_ << kThreadBadgeShift) | proc_index_;
+    dprintf(INFO, "badge val: %lu\n", badge_val);
 
     /* Mint fault ep cap */
     set_dest_slot(&dest, cspace_.cptr, SEL4UTILS_ENDPOINT_SLOT);
-    error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(ZxFaultBadge & badge_val));
+    error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(ZxFaultBadge | badge_val));
     assert(!error);
 
     /* Mint syscall ep cap */
     set_dest_slot(&dest, cspace_.cptr, SEL4UTILS_FIRST_FREE);
-    error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(badge_val));
+    error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(ZxSyscallBadge | badge_val));
     assert(!error);
 
     /* Create TCB */
@@ -88,7 +89,7 @@ int ZxThread::configure_tcb(seL4_CNode pd)
 
     seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0, seL4_WordBits - kThreadCspaceBits);
     seL4_CapData_t null_cap_data = {{0}};
-    return seL4_TCB_Configure(tcb_.cptr, get_server_ep(), seL4_PrioProps_new(0,0),
+    return seL4_TCB_Configure(tcb_.cptr, SEL4UTILS_ENDPOINT_SLOT, seL4_PrioProps_new(0,0),
                             cspace_.cptr, cspace_root_data, pd, null_cap_data,
                             (seL4_Word)ipc_buffer_addr_, ipc_buffer_frame_.cptr);
 }

@@ -45,3 +45,25 @@ bool ZxVmar::add_vm_region(VmRegion *child)
 
     return true;
 }
+
+/* Lookup a VMO mapping with a vaddr */
+VmoMapping *ZxVmar::get_vmap_from_addr(uintptr_t addr)
+{
+    VmRegion **vmr = children_.get();
+    for (size_t i = 0; i < children_.size(); ++i) {
+        uintptr_t vmr_base = vmr[i]->get_base();
+        uintptr_t vmr_end = vmr_base + vmr[i]->get_size();
+        if (addr >= vmr_base && addr < vmr_end) {
+            /* Check if vmap or child vmar */
+            if (vmr[i]->is_vmo_mapping()) {
+                /* Vmap found */
+                return (VmoMapping *)vmr[i];
+            } else {
+                /* Check subregions of child vmar */
+                return ((ZxVmar *)vmr[i])->get_vmap_from_addr(addr);
+            }
+        }
+    }
+
+    return NULL;
+}
