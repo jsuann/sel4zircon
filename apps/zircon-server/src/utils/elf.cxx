@@ -1,4 +1,4 @@
-#include "test/elf.h"
+#include "utils/elf.h"
 #include "server.h"
 #include "addrspace.h"
 
@@ -11,6 +11,12 @@ extern "C" {
 #include "debug.h"
 }
 
+namespace ElfCxx {
+
+/* This will get linked */
+extern "C" char _cpio_archive[];
+
+/* Wrappers for elf parsing functions CXX doesn't like */
 extern "C" {
 uint16_t get_num_elf_headers(void *elf_file);
 uint32_t get_elf_header_type(void *elf_file, uint16_t i);
@@ -20,13 +26,14 @@ void get_elf_file_info(char *elf_file, uint16_t i,
         uint64_t *segment_size, uint64_t *vaddr, uint64_t *flags);
 }
 
-namespace ElfCxx {
-
+/* constants */
 constexpr uint64_t kPageSize = (1 << seL4_PageBits);
 constexpr uint64_t kPageMask = ~(kPageSize - 1);
 constexpr uint64_t kStackAlign = 16;
 constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
 
+
+/* Create a vmo that will contain an elf segment */
 ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
         unsigned long segment_size, unsigned long permissions)
 {
@@ -61,6 +68,7 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
     return vmo;
 }
 
+/* Write to stack vmo and update stack pointer */
 void write_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
         uintptr_t *stack_ptr, void *buf, size_t len)
 {
@@ -76,6 +84,7 @@ void write_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
     *stack_ptr = new_stack_ptr;
 }
 
+/* Write a constant value to stack vmo */
 void write_constant_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
         uintptr_t *stack_ptr, seL4_Word value)
 {
@@ -84,7 +93,6 @@ void write_constant_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
 
 } /* namespace ElfCxx */
 
-extern "C" char _cpio_archive[];
 
 /* creates required VMOs and loads elf segments into them */
 uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
@@ -151,6 +159,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
     return entry_point;
 }
 
+/* Spawns zircon process. Requires elf & stack vmos ready. */
 bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
         uintptr_t stack_base, const char *image_name, uintptr_t entry)
 {
@@ -201,7 +210,7 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
     /* Write empty env */
     write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
 
-    /* Write empty args */
+    /* Write empty args (null argv, argc) */
     write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
     write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
 

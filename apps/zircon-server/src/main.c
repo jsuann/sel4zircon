@@ -40,13 +40,6 @@
 
 #include "debug.h"
 
-/* constants */
-#define EP_BADGE 0x61 // arbitrary (but unique) number for a badge
-#define MSG_DATA 0x6161 // arbitrary data to send
-
-#define APP_PRIORITY seL4_MaxPrio
-#define APP_IMAGE_NAME "zircon-test"
-
 /* Use a two level cspace to allow for higher memory usage */
 /* A patch for libsel4simple-default is required for this to work */
 #define ZX_USE_TWO_LEVEL_CSPACE     1
@@ -55,19 +48,12 @@
 #define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 40)
 static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 
-/* dimensions of virtual memory for the allocator to use */
-#define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 32000)
-#define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
-
 /* static memory for virtual memory bootstrapping */
 UNUSED static sel4utils_alloc_data_t data;
 
-/* stack for the new thread */
-#define THREAD_2_STACK_SIZE 4096
-UNUSED static int thread_2_stack[THREAD_2_STACK_SIZE];
-
-/* convenience function */
-extern void name_thread(seL4_CPtr tcb, char *name);
+/* dimensions of virtual memory for the allocator to use */
+#define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 32000)
+#define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
 
 /* zircon server calls */
 extern void do_cpp_test(void);
@@ -90,7 +76,9 @@ int main(void) {
     ZF_LOGF_IF(info == NULL, "Failed to get bootinfo.");
 
     /* give us a name: useful for debugging if the thread faults */
-    name_thread(seL4_CapInitThreadTCB, "zircon-server");
+#ifdef SEL4_DEBUG_KERNEL
+    seL4_DebugNameThread(seL4_CapInitThreadTCB, "zircon-server");
+#endif
 
     /* init simple */
     simple_default_init_bootinfo(&simple, info);
@@ -98,28 +86,32 @@ int main(void) {
     /* print out bootinfo and other info about simple */
     //simple_print(&simple);
 
-    dprintf(ALWAYS, "cap count: %d\n", simple_get_cap_count(&simple));
-    dprintf(ALWAYS, "empty: %lu, %lu\n", info->empty.start, info->empty.end);
-    dprintf(ALWAYS, "shared frames: %lu, %lu\n", info->sharedFrames.start, info->sharedFrames.end);
-    dprintf(ALWAYS, "io space caps: %lu, %lu\n", info->ioSpaceCaps.start, info->ioSpaceCaps.end);
-    dprintf(ALWAYS, "user img frames: %lu, %lu\n", info->userImageFrames.start, info->userImageFrames.end);
-    dprintf(ALWAYS, "user img paging: %lu, %lu\n", info->userImagePaging.start, info->userImagePaging.end);
-    dprintf(ALWAYS, "Extra boot info frames: %lu, %lu\n", info->extraBIPages.start, info->extraBIPages.end);
-    dprintf(ALWAYS, "untyped: %lu, %lu\n", info->untyped.start, info->untyped.end);
+    /* Additional bootinfo cap prints */
+    dprintf(SPEW, "cap count: %d\n", simple_get_cap_count(&simple));
+    dprintf(SPEW, "empty: %lu, %lu\n", info->empty.start, info->empty.end);
+    dprintf(SPEW, "shared frames: %lu, %lu\n", info->sharedFrames.start, info->sharedFrames.end);
+    dprintf(SPEW, "io space caps: %lu, %lu\n", info->ioSpaceCaps.start, info->ioSpaceCaps.end);
+    dprintf(SPEW, "user img frames: %lu, %lu\n", info->userImageFrames.start, info->userImageFrames.end);
+    dprintf(SPEW, "user img paging: %lu, %lu\n", info->userImagePaging.start, info->userImagePaging.end);
+    dprintf(SPEW, "Extra boot info frames: %lu, %lu\n", info->extraBIPages.start, info->extraBIPages.end);
+    dprintf(SPEW, "untyped: %lu, %lu\n", info->untyped.start, info->untyped.end);
 
     size_t cap_count = simple_get_cap_count(&simple);
     for (size_t i = 0; i < cap_count; ++i) {
         seL4_CPtr pos = simple_get_nth_cap(&simple,i);
         if (pos < i)
-            dprintf(ALWAYS, "BAD: %luth cap, cap pos: %lu\n", i, pos);
+            dprintf(SPEW, "BAD: %luth cap, cap pos: %lu\n", i, pos);
     }
 
 #if ZX_USE_TWO_LEVEL_CSPACE
+    /* create new 2 level cspace & allocator */
     allocman = bootstrap_new_2level_simple(&simple, 14, 14, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
     assert(allocman);
 
+    /* create a vka */
     allocman_make_vka(&vka, allocman);
 
+    /* create vspace manager */
     error = sel4utils_bootstrap_vspace_with_bootinfo_leaky(&vspace, &data, seL4_CapInitThreadPD, &vka, info);
     assert(!error);
 #else
@@ -127,7 +119,7 @@ int main(void) {
     allocman = bootstrap_use_current_simple(&simple, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
     assert(allocman);
 
-    /* create a vka (interface for interacting with the underlying allocator) */
+    /* create a vka */
     allocman_make_vka(&vka, allocman);
 
     /* create a vspace object to manage our vspace */
@@ -140,8 +132,7 @@ int main(void) {
     UNUSED reservation_t virtual_reservation;
     virtual_reservation = vspace_reserve_range_at(&vspace, vaddr, ALLOCATOR_VIRTUAL_POOL_SIZE, seL4_AllRights, 1);
     assert(virtual_reservation.res);
-    bootstrap_configure_virtual_pool(allocman, vaddr,
-                                     ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
+    bootstrap_configure_virtual_pool(allocman, vaddr, ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
     error = allocman_fill_reserves(allocman);
     assert(!error);
 
@@ -186,9 +177,9 @@ int main(void) {
     msg = (uint32_t) time;
     seL4_SetMR(0, msg);
     seL4_Reply(tag);
-*/
 
     sel4platsupport_destroy_timer(&timer, &vka);
+*/
 
     //do_cpp_test();
 
@@ -198,5 +189,6 @@ int main(void) {
     /* Enter syscall loop */
     syscall_loop();
 
+    /* We shouldn't get here! */
     return 0;
 }
