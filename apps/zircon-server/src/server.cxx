@@ -27,8 +27,7 @@ extern "C" {
 
 extern "C" void do_cpp_test(void);
 extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
-extern "C" uint64_t init_zircon_test(void);
-extern "C" void send_zircon_test_data(seL4_CPtr ep_cap);
+extern "C" void init_zircon_test(void);
 extern "C" void syscall_loop(void);
 
 /* Wrap globals in a namespace to prevent access outside this file */
@@ -77,7 +76,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_vmo_kmap();
 }
 
-uint64_t init_zircon_test(void)
+void init_zircon_test(void)
 {
     using namespace ServerCxx;
 
@@ -116,15 +115,11 @@ uint64_t init_zircon_test(void)
     VmoMapping *stack_map = stack_vmo->create_mapping(0x30000000, test_vmar,
             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
     assert(stack_map != NULL);
-    stack_vmo->commit_all_pages(stack_map);
+    assert(stack_vmo->commit_all_pages(stack_map));
 
-    /* Return badge value for process */
-    return test_proc->get_proc_index();
-}
-
-void send_zircon_test_data(seL4_CPtr ep_cap)
-{
-    using namespace ServerCxx;
+    /* Start test process */
+    assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
+            "zircon-test", entry));
 
     /* Get handles to test objects */
     Handle *vmar_handle = test_vmar->create_handle(ZX_DEFAULT_VMAR_RIGHTS);
@@ -148,7 +143,7 @@ void send_zircon_test_data(seL4_CPtr ep_cap)
     seL4_SetMR(0, vmar_uval);
     seL4_SetMR(1, proc_uval);
     seL4_SetMR(2, thrd_uval);
-    seL4_Send(ep_cap, tag);
+    seL4_Send(server_ep, tag);
 }
 
 void do_cpp_test(void)

@@ -30,6 +30,7 @@ public:
             root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
         /* FIXME gen better rand val */
         handle_rand_ = get_koid();
+        root_vmar_->set_proc(this);
     }
 
     ~ZxProcess() final {}

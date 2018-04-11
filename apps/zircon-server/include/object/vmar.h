@@ -38,6 +38,10 @@ public:
     bool check_vm_region(uintptr_t child_base, size_t child_size);
     bool add_vm_region(VmRegion *child);
 
+    void set_proc(ZxProcess *proc) {
+        proc_ = proc;
+    }
+
     ZxProcess *get_proc() const {
         return proc_;
     }

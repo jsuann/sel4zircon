@@ -38,6 +38,11 @@ public:
     int copy_cap_to_thread(cspacepath_t *src, seL4_CPtr slot);
     int configure_tcb(seL4_CNode pd);
 
+    int write_registers(seL4_UserContext *context, int resume) {
+        return seL4_TCB_WriteRegisters(tcb_.cptr, resume, 0,
+                sizeof(*context) / sizeof(seL4_Word), context);
+    }
+
     uint32_t get_thread_index() const {
         return thread_index_;
     }

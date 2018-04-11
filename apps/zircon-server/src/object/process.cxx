@@ -174,7 +174,7 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
     VkaObjectNode *head = pt_list_;
     int num_alloc = 0;
     for (int i = 0; i < num_obj; ++i) {
-        head = new_vka_node(pt_list_, objects[i]);
+        head = new_vka_node(head, objects[i]);
         if (head == NULL) {
             break;
         }

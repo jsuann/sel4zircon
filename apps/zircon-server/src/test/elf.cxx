@@ -7,6 +7,7 @@ extern "C" {
 #include <cpio/cpio.h>
 #include <elf.h>
 #include <sel4utils/elf.h>
+#include <sel4utils/helpers.h>
 #include "debug.h"
 }
 
@@ -23,6 +24,8 @@ namespace ElfCxx {
 
 constexpr uint64_t kPageSize = (1 << seL4_PageBits);
 constexpr uint64_t kPageMask = ~(kPageSize - 1);
+constexpr uint64_t kStackAlign = 16;
+constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
 
 ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
         unsigned long segment_size, unsigned long permissions)
@@ -56,6 +59,27 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
     vmo->commit_all_pages(vmap);
 
     return vmo;
+}
+
+void write_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
+        uintptr_t *stack_ptr, void *buf, size_t len)
+{
+    /* Calculate offset to write to vmo */
+    uintptr_t new_stack_ptr = (*stack_ptr) - len;
+    uint64_t offset = new_stack_ptr - stack_base;
+    assert(stack_vmo->get_size() > offset);
+
+    /* Write to stack (should already be mapped in!) */
+    stack_vmo->write(offset, len, (uintptr_t)buf);
+
+    /* Update stack ptr */
+    *stack_ptr = new_stack_ptr;
+}
+
+void write_constant_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
+        uintptr_t *stack_ptr, seL4_Word value)
+{
+    write_to_stack(stack_vmo, stack_base, stack_ptr, (void *)&value, sizeof(value));
 }
 
 } /* namespace ElfCxx */
@@ -125,4 +149,75 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
         }
     }
     return entry_point;
+}
+
+bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
+        uintptr_t stack_base, const char *image_name, uintptr_t entry)
+{
+    using namespace ElfCxx;
+
+    /* Get elf info */
+    uintptr_t vsyscall = sel4utils_elf_get_vsyscall(image_name);
+    uint32_t num_phdrs = sel4utils_elf_num_phdrs(image_name);
+    Elf_Phdr *phdrs = (Elf_Phdr *)calloc(num_phdrs, sizeof(Elf_Phdr));
+    if (phdrs == NULL) {
+        return false;
+    }
+    sel4utils_elf_read_phdrs(image_name, num_phdrs, phdrs);
+
+    /* Get stack pointer */
+    uintptr_t stack_ptr = (stack_base + stack_vmo->get_size()) - sizeof(seL4_Word);
+
+    /* Copy elf headers */
+    write_to_stack(stack_vmo, stack_base, &stack_ptr, phdrs, num_phdrs * sizeof(Elf_Phdr));
+    uintptr_t at_phdr = stack_ptr;
+
+    /* Init aux vectors */
+    int auxc = 5;
+    Elf_auxv_t auxv[5];
+    auxv[0].a_type = AT_PAGESZ;
+    auxv[0].a_un.a_val = kPageSize;
+    auxv[1].a_type = AT_PHDR;
+    auxv[1].a_un.a_val = at_phdr;
+    auxv[2].a_type = AT_PHNUM;
+    auxv[2].a_un.a_val = num_phdrs;
+    auxv[3].a_type = AT_PHENT;
+    auxv[3].a_un.a_val = sizeof(Elf_Phdr);
+    auxv[4].a_type = AT_SYSINFO;
+    auxv[4].a_un.a_val = vsyscall;
+
+    /* XXX We do not support envp or argv > 0, these can be sent with send/recv instead */
+
+    /* Ensure alignment of stack ptr (double word alignment) */
+    size_t to_push = (5 * sizeof(seL4_Word)) + (sizeof(auxv[0]) * auxc);
+    uintptr_t rounded_stack_ptr = (stack_ptr - to_push) & kStackAlignMask;
+    stack_ptr = rounded_stack_ptr + to_push;
+
+    /* Write aux */
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+    write_to_stack(stack_vmo, stack_base, &stack_ptr, auxv, sizeof(auxv[0]) * auxc);
+
+    /* Write empty env */
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+
+    /* Write empty args */
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+
+    assert(stack_ptr % kStackAlign == 0);
+    dprintf(INFO, "New proc, entry %lx, stack %lx\n", entry, stack_ptr);
+
+    /* Init context */
+    seL4_UserContext context = {0};
+    if (sel4utils_arch_init_context((void *)entry, (void *)stack_ptr, &context)) {
+        return false;
+    }
+
+    /* Write to registers & start process */
+    if (thrd->write_registers(&context, 1)) {
+        return false;
+    }
+
+    return true;
 }

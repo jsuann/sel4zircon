@@ -85,9 +85,9 @@ int main(int argc, char **argv) {
 
     int stk = 0;
     void *ptr = malloc(4);
-    int *ptr2 = (int *)0x100000;
     printf("&stk: %p, ptr: %p\n", &stk, ptr);
-    printf("ptr2: %d\n", *ptr2);
+
+    printf("Zircon test exiting!\n");
 
     return 0;
 }

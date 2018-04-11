@@ -116,7 +116,7 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     if (vmap != NULL) {
         assert(map_list_.contains(vmap));
         assert(frames_[index].cptr != 0);
-        if (vmap->caps_[index] != 0) {
+        if (vmap->caps_[index] == 0) {
             cspacepath_t src, dest;
             /* src is kmap slot, dest is vmap slot */
             err = vka_cspace_alloc_path(vka, &dest);
@@ -133,13 +133,15 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
             /* Map into proc addrspace */
             ZxProcess *proc = vmap->parent_->get_proc();
             uintptr_t vaddr = vmap->start_addr_ + (index * (1 << seL4_PageBits));
-            err = proc->map_page_in_vspace(frames_[index].cptr,
-                    (void *)vaddr, vmap->rights_, 1);
+            dprintf(INFO, "Mapping page at %lx for proc %p\n", vaddr, proc);
+            err = proc->map_page_in_vspace(dest.capPtr, (void *)vaddr, vmap->rights_, 1);
             if (err) {
                 vka_cnode_delete(&dest);
                 vka_cspace_free_path(vka, dest);
                 return false;
             }
+            /* Set vmap cap */
+            vmap->caps_[index] = dest.capPtr;
         }
     }
 

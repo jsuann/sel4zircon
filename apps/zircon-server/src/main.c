@@ -159,31 +159,6 @@ int main(void) {
 
     /* Init the zircon server */
     init_zircon_server(&vka, &vspace, ep_object.cptr);
-    uint64_t badge_val = init_zircon_test();
-
-    /* XXX Replace with zircon objects */
-    /* use sel4utils to make a new process */
-    sel4utils_process_t new_process;
-    sel4utils_process_config_t config = process_config_default_simple(&simple, APP_IMAGE_NAME, APP_PRIORITY);
-    error = sel4utils_configure_process_custom(&new_process, &vka, &vspace, config);
-    assert(error == 0);
-
-    /* give the new process's thread a name */
-    name_thread(new_process.thread.tcb.cptr, "zircon-test");
-
-    /* make a cspacepath for the new endpoint cap */
-    cspacepath_t ep_cap_path;
-    seL4_CPtr new_ep_cap;
-    vka_cspace_make_path(&vka, ep_object.cptr, &ep_cap_path);
-
-    /* copy the endpont cap and add a badge to the new cap */
-    new_ep_cap = sel4utils_mint_cap_to_process(&new_process, ep_cap_path, seL4_AllRights, seL4_CapData_Badge_new(badge_val));
-    assert(new_ep_cap != 0);
-
-    /* spawn the process */
-    error = sel4utils_spawn_process_v(&new_process, &vka, &vspace, 0, NULL, 1);
-    assert(error == 0);
-    /* XXX */
 
     dprintf(ALWAYS, "=== Zircon Server ===\n");
 
@@ -215,9 +190,12 @@ int main(void) {
 
     sel4platsupport_destroy_timer(&timer, &vka);
 
-    do_cpp_test();
-    send_zircon_test_data(ep_cap_path.capPtr);
+    //do_cpp_test();
 
+    /* Init zircon test */
+    init_zircon_test();
+
+    /* Enter syscall loop */
     syscall_loop();
 
     return 0;
