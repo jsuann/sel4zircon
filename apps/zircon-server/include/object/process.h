@@ -100,7 +100,13 @@ public:
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
 
-    void *uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len);
+    void *uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, zx_status_t *err);
+
+    /* Wrapper for above when getting specific types */
+    template <typename T>
+    T *get_kvaddr(uintptr_t uvaddr, zx_status_t *err) {
+        return (T *)uvaddr_to_kvaddr(uvaddr, sizeof(T), err);
+    }
 
 private:
     /* List of Handles */

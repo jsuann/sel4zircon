@@ -63,6 +63,13 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
     /* Create mapping */
     VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, caps, rights, vmar);
     map_list_.push_back(vmap);
+
+    /* Add vmap to vmar. We assume it has been checked for validity */
+    if (!vmar->add_vm_region(vmap)) {
+        delete_mapping(vmap);
+        return NULL;
+    }
+
     return vmap;
 }
 

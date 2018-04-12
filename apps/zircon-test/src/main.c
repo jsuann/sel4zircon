@@ -80,6 +80,10 @@ int main(int argc, char **argv) {
     err = zx_handle_close(1231231313);
     printf("zx_handle_close returned %d\n", err);
 
+    zx_handle_t thrd_handle2 = 0;
+    err = zx_handle_replace(thrd_handle, ZX_RIGHT_SAME_RIGHTS, &thrd_handle2);
+    printf("zx_handle_replace returned %d, new handle %u\n", err, thrd_handle2);
+
     //err = zx_handle_close(vmar_handle);
     //printf("zx_handle_close returned %d\n", err);
 

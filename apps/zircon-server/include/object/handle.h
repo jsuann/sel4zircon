@@ -27,6 +27,10 @@ public:
     const zx_rights_t get_rights() const { return rights_; }
     const uint32_t get_value() const { return base_value_; }
 
+    bool has_rights(zx_rights_t desired) const {
+        return (rights_ & desired) == desired;
+    }
+
 private:
     ZxObject *obj_;
     const zx_rights_t rights_;

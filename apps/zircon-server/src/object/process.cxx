@@ -212,21 +212,32 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
 }
 
 /* Get server vaddr from user vaddr. Perform length check in process */
-void *ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len)
+void *ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, zx_status_t *err)
 {
+    *err = ZX_OK;
+
     /* Get the VMO mapping of uvaddr */
     VmoMapping *vmap = root_vmar_->get_vmap_from_addr(uvaddr);
     if (vmap == NULL) {
+        *err = ZX_ERR_INVALID_ARGS;
         return NULL;
     }
 
     /* Ensure that addr + len won't exceed vmo end */
     if (uvaddr + len > vmap->get_base() + vmap->get_size()) {
+        *err = ZX_ERR_INVALID_ARGS;
+        return NULL;
+    }
+
+    /* Ensure addr is backed by a page */
+    ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
+    uint64_t offset = uvaddr - vmap->get_base();
+    if (!vmo->commit_page(offset / (1 << seL4_PageBits), vmap)) {
+        *err = ZX_ERR_NO_MEMORY;
         return NULL;
     }
 
     /* Return kvaddr */
-    ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
-    uintptr_t kvaddr = vmo->get_base() + (uvaddr - vmap->get_base());
+    uintptr_t kvaddr = vmo->get_base() + offset;
     return (void *)kvaddr;
 }
