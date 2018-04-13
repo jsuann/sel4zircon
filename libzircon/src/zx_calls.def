@@ -60,12 +60,6 @@ zx_status_t zx_system_get_features(uint32_t kind, uint32_t* out)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_cache_flush(void* addr, size_t len, uint32_t options)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_CACHE_FLUSH, 3, addr, len, options);
-    return seL4_GetMR(0);
-}
-
 zx_status_t zx_handle_close(zx_handle_t handle)
 {
     ZX_SYSCALL_SEND(ZX_SYS_HANDLE_CLOSE, 1, handle);
@@ -132,7 +126,7 @@ zx_status_t zx_object_set_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_object_get_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t cookie)
+zx_status_t zx_object_get_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t* cookie)
 {
     ZX_SYSCALL_SEND(ZX_SYS_OBJECT_GET_COOKIE, 3, handle, scope, cookie);
     return seL4_GetMR(0);
@@ -144,7 +138,7 @@ zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer,
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights, zx_handle_t out)
+zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights, zx_handle_t* out)
 {
     ZX_SYSCALL_SEND(ZX_SYS_OBJECT_GET_CHILD, 4, handle, koid, rights, out);
     return seL4_GetMR(0);
@@ -174,19 +168,7 @@ zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, void* bytes, 
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_channel_call_noretry(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_CHANNEL_CALL_NORETRY, 7, handle, options, deadline, args, actual_bytes, actual_handles, read_status);
-    return seL4_GetMR(0);
-}
-
-zx_status_t zx_channel_call_finish(zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_CHANNEL_CALL_FINISH, 5, deadline, args, actual_bytes, actual_handles, read_status);
-    return seL4_GetMR(0);
-}
-
-zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status)
+zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, zx_status_t* read_status)
 {
     ZX_SYSCALL_SEND(ZX_SYS_CHANNEL_CALL, 7, handle, options, deadline, args, actual_bytes, actual_handles, read_status);
     return seL4_GetMR(0);
@@ -274,13 +256,13 @@ zx_status_t zx_process_start(zx_handle_t process_handle, zx_handle_t thread_hand
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t actual)
+zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PROCESS_READ_MEMORY, 5, proc, vaddr, buffer, len, actual);
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t actual)
+zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PROCESS_WRITE_MEMORY, 5, proc, vaddr, buffer, len, actual);
     return seL4_GetMR(0);
@@ -400,19 +382,19 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t actual)
+zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMO_READ, 5, handle, data, offset, len, actual);
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t actual)
+zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMO_WRITE, 5, handle, data, offset, len, actual);
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t size)
+zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMO_GET_SIZE, 2, handle, size);
     return seL4_GetMR(0);
@@ -442,7 +424,7 @@ zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar_handle, size_t offset, size_t size, uint32_t map_flags, zx_handle_t* child_vmar, uintptr_t child_addr)
+zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar_handle, size_t offset, size_t size, uint32_t map_flags, zx_handle_t* child_vmar, uintptr_t* child_addr)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMAR_ALLOCATE, 6, parent_vmar_handle, offset, size, map_flags, child_vmar, child_addr);
     return seL4_GetMR(0);
@@ -454,7 +436,7 @@ zx_status_t zx_vmar_destroy(zx_handle_t vmar_handle)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset, zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags, uintptr_t mapped_addr)
+zx_status_t zx_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset, zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags, uintptr_t* mapped_addr)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMAR_MAP, 7, vmar_handle, vmar_offset, vmo_handle, vmo_offset, len, map_flags, mapped_addr);
     return seL4_GetMR(0);
@@ -472,7 +454,7 @@ zx_status_t zx_vmar_protect(zx_handle_t vmar_handle, uintptr_t addr, size_t len,
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_cprng_draw(void* buffer, size_t len, size_t actual)
+zx_status_t zx_cprng_draw(void* buffer, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_CPRNG_DRAW, 3, buffer, len, actual);
     return seL4_GetMR(0);
@@ -490,13 +472,13 @@ zx_status_t zx_fifo_create(uint32_t elem_count, uint32_t elem_size, uint32_t opt
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t num_written)
+zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t* num_written)
 {
     ZX_SYSCALL_SEND(ZX_SYS_FIFO_READ, 4, handle, data, len, num_written);
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t num_written)
+zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t* num_written)
 {
     ZX_SYSCALL_SEND(ZX_SYS_FIFO_WRITE, 4, handle, data, len, num_written);
     return seL4_GetMR(0);
@@ -549,7 +531,7 @@ zx_status_t zx_debuglog_read(zx_handle_t handle, uint32_t options, void* buffer,
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_ktrace_read(zx_handle_t handle, void* data, uint32_t offset, uint32_t len, uint32_t actual)
+zx_status_t zx_ktrace_read(zx_handle_t handle, void* data, uint32_t offset, uint32_t len, uint32_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_KTRACE_READ, 5, handle, data, offset, len, actual);
     return seL4_GetMR(0);
@@ -603,13 +585,13 @@ zx_status_t zx_interrupt_bind(zx_handle_t handle, uint32_t slot, zx_handle_t hrs
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_interrupt_wait(zx_handle_t handle, uint64_t slots)
+zx_status_t zx_interrupt_wait(zx_handle_t handle, uint64_t* slots)
 {
     ZX_SYSCALL_SEND(ZX_SYS_INTERRUPT_WAIT, 2, handle, slots);
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot, zx_time_t timestamp)
+zx_status_t zx_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot, zx_time_t* timestamp)
 {
     ZX_SYSCALL_SEND(ZX_SYS_INTERRUPT_GET_TIMESTAMP, 3, handle, slot, timestamp);
     return seL4_GetMR(0);
@@ -651,7 +633,7 @@ zx_status_t zx_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id, 
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint64_t size, uint32_t perms, zx_paddr_t* addrs, size_t addrs_len, size_t actual)
+zx_status_t zx_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint64_t size, uint32_t perms, zx_paddr_t* addrs, size_t addrs_len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_BTI_PIN, 8, bti, vmo, offset, size, perms, addrs, addrs_len, actual);
     return seL4_GetMR(0);
@@ -663,7 +645,7 @@ zx_status_t zx_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_bootloader_fb_get_info(uint32_t format, uint32_t width, uint32_t height, uint32_t stride)
+zx_status_t zx_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride)
 {
     ZX_SYSCALL_SEND(ZX_SYS_BOOTLOADER_FB_GET_INFO, 4, format, width, height, stride);
     return seL4_GetMR(0);
@@ -729,7 +711,7 @@ zx_status_t zx_pci_map_interrupt(zx_handle_t handle, int32_t which_irq, zx_handl
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_pci_query_irq_mode(zx_handle_t handle, uint32_t mode, uint32_t out_max_irqs)
+zx_status_t zx_pci_query_irq_mode(zx_handle_t handle, uint32_t mode, uint32_t* out_max_irqs)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PCI_QUERY_IRQ_MODE, 3, handle, mode, out_max_irqs);
     return seL4_GetMR(0);

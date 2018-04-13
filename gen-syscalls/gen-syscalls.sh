@@ -12,6 +12,7 @@ TABLE_FILE=../apps/zircon-server/src/syscalls/sys_table.cxx
 SYSNO_FILE=../libzircon/src/sys_def.h
 
 DEFINED_LIST=syscalls.list
+SKIP_LIST=skip-sys.list
 
 LIBZIRCON_HEADER=../libzircon/include/zircon/zx_calls.h
 LIBZIRCON_DEFS=../libzircon/src/zx_calls.def
@@ -53,6 +54,12 @@ do
 
     syscall_name=$(sed -e 's/^syscall \([a-z0-9_]*\).*$/\1/' <<< "${syscall}")
 
+    # some syscalls are not handled server-side, skip these
+    if grep -q "^zx_${syscall_name}$" "${SKIP_LIST}"; then
+        syscall=
+        continue
+    fi
+
     # get name for syscall number definition
     syscall_def="ZX_SYS_$(tr '[:lower:]' '[:upper:]' <<< "${syscall_name}")"
 
@@ -60,7 +67,7 @@ do
     echo "#define ${syscall_def} ${syscall_num}" >> "${SYSNO_FILE}"
 
     # check if syscall has server side implementation
-    if grep -q "sys_${syscall_name}" "${DEFINED_LIST}"; then
+    if grep -q "^sys_${syscall_name}$" "${DEFINED_LIST}"; then
         # declare kernel-side handler
         echo "void sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
         # add to syscall table
@@ -88,16 +95,22 @@ do
     # generate the syscall declaration
     arg_count=0
     arg_name_list=
+    is_return_arg=0
     syscall_decl="${syscall_ret} zx_${syscall_name}("
     if [ -z "${syscall_args}" ] && [ -z "${syscall_ret_args}" ]; then
         syscall_decl="${syscall_decl}void)"
     else
-        arg_list="${syscall_args},${syscall_ret_args},"
+        arg_list="${syscall_args},return_args,${syscall_ret_args},"
         while [ -n "${arg_list}" ]
         do
             curr_arg=$(cut -f 1 -d ',' <<< "${arg_list}")
             arg_list=$(cut -f 2- -d ',' <<< "${arg_list}")
             [ -z "${curr_arg}" ] && continue
+
+            if [ "${curr_arg}" = "return_args" ]; then
+                is_return_arg=1
+                continue
+            fi
 
             arg_name=$(cut -f 1 -d ':' <<< "${curr_arg}")
             arg_type=$(cut -f 2 -d ':' <<< "${curr_arg}")
@@ -119,6 +132,8 @@ do
                 arg_type="${arg_type% *}*"
             elif [ "${syscall_name}" = "vcpu_resume" ] && \
                     [ "${arg_name}" = "packet" ]; then
+                arg_type="${arg_type% *}*"
+            elif [ ${is_return_arg} -ne 0 ]; then
                 arg_type="${arg_type% *}*"
             else
                 arg_type="${arg_type% *}"

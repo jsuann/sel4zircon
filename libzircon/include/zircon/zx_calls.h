@@ -20,8 +20,6 @@ extern uint64_t zx_system_get_physmem(void);
 
 extern zx_status_t zx_system_get_features(uint32_t kind, uint32_t* out);
 
-extern zx_status_t zx_cache_flush(void* addr, size_t len, uint32_t options);
-
 extern zx_status_t zx_handle_close(zx_handle_t handle);
 
 extern zx_status_t zx_handle_duplicate(zx_handle_t handle, zx_rights_t rights, zx_handle_t* out);
@@ -44,11 +42,11 @@ extern zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property,
 
 extern zx_status_t zx_object_set_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t cookie);
 
-extern zx_status_t zx_object_get_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t cookie);
+extern zx_status_t zx_object_get_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t* cookie);
 
 extern zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size, size_t* actual_count, size_t* avail_count);
 
-extern zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights, zx_handle_t out);
+extern zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights, zx_handle_t* out);
 
 extern zx_status_t zx_channel_create(uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
 
@@ -58,11 +56,7 @@ extern zx_status_t zx_channel_read_etc(zx_handle_t handle, uint32_t options, voi
 
 extern zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t num_handles);
 
-extern zx_status_t zx_channel_call_noretry(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status);
-
-extern zx_status_t zx_channel_call_finish(zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status);
-
-extern zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t actual_bytes, uint32_t actual_handles, zx_status_t* read_status);
+extern zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, zx_status_t* read_status);
 
 extern zx_status_t zx_socket_create(uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
 
@@ -92,9 +86,9 @@ extern zx_status_t zx_process_create(zx_handle_t job, char* name, uint32_t name_
 
 extern zx_status_t zx_process_start(zx_handle_t process_handle, zx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, zx_handle_t arg_handle, uintptr_t arg2);
 
-extern zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t actual);
+extern zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual);
 
-extern zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t actual);
+extern zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual);
 
 extern zx_status_t zx_job_create(zx_handle_t parent_job, uint32_t options, zx_handle_t* out);
 
@@ -134,11 +128,11 @@ extern zx_status_t zx_timer_cancel(zx_handle_t handle);
 
 extern zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 
-extern zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t actual);
+extern zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual);
 
-extern zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t actual);
+extern zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual);
 
-extern zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t size);
+extern zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
 extern zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
 
@@ -148,25 +142,25 @@ extern zx_status_t zx_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t o
 
 extern zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
 
-extern zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar_handle, size_t offset, size_t size, uint32_t map_flags, zx_handle_t* child_vmar, uintptr_t child_addr);
+extern zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar_handle, size_t offset, size_t size, uint32_t map_flags, zx_handle_t* child_vmar, uintptr_t* child_addr);
 
 extern zx_status_t zx_vmar_destroy(zx_handle_t vmar_handle);
 
-extern zx_status_t zx_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset, zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags, uintptr_t mapped_addr);
+extern zx_status_t zx_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset, zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags, uintptr_t* mapped_addr);
 
 extern zx_status_t zx_vmar_unmap(zx_handle_t vmar_handle, uintptr_t addr, size_t len);
 
 extern zx_status_t zx_vmar_protect(zx_handle_t vmar_handle, uintptr_t addr, size_t len, uint32_t prot_flags);
 
-extern zx_status_t zx_cprng_draw(void* buffer, size_t len, size_t actual);
+extern zx_status_t zx_cprng_draw(void* buffer, size_t len, size_t* actual);
 
 extern zx_status_t zx_cprng_add_entropy(void* buffer, size_t len);
 
 extern zx_status_t zx_fifo_create(uint32_t elem_count, uint32_t elem_size, uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
 
-extern zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t num_written);
+extern zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t* num_written);
 
-extern zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t num_written);
+extern zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t* num_written);
 
 extern zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle, uintptr_t addr, size_t len, zx_handle_t handle);
 
@@ -184,7 +178,7 @@ extern zx_status_t zx_debuglog_write(zx_handle_t handle, uint32_t options, void*
 
 extern zx_status_t zx_debuglog_read(zx_handle_t handle, uint32_t options, void* buffer, size_t len);
 
-extern zx_status_t zx_ktrace_read(zx_handle_t handle, void* data, uint32_t offset, uint32_t len, uint32_t actual);
+extern zx_status_t zx_ktrace_read(zx_handle_t handle, void* data, uint32_t offset, uint32_t len, uint32_t* actual);
 
 extern zx_status_t zx_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t options, void* ptr);
 
@@ -202,9 +196,9 @@ extern zx_status_t zx_interrupt_create(zx_handle_t hrsrc, uint32_t options, zx_h
 
 extern zx_status_t zx_interrupt_bind(zx_handle_t handle, uint32_t slot, zx_handle_t hrsrc, uint32_t vector, uint32_t options);
 
-extern zx_status_t zx_interrupt_wait(zx_handle_t handle, uint64_t slots);
+extern zx_status_t zx_interrupt_wait(zx_handle_t handle, uint64_t* slots);
 
-extern zx_status_t zx_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot, zx_time_t timestamp);
+extern zx_status_t zx_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot, zx_time_t* timestamp);
 
 extern zx_status_t zx_interrupt_signal(zx_handle_t handle, uint32_t slot, zx_time_t timestamp);
 
@@ -218,11 +212,11 @@ extern zx_status_t zx_iommu_create(zx_handle_t rsrc_handle, uint32_t type, void*
 
 extern zx_status_t zx_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id, zx_handle_t* out);
 
-extern zx_status_t zx_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint64_t size, uint32_t perms, zx_paddr_t* addrs, size_t addrs_len, size_t actual);
+extern zx_status_t zx_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint64_t size, uint32_t perms, zx_paddr_t* addrs, size_t addrs_len, size_t* actual);
 
 extern zx_status_t zx_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr);
 
-extern zx_status_t zx_bootloader_fb_get_info(uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
+extern zx_status_t zx_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride);
 
 extern zx_status_t zx_set_framebuffer(zx_handle_t handle, void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
 
@@ -244,7 +238,7 @@ extern zx_status_t zx_pci_get_bar(zx_handle_t handle, uint32_t bar_num, zx_pci_b
 
 extern zx_status_t zx_pci_map_interrupt(zx_handle_t handle, int32_t which_irq, zx_handle_t* out_handle);
 
-extern zx_status_t zx_pci_query_irq_mode(zx_handle_t handle, uint32_t mode, uint32_t out_max_irqs);
+extern zx_status_t zx_pci_query_irq_mode(zx_handle_t handle, uint32_t mode, uint32_t* out_max_irqs);
 
 extern zx_status_t zx_pci_set_irq_mode(zx_handle_t handle, uint32_t mode, uint32_t requested_irq_count);
 

@@ -1,0 +1,5 @@
+# The following is a list of syscalls not handled by server,
+# or private to vdso/libzircon (hence zx prefix). Do not edit.
+zx_channel_call_noretry
+zx_channel_call_finish
+zx_cache_flush
