@@ -12,6 +12,7 @@ extern "C" {
 /* Test syscalls return sum of args */
 #define DO_TEST_SYSCALL(n) \
     dprintf(INFO, "Got %s\n", __FUNCTION__); \
+    SYS_CHECK_NUM_ARGS(tag, n); \
     uint64_t ret = 0; \
     for (int i = 0; i < n; i++) \
         ret += seL4_GetMR(i); \
@@ -20,6 +21,7 @@ extern "C" {
 void sys_syscall_test_0(seL4_MessageInfo_t tag, uint64_t badge)
 {
     dprintf(INFO, "Got %s\n", __FUNCTION__);
+    SYS_CHECK_NUM_ARGS(tag, 0);
     sys_reply(0);
 }
 

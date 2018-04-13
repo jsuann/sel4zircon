@@ -78,7 +78,7 @@ void write_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
     assert(stack_vmo->get_size() > offset);
 
     /* Write to stack (should already be mapped in!) */
-    stack_vmo->write(offset, len, (uintptr_t)buf);
+    stack_vmo->write(offset, len, buf);
 
     /* Update stack ptr */
     *stack_ptr = new_stack_ptr;
@@ -149,7 +149,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
 
             /* Copy segment to vmo */
             uint64_t offset = vaddr - (vaddr & kPageMask);
-            elf_vmo->write(offset, file_size, (uintptr_t)source_addr);
+            elf_vmo->write(offset, file_size, source_addr);
 
             /* Store vmo ptr */
             vmos[vmo_index] = elf_vmo;

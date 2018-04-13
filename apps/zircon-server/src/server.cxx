@@ -115,9 +115,10 @@ void syscall_loop(void)
 #include "syscalls/other.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"
+#include "syscalls/vmo.cxx"
 
-#include "utils/init_test.cxx"
 #include "utils/elf.cxx"
+#include "utils/init_test.cxx"
 
 /* Extra test function */
 void do_cpp_test(void)

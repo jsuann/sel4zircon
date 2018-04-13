@@ -36,11 +36,11 @@ public:
     void destroy();
 
     /* read & write assume args are valid! */
-    void read(uint64_t offset, size_t len, uintptr_t dest) {
-        memcpy((void *)dest, (void *)(kaddr_ + offset), len);
+    void read(uint64_t offset, size_t len, void *dest) {
+        memcpy(dest, (void *)(kaddr_ + offset), len);
     }
-    void write(uint64_t offset, size_t len, uintptr_t src) {
-        memcpy((void *)(kaddr_ + offset), (void *)src, len);
+    void write(uint64_t offset, size_t len, void *src) {
+        memcpy((void *)(kaddr_ + offset), src, len);
     }
 
     VmoMapping *create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags);
@@ -50,6 +50,18 @@ public:
     bool commit_all_pages(VmoMapping *vmap) {
         for (uint32_t i = 0; i < num_pages_; ++i) {
             if (!commit_page(i, vmap)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool commit_range(uint64_t offset, size_t len) {
+        uint32_t start_page = offset / (1 << seL4_PageBits);
+        uint32_t end_page = (offset + len - 1) / (1 << seL4_PageBits);
+        assert(end_page < num_pages_);
+        for (uint32_t i = start_page; i <= end_page; ++i) {
+            if (!commit_page(i, NULL)) {
                 return false;
             }
         }

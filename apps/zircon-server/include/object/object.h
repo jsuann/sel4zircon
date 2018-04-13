@@ -61,3 +61,6 @@ template <typename T>
 void free_object(T *obj);
 
 void destroy_object(ZxObject *obj);
+
+template <typename T>
+bool is_object_type(ZxObject *obj);

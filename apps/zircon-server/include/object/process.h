@@ -100,12 +100,21 @@ public:
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
 
-    void *uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, zx_status_t *err);
+    zx_status_t uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, void *&kvaddr);
 
     /* Wrapper for above when getting specific types */
     template <typename T>
-    T *get_kvaddr(uintptr_t uvaddr, zx_status_t *err) {
-        return (T *)uvaddr_to_kvaddr(uvaddr, sizeof(T), err);
+    zx_status_t get_kvaddr(uintptr_t uvaddr, T *&t) {
+        return uvaddr_to_kvaddr(uvaddr, sizeof(T), (void *&)t);
+    }
+
+    template <typename T>
+    zx_status_t get_object_with_rights(zx_handle_t handle_val,
+            zx_rights_t rights, T *&obj);
+
+    template <typename T>
+    zx_status_t get_object(zx_handle_t handle_val, T *&obj) {
+        return get_object_with_rights(handle_val, 0, obj);
     }
 
 private:

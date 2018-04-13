@@ -212,32 +212,54 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
 }
 
 /* Get server vaddr from user vaddr. Perform length check in process */
-void *ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, zx_status_t *err)
+zx_status_t ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr,
+        size_t len, void *&kvaddr)
 {
-    *err = ZX_OK;
+    kvaddr = NULL;
 
     /* Get the VMO mapping of uvaddr */
     VmoMapping *vmap = root_vmar_->get_vmap_from_addr(uvaddr);
     if (vmap == NULL) {
-        *err = ZX_ERR_INVALID_ARGS;
-        return NULL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Ensure that addr + len won't exceed vmo end */
     if (uvaddr + len > vmap->get_base() + vmap->get_size()) {
-        *err = ZX_ERR_INVALID_ARGS;
-        return NULL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Ensure addr is backed by a page */
     ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
     uint64_t offset = uvaddr - vmap->get_base();
     if (!vmo->commit_page(offset / (1 << seL4_PageBits), vmap)) {
-        *err = ZX_ERR_NO_MEMORY;
-        return NULL;
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* Return kvaddr */
-    uintptr_t kvaddr = vmo->get_base() + offset;
-    return (void *)kvaddr;
+    kvaddr = (void *)(vmo->get_base() + offset);
+    return ZX_OK;
+}
+
+template <typename T>
+zx_status_t ZxProcess::get_object_with_rights(zx_handle_t handle_val,
+        zx_rights_t rights, T *&obj)
+{
+    obj = NULL;
+
+    Handle *h = get_handle(handle_val);
+    if (h == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+
+    ZxObject *base = h->get_object();
+    if (!is_object_type<T>(base)) {
+        return ZX_ERR_WRONG_TYPE;
+    }
+
+    if (!h->has_rights(rights)) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    obj = (T *)base;
+    return ZX_OK;
 }

@@ -14,3 +14,11 @@ static inline void sys_reply(zx_status_t res)
     seL4_SetMR(0, res);
     seL4_Reply(tag);
 }
+
+/* Check that syscall has correct num args */
+#define SYS_CHECK_NUM_ARGS(tag, n) \
+    do { \
+        if (seL4_MessageInfo_get_length(tag) != n) { \
+            return sys_reply(ZX_ERR_INVALID_ARGS); \
+        } \
+    } while (0)
