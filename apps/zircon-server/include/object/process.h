@@ -23,13 +23,13 @@ extern "C" {
 #include "thread.h"
 #include "../zxcpp/bitalloc.h"
 #include "vkaobjectnode.h"
+#include "../utils/rng.h"
 
 class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
             root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
-        /* FIXME gen better rand val */
-        handle_rand_ = get_koid();
+        handle_rand_ = get_handle_rand();
         root_vmar_->set_proc(this);
     }
 

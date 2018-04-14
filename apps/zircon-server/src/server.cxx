@@ -24,6 +24,7 @@ extern "C" {
 #include "object/vmar.h"
 
 #include "utils/elf.h"
+#include "utils/rng.h"
 
 /* Wrap globals in a namespace to prevent access outside this file */
 namespace ServerCxx {
@@ -63,10 +64,11 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     server_vspace = vspace;
     server_ep = new_ep;
 
-    /* init allocators */
+    /* init allocators and other things */
     init_handle_table(server_vspace);
     init_proc_table(server_vspace);
     init_vmo_kmap();
+    init_prng();
 }
 
 void syscall_loop(void)

@@ -166,7 +166,7 @@ int main(void) {
         printf("badge: %lu\n", badge);
 
         count++;
-        if (count == 10 * msg) {
+        if (count == 10) {
             break;
         }
     }
@@ -179,6 +179,7 @@ int main(void) {
     seL4_Reply(tag);
 
     sel4platsupport_destroy_timer(&timer, &vka);
+    while (1);
 */
 
     //do_cpp_test();
