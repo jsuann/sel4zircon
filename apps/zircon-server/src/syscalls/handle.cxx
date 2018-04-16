@@ -28,10 +28,7 @@ void sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     proc->remove_handle(h);
-    ZxObject *o = h->get_object();
-    if (o->destroy_handle(h)) {
-        destroy_object(o);
-    }
+    destroy_handle_maybe_object(h);
     sys_reply(ZX_OK);
 }
 

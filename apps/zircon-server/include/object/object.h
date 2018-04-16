@@ -23,6 +23,14 @@ public:
 
     virtual zx_obj_type_t get_object_type() const { return ZX_OBJ_TYPE_NONE; }
 
+    /* All objects need to define a destroy/cleanup function */
+    virtual void destroy() = 0;
+
+    /* Check that object has no more references & is safe to destroy */
+    virtual bool can_destroy() { return (handle_count_ == 0); }
+
+    bool zero_handles() const { return (handle_count_ == 0); }
+
     zx_koid_t get_koid() const { return koid_; }
 
     Handle *create_handle(zx_rights_t rights) {
@@ -33,10 +41,9 @@ public:
         return h;
     }
 
-    bool destroy_handle(Handle *h) {
+    void destroy_handle(Handle *h) {
         free_handle(h);
         --handle_count_;
-        return handle_count_ == 0u;
     }
 
     uint32_t current_handle_count() const {
@@ -60,7 +67,8 @@ T *allocate_object(U ... args);
 template <typename T>
 void free_object(T *obj);
 
-void destroy_object(ZxObject *obj);
-
 template <typename T>
 bool is_object_type(ZxObject *obj);
+
+/* Combine destroying of handle & object */
+void destroy_handle_maybe_object(Handle *h);

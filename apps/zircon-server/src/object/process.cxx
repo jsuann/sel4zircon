@@ -67,6 +67,8 @@ ZxProcess *get_proc_from_badge(uint64_t badge)
     return proc_table.get(index);
 }
 
+/* We use a different allocator for processes,
+   so we require a template specialisation */
 template <>
 ZxProcess *allocate_object<ZxProcess>(ZxVmar *root_vmar)
 {
@@ -89,6 +91,7 @@ void free_object<ZxProcess>(ZxProcess *obj)
     proc_table.free(index);
 }
 
+
 /*
  *  ZxProcess member functions
  */
@@ -99,6 +102,9 @@ bool ZxProcess::init()
     int error;
     vka_t *vka = get_server_vka();
 
+    /* If we fail at any point, destroy is capable of
+       cleaning up a partially intialised proc */
+
     /* Create thread id allocator */
     if (!thrd_alloc_.init(kProcThreadAllocSize)) {
         return false;
@@ -106,11 +112,15 @@ bool ZxProcess::init()
 
     /* Create PD */
     error = vka_alloc_vspace_root(vka, &pd_);
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     /* Assign ASID pool */
     error = assign_asid_pool(pd_.cptr, &asid_pool_);
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     return true;
 }
@@ -119,47 +129,85 @@ void ZxProcess::destroy()
 {
     using namespace ProcessCxx;
 
+    vka_t *vka = get_server_vka();
+
     thrd_alloc_.destroy();
+
+    /* Destroy pd */
+    if (pd_.cptr != 0) {
+        vka_free_object(vka, &pd_);
+    }
+
+    /* Threads should already be removed */
+    assert(thread_list_.empty());
+
+    /* Destroy handles */
+    while (!handle_list_.empty()) {
+        Handle *h = handle_list_.pop_front();
+        destroy_handle_maybe_object(h);
+    }
+
+    /* Destroy VMAR */
+    root_vmar->destroy();
 }
 
 bool ZxProcess::add_thread(ZxThread *thrd)
 {
     using namespace ProcessCxx;
 
-    /* TODO proper error handling, cleanup */
     int error;
     cspacepath_t src;
     vka_t *vka = get_server_vka();
 
+    vka_object_t ipc_frame = {0};
+
+    /* Thread index already allocated to make cleanup easier */
+    uint32_t thrd_index = thrd->get_thread_index();
+
+    /* Calc address of IPC buffer */
+    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd_index * 2);
+
     /* Copy PD cap into thread cspace */
     vka_cspace_make_path(vka, pd_.cptr, &src);
     error = thrd->copy_cap_to_thread(&src, SEL4UTILS_PD_SLOT);
-    assert(!error);
-
-    /* Get address of IPC buffer */
-    uint32_t thrd_index = thrd->get_thread_index();
-    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd_index * 2);
+    if (error) {
+        goto error_add_thread;
+    }
 
     /* Create IPC buffer frame */
-    vka_object_t ipc_frame;
     error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
-    assert(!error);
+    if (error) {
+        goto error_add_thread;
+    }
 
     /* Map IPC frame into vspace */
     error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights, 1);
-    assert(!error);
+    if (error) {
+        goto error_add_thread;
+    }
 
     /* Assign IPC buffer to thread */
     thrd->set_ipc_buffer(ipc_frame, ipc_buf_addr);
 
     /* Configure TCB */
-    dprintf(SPEW, "Conf tcb\n");
     error = thrd->configure_tcb(pd_.cptr);
-    assert(!error);
+    if (error) {
+        goto error_add_thread;
+    }
 
     /* Add thread to list */
     thread_list_.push_back(thrd);
     return true;
+
+error_add_thread:
+    /* Delete frame object */
+    if (ipc_frame.cptr != 0) {
+        vka_free_object(vka, &ipc_frame);
+    }
+
+    /* Free thread index */
+    thrd_alloc_.free(thrd_index);
+    return false;
 }
 
 int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,

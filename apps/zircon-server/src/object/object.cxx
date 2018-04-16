@@ -7,7 +7,25 @@ zx_koid_t global_koid = 1024ULL;
 /* Helper struct for determining if object is of a required type */
 template <typename T> struct ZxObjectType;
 
+/* Object destroyer upon all handles closed */
+void destroy_object(ZxObject *obj)
+{
+    /* Destroy structure in object */
+    obj->destroy();
+
+    /* Free object memory */
+    zx_obj_type_t type = obj->get_object_type();
+    assert(type != ZX_OBJ_TYPE_NONE);
+    switch (type) {
+    case ZX_OBJ_TYPE_PROCESS:
+        free_object<ZxProcess>((ZxProcess *)obj);
+        break;
+    default:
+        free_object(obj);
+    }
 }
+
+} /* namespace ObjectCxx */
 
 ZxObject::ZxObject() : koid_{ObjectCxx::global_koid},
     handle_count_{0}, signals_{0}
@@ -31,18 +49,16 @@ void free_object(T *obj)
     delete obj;
 }
 
-void destroy_object(ZxObject *obj)
+void destroy_handle_maybe_object(Handle *h);
 {
-    zx_obj_type_t type = obj->get_object_type();
-    assert(type != ZX_OBJ_TYPE_NONE);
-    switch (type) {
-    case ZX_OBJ_TYPE_PROCESS:
-        free_object<ZxProcess>((ZxProcess *)obj);
-        break;
-    default:
-        free_object(obj);
+    ZxObject *o = h->get_object();
+    o->destroy_handle(h);
+    if (obj->can_destroy()) {
+        /* Try to destroy object */
+        ObjectCxx::destroy_object(o);
     }
 }
+
 
 #define DECL_OBJ_TYPE(T, E) \
 class T; \

@@ -66,6 +66,6 @@ public:
     }
 
 private:
-    uint8_t *bitmap_;
+    uint8_t *bitmap_ = NULL;
     size_t num_bytes_;
 };

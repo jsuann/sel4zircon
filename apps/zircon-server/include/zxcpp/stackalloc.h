@@ -83,5 +83,5 @@ private:
     size_t count_;
     uint32_t next_free_;
     uint32_t num_alloc_;
-    FreeListNode *free_list_;
+    FreeListNode *free_list_ = NULL;
 };

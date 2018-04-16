@@ -41,6 +41,9 @@ public:
     bool init();
     void destroy();
 
+    /* TODO: can_destroy should check owning job */
+    /* TODO: entry into dead state once all threads exited */
+
     void set_name(const char *name) {
         /* Silently truncate name */
         strncpy(name_, name, ZX_MAX_NAME_LEN-1);
@@ -142,8 +145,8 @@ private:
     /* Exception port */
 
     /* vspace */
-    vka_object_t pd_;
-    seL4_CPtr asid_pool_;
+    vka_object_t pd_ = {0};
+    seL4_CPtr asid_pool_ = 0;
 
     /* Used to store PT objects */
     VkaObjectNode *pt_list_ = NULL;

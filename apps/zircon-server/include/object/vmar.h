@@ -30,6 +30,10 @@ public:
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
 
+    void destroy();
+
+    bool can_destroy() override { return (zero_handles() && !is_active_); }
+
     uintptr_t get_base() const override { return base_; }
     size_t get_size() const override { return size_; }
     VmRegion *get_parent() const override { return parent_; }
@@ -55,6 +59,9 @@ private:
 
     /* Parent vmar */
     ZxVmar *parent_;
+
+    /* False if vmar has been destroyed */
+    bool is_active_ = true;
 
     /* List of child vmars & mapped vmos */
     Vector<VmRegion*> children_;
