@@ -59,6 +59,12 @@ public:
         dprintf(INFO, "%lu %u %u\n", koid_, handle_count_, signals_);
     }
 
+    void update_state(zx_signals_t clear_mask, zx_signals_t set_mask) {
+        signals_ &= ~clear_mask;
+        signals_ |= set_mask;
+        /* TODO wake up waiters */
+    }
+
 private:
     const zx_koid_t koid_;
     uint32_t handle_count_;

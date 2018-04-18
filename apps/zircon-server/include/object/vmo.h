@@ -18,11 +18,11 @@ class VmoMapping;
 
 class ZxVmo final : public ZxObject {
 public:
-    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
-
     ZxVmo(uint32_t num_pages) : num_pages_{num_pages}, map_list_{this} {
         size_ = num_pages * (1 << seL4_PageBits);
     }
+
+    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
 
     uintptr_t get_base() const {
         return kaddr_;

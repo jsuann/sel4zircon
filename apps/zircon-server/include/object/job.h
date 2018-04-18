@@ -6,7 +6,6 @@
 #include <assert.h>
 
 extern "C" {
-#include <sel4/sel4.h>
 #include <zircon/types.h>
 }
 
@@ -17,6 +16,8 @@ extern "C" {
 class ZxJob final : public ZxObject, public Listable<ZxJob> {
 public:
     ZxJob() : job_list_{this}, proc_list_{this} {}
+
+    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_JOB; }
 
     bool can_destroy() override {
         /* End of life when no child jobs or procs */
