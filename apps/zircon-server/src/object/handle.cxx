@@ -54,11 +54,6 @@ void init_handle_table(vspace_t *vspace)
     dprintf(ALWAYS, "Handle table created at %p, %lu pages\n", handle_pool, kHandleTableNumPages);
     dprintf(ALWAYS, "End of handle table at %p\n", (void *)(((uintptr_t)handle_pool)
             + (kHandleTableNumPages * BIT(seL4_PageBits))));
-
-    /* Alloc first slot to prevent very rare case of uval == 0 */
-    uint32_t index;
-    assert(handle_table.alloc(index));
-    assert(index == 0);
 }
 
 Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)

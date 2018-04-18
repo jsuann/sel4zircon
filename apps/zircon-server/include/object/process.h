@@ -79,16 +79,12 @@ public:
     }
 
     zx_handle_t get_handle_user_val(Handle *h) const {
-        return (h->get_value() ^ handle_rand_);
+        return (((h->get_value() << 1) | 0x1) ^ handle_rand_);
     }
 
     Handle *get_handle(zx_handle_t user_val) const {
-        Handle *h = base_value_to_addr(user_val ^ handle_rand_);
+        Handle *h = base_value_to_addr((user_val ^ handle_rand_) >> 1);
         return (h != NULL && h->get_owner() == this) ? h : NULL;
-    }
-
-    uint32_t get_handle_kernel_val(zx_handle_t user_val) const {
-        return (user_val ^ handle_rand_);
     }
 
     bool has_handle(Handle *h) const {
