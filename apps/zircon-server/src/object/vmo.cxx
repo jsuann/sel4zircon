@@ -19,7 +19,8 @@ void ZxVmo::destroy()
 {
     vka_t *vka = get_server_vka();
 
-    /* TODO Destroy vmo mappings: remove from vmar, then delete */
+    /* Only destroy when no mappings exist */
+    assert(map_list_.empty());
 
     /* Free any allocated frame objects */
     if (frames_ != NULL) {
@@ -144,7 +145,7 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
             /* Map into proc addrspace */
             ZxProcess *proc = vmap->parent_->get_proc();
             uintptr_t vaddr = vmap->start_addr_ + (index * (1 << seL4_PageBits));
-            dprintf(SPEW, "Mapping page at %lx for proc %s\n", vaddr, proc->get_name());
+            //dprintf(SPEW, "Mapping page at %lx for proc %s\n", vaddr, proc->get_name());
             err = proc->map_page_in_vspace(dest.capPtr, (void *)vaddr, vmap->rights_, 1);
             if (err) {
                 vka_cnode_delete(&dest);

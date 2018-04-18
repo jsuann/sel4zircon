@@ -151,8 +151,6 @@ int main(void) {
     /* Init the zircon server */
     init_zircon_server(&vka, &vspace, ep_object.cptr);
 
-    dprintf(ALWAYS, "=== Zircon Server ===\n");
-
 /*
     error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
     assert(error == 0);

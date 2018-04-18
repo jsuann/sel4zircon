@@ -25,6 +25,8 @@ extern "C" {
 #include "vkaobjectnode.h"
 #include "../utils/rng.h"
 
+class ZxJob;
+
 class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
@@ -39,10 +41,12 @@ public:
 
     /* Init & destroy seL4 data */
     bool init();
-    void destroy();
+    void destroy() override;
 
-    /* TODO: can_destroy should check owning job */
-    /* TODO: entry into dead state once all threads exited */
+    bool can_destroy() override {
+        /* End of life when all threads exited */
+        return (zero_handles() && thread_list_.empty());
+    }
 
     void set_name(const char *name) {
         /* Silently truncate name */
@@ -53,12 +57,25 @@ public:
         return name_;
     }
 
-    void add_handle(Handle *h) {
-        handle_list_.push_back(h);
-    }
-
     ZxVmar *get_root_vmar() const {
         return root_vmar_;
+    }
+
+    uint32_t get_proc_index() const {
+        return proc_index_;
+    }
+
+    enum class State {
+        INITIAL,    /* Proc created, but no thread started yet */
+        RUNNING,    /* First thread started */
+        DYING,      /* Kill signal sent to threads */
+        DEAD,       /* All threads dead */
+    };
+
+    /* Handle funcs */
+
+    void add_handle(Handle *h) {
+        handle_list_.push_back(h);
     }
 
     zx_handle_t get_handle_user_val(Handle *h) const {
@@ -91,15 +108,16 @@ public:
         handle_list_.for_each(print_func);
     }
 
-    uint32_t get_proc_index() const {
-        return proc_index_;
-    }
+    /* Thread funcs */
 
     bool alloc_thread_index(uint32_t &index) {
         return thrd_alloc_.alloc(index);
     }
 
     bool add_thread(ZxThread *thrd);
+
+    /* Addrspace funcs */
+
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
 
@@ -111,6 +129,8 @@ public:
         return uvaddr_to_kvaddr(uvaddr, sizeof(T), (void *&)t);
     }
 
+    /* Object funcs */
+
     template <typename T>
     zx_status_t get_object_with_rights(zx_handle_t handle_val,
             zx_rights_t rights, T *&obj);
@@ -118,6 +138,17 @@ public:
     template <typename T>
     zx_status_t get_object(zx_handle_t handle_val, T *&obj) {
         return get_object_with_rights(handle_val, 0, obj);
+    }
+
+    /* Creates handle, adds to proc, returns uval */
+    template <typename T>
+    zx_handle_t create_handle_get_uval(T *obj) {
+        Handle *h = create_handle_default_rights<T>(obj);
+        if (h == NULL) {
+            return ZX_HANDLE_INVALID;
+        }
+        add_handle(h);
+        return get_handle_user_val(h);
     }
 
 private:
@@ -140,7 +171,6 @@ private:
 
     uint32_t proc_index_;
 
-    /* Owning Job */
     /* State */
     /* Exception port */
 

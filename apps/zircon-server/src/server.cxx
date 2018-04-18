@@ -19,8 +19,8 @@ extern "C" {
 #include "syscalls.h"
 #include "sys_helpers.h"
 
+#include "object/job.h"
 #include "object/handle.h"
-#include "object/process.h"
 #include "object/vmar.h"
 
 #include "utils/elf.h"
@@ -59,6 +59,8 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
 {
     using namespace ServerCxx;
 
+    dprintf(ALWAYS, "=== Zircon Server ===\n");
+
     /* store server globals */
     server_vka = vka;
     server_vspace = vspace;
@@ -69,6 +71,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_proc_table(server_vspace);
     init_vmo_kmap();
     init_prng();
+    init_root_job();
 }
 
 void syscall_loop(void)
@@ -106,6 +109,7 @@ void syscall_loop(void)
  */
 #include "object/handle.cxx"
 #include "object/object.cxx"
+#include "object/job.cxx"
 #include "object/process.cxx"
 #include "object/thread.cxx"
 #include "object/vmar.cxx"

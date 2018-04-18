@@ -19,6 +19,7 @@ class ZxProcess;
 class VmoMapping;
 
 class ZxVmar final : public ZxObject, public VmRegion {
+friend void deactivate_maybe_destroy_vmar(ZxVmar *root);
 public:
     /* Root vmar constructor */
     ZxVmar() : parent_{NULL}, base_{ZX_USER_ASPACE_BASE},
@@ -30,9 +31,12 @@ public:
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
 
-    void destroy();
+    void destroy() override;
 
-    bool can_destroy() override { return (zero_handles() && !is_active_); }
+    bool can_destroy() override {
+        /* Vmar must already be destroyed by vmar_destroy */
+        return (zero_handles() && !is_active_);
+    }
 
     uintptr_t get_base() const override { return base_; }
     size_t get_size() const override { return size_; }
@@ -70,3 +74,5 @@ private:
     uintptr_t base_;
     size_t size_;
 };
+
+void deactivate_maybe_destroy_vmar(ZxVmar *root);

@@ -95,5 +95,9 @@ int main(int argc, char **argv) {
 
     printf("Zircon test exiting!\n");
 
+    /* TODO move this to exit? */
+    zx_process_exit(0);
+
+    printf("We shouldn't get here!\n");
     return 0;
 }

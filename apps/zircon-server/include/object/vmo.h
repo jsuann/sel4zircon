@@ -33,7 +33,12 @@ public:
     }
 
     bool init();
-    void destroy();
+    void destroy() override;
+
+    bool can_destroy() override {
+        /* VMOs stay alive while mappings exist */
+        return (zero_handles() && map_list_.empty());
+    }
 
     /* read & write assume args are valid! */
     void read(uint64_t offset, size_t len, void *dest) {
@@ -89,7 +94,6 @@ private:
 };
 
 /* Class representing the mapping of vmo in a vmar */
-/* TODO mapping rights! */
 class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
     friend class ZxVmo;
 public:

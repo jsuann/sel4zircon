@@ -148,7 +148,7 @@ void ZxProcess::destroy()
     }
 
     /* Destroy VMAR */
-    root_vmar->destroy();
+    deactivate_maybe_destroy_vmar(root_vmar_);
 }
 
 bool ZxProcess::add_thread(ZxThread *thrd)

@@ -46,7 +46,7 @@ void init_handle_table(vspace_t *vspace)
     /* Allocate handle pool */
     void *handle_pool = vspace_new_pages_with_config(vspace, &config, seL4_AllRights);
     assert(handle_pool != NULL);
-    memset(handle_pool, 0, kHandleTableSize);
+    memset(handle_pool, 0, kHandleTableSize); // XXX pages should be zero'd out anyway
 
     /* Create alloc object */
     assert(handle_table.init(handle_pool, kMaxHandleCount));
@@ -54,6 +54,11 @@ void init_handle_table(vspace_t *vspace)
     dprintf(ALWAYS, "Handle table created at %p, %lu pages\n", handle_pool, kHandleTableNumPages);
     dprintf(ALWAYS, "End of handle table at %p\n", (void *)(((uintptr_t)handle_pool)
             + (kHandleTableNumPages * BIT(seL4_PageBits))));
+
+    /* Alloc first slot to prevent very rare case of uval == 0 */
+    uint32_t index;
+    assert(handle_table.alloc(index));
+    assert(index == 0);
 }
 
 Handle *allocate_handle(ZxObject *obj, zx_rights_t rights)

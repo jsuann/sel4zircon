@@ -33,7 +33,9 @@ public:
 
     /* Init & destroy seL4 data */
     bool init();
-    void destroy();
+    void destroy() override;
+
+    /* TODO can destroy() only when thread is dead */
 
     int copy_cap_to_thread(cspacepath_t *src, seL4_CPtr slot);
     int configure_tcb(seL4_CNode pd);

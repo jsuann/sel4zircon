@@ -93,6 +93,14 @@ public:
         return true;
     }
 
+    void clear() {
+        free(vec_);
+        size_ = 0;
+        num_items_ = 0;
+        /* vec must be NULL so destructor doesn't double free */
+        vec_ = NULL;
+    }
+
 private:
     T *vec_ = NULL;
     size_t size_ = 0;

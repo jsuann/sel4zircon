@@ -1,5 +1,6 @@
 #include "server.h"
 #include "object/handle.h"
+#include "object/job.h"
 #include "object/process.h"
 #include "object/vmar.h"
 #include "utils/elf.h"
@@ -30,6 +31,7 @@ void init_zircon_test(void)
 
     /* Create a process */
     test_proc = allocate_object<ZxProcess>(test_vmar);
+    get_root_job()->add_process(test_proc);
     assert(test_proc != NULL);
     test_proc->set_name("zircon-test");
     assert(test_proc->init());
@@ -65,23 +67,18 @@ void init_zircon_test(void)
     assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
             "zircon-test", entry));
 
-    /* TODO: add vmo handles? not strictly required since vmap counts as ref */
-
     /* Get handles to test objects */
-    Handle *vmar_handle = test_vmar->create_handle(ZX_DEFAULT_VMAR_RIGHTS);
-    Handle *proc_handle = test_proc->create_handle(ZX_DEFAULT_PROCESS_RIGHTS);
-    Handle *thrd_handle = test_thread->create_handle(ZX_DEFAULT_THREAD_RIGHTS);
+    zx_handle_t vmar_uval = test_proc->create_handle_get_uval(test_vmar);
+    zx_handle_t proc_uval = test_proc->create_handle_get_uval(test_proc);
+    zx_handle_t thrd_uval = test_proc->create_handle_get_uval(test_thread);
 
-    /* Add handles to process */
-    test_proc->add_handle(vmar_handle);
-    test_proc->add_handle(proc_handle);
-    test_proc->add_handle(thrd_handle);
+    assert(vmar_uval != ZX_HANDLE_INVALID);
+    assert(proc_uval != ZX_HANDLE_INVALID);
+    assert(thrd_uval != ZX_HANDLE_INVALID);
+
+    /* We don't send vmo handles. Vmar has refs to them */
+
     test_proc->print_handles();
-
-    /* Get user handle values */
-    zx_handle_t vmar_uval = test_proc->get_handle_user_val(vmar_handle);
-    zx_handle_t proc_uval = test_proc->get_handle_user_val(proc_handle);
-    zx_handle_t thrd_uval = test_proc->get_handle_user_val(thrd_handle);
 
     /* Send handles to zircon test */
     dprintf(SPEW, "Sending test data to zircon test!\n");
