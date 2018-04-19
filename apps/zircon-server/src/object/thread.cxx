@@ -32,36 +32,45 @@ bool ZxThread::init()
 {
     using namespace ThreadCxx;
 
-    /* TODO proper error handling, cleanup */
     int error;
     vka_t *vka = get_server_vka();
     cspacepath_t src;
     cspacepath_t dest = {0};
 
+    /* If we fail at any point, destroy is capable of
+       cleaning up a partially intialised proc */
+
     /* Create cspace */
     error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     /* Get path to server ep */
     vka_cspace_make_path(vka, get_server_ep(), &src);
 
     /* Create badge val */
     uint64_t badge_val = (thread_index_ << kThreadBadgeShift) | proc_index_;
-    dprintf(INFO, "badge val: %lu\n", badge_val);
 
     /* Mint fault ep cap */
     set_dest_slot(&dest, cspace_.cptr, ZX_THREAD_FAULT_SLOT);
     error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(ZxFaultBadge | badge_val));
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     /* Mint syscall ep cap */
     set_dest_slot(&dest, cspace_.cptr, ZX_THREAD_SYSCALL_SLOT);
     error = vka_cnode_mint(&dest, &src, seL4_AllRights, seL4_CapData_Badge_new(ZxSyscallBadge | badge_val));
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     /* Create TCB */
     error = vka_alloc_tcb(vka, &tcb_);
-    assert(!error);
+    if (error) {
+        return false;
+    }
 
     return true;
 }
@@ -80,4 +89,24 @@ int ZxThread::configure_tcb(seL4_CNode pd)
 void ZxThread::destroy()
 {
     using namespace ThreadCxx;
+
+    vka_t *vka = get_server_vka();
+
+    /* Delete cspace */
+    if (cspace_.cptr != 0) {
+        vka_free_object(vka, &cspace_);
+    }
+
+    /* Delete ipc buffer */
+    if (ipc_buffer_frame_.cptr != 0) {
+        seL4_X86_Page_Unmap(ipc_buffer_frame_.cptr);
+        vka_free_object(vka, &ipc_buffer_frame_);
+    }
+
+    /* Delete tcb */
+    if (tcb_.cptr != 0) {
+        vka_free_object(vka, &tcb_);
+    }
+
+    /* TODO: if reply cap saved, free slot */
 }

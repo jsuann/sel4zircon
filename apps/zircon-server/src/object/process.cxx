@@ -127,12 +127,8 @@ void ZxProcess::destroy()
 
     vka_t *vka = get_server_vka();
 
+    /* Destroy thread index allocator */
     thrd_alloc_.destroy();
-
-    /* Destroy pd */
-    if (pd_.cptr != 0) {
-        vka_free_object(vka, &pd_);
-    }
 
     /* Threads should already be removed */
     assert(thread_list_.empty());
@@ -143,8 +139,16 @@ void ZxProcess::destroy()
         destroy_handle_maybe_object(h);
     }
 
-    /* Destroy VMAR */
+    /* Destroy VMAR and its subregions */
     deactivate_maybe_destroy_vmar(root_vmar_);
+
+    /* Delete vka PT nodes */
+    free_vka_nodes(vka, pt_list_);
+
+    /* Destroy pd */
+    if (pd_.cptr != 0) {
+        vka_free_object(vka, &pd_);
+    }
 }
 
 bool ZxProcess::add_thread(ZxThread *thrd)
@@ -165,13 +169,14 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     /* Create IPC buffer frame */
     error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
     if (error) {
-        goto error_add_thread;
+        return false;
     }
 
     /* Map IPC frame into vspace */
     error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights, 1);
     if (error) {
-        goto error_add_thread;
+        vka_free_object(vka, &ipc_frame);
+        return false;
     }
 
     /* Assign IPC buffer to thread */
@@ -180,22 +185,13 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     /* Configure TCB */
     error = thrd->configure_tcb(pd_.cptr);
     if (error) {
-        goto error_add_thread;
+        /* Thread destroy can clean up if configure fails */
+        return false;
     }
 
     /* Add thread to list */
     thread_list_.push_back(thrd);
     return true;
-
-error_add_thread:
-    /* Delete frame object */
-    if (ipc_frame.cptr != 0) {
-        vka_free_object(vka, &ipc_frame);
-    }
-
-    /* Free thread index */
-    thrd_alloc_.free(thrd_index);
-    return false;
 }
 
 int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,

@@ -72,12 +72,18 @@ private:
     char name_[ZX_MAX_NAME_LEN] = {0};
 
     /* cspace */
-    vka_object_t cspace_;
+    vka_object_t cspace_ = {0};
+
+    /* IPC buffer frame */
+    vka_object_t ipc_buffer_frame_ = {0};
+    uintptr_t ipc_buffer_addr_ = 0;
 
     /* TCB */
-    vka_object_t tcb_;
-    vka_object_t sched_context_;
-    vka_object_t ipc_buffer_frame_;
-    uintptr_t ipc_buffer_addr_;
-    seL4_CPtr reply_cap_;   // vka object for RT kernel
+    vka_object_t tcb_ = {0};
+
+    /* TODO RT scheduler */
+    vka_object_t sched_context_ = {0};
+
+    /* If waiting, slot for reply cap */
+    seL4_CPtr reply_cap_ = 0;   // vka object for RT kernel
 };

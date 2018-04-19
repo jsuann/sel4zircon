@@ -62,7 +62,9 @@ void destroy_object(ZxObject *obj)
     /* XXX sanity check */
     assert(obj->can_destroy());
 
-    /* Perform any internal destruction in object */
+    /* Perform any internal destruction in object.
+       We could use destructor instead, but this is easier
+       for non-heap objects like processes. */
     obj->destroy();
 
     /* Free object memory */
