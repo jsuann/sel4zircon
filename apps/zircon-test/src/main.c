@@ -19,11 +19,12 @@
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
+#include <sel4zircon/cspace.h>
 
 #include "test.h"
 
 /* constants */
-#define EP_CPTR SEL4UTILS_FIRST_FREE
+#define EP_CPTR ZX_THREAD_SYSCALL_SLOT
 #define MSG_DATA 0x2 //  arbitrary data to send
 
 int main(int argc, char **argv) {

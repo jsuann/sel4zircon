@@ -1,12 +1,12 @@
 #include <sel4/sel4.h>
-#include <sel4utils/process.h>
 
 #include <zircon/syscalls.h>
+#include <sel4zircon/cspace.h>
 
 #include "sys_def.h"
 
-/* Endpoint for performing syscalls */
-#define ZX_SYSCALL_CPTR SEL4UTILS_FIRST_FREE
+/* Endpoint for performing zircon syscalls */
+#define ZX_SYSCALL_CPTR ZX_THREAD_SYSCALL_SLOT
 
 /*
  * Macros for performing syscalls

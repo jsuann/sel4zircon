@@ -7,8 +7,7 @@ extern "C" {
 }
 
 /* server ep badge bits (28 bits) */
-constexpr seL4_Word ZxFaultBadge = 1 << 24;
-constexpr seL4_Word ZxIrqBadge = 1 << 23;
+constexpr seL4_Word ZxFaultBadge = 1 << 23;
 constexpr seL4_Word ZxSyscallBadge = 1 << 22;
 
 /* Mask to remove above bits */

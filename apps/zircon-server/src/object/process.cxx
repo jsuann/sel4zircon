@@ -2,10 +2,6 @@
 #include "zxcpp/stackalloc.h"
 #include "server.h"
 
-extern "C" {
-#include <sel4utils/process.h>
-}
-
 namespace ProcessCxx {
 
 /* If 1024 or greater, we need to create more ASID pools */
@@ -156,7 +152,6 @@ bool ZxProcess::add_thread(ZxThread *thrd)
     using namespace ProcessCxx;
 
     int error;
-    cspacepath_t src;
     vka_t *vka = get_server_vka();
 
     vka_object_t ipc_frame = {0};
@@ -166,13 +161,6 @@ bool ZxProcess::add_thread(ZxThread *thrd)
 
     /* Calc address of IPC buffer */
     uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd_index * 2);
-
-    /* Copy PD cap into thread cspace */
-    vka_cspace_make_path(vka, pd_.cptr, &src);
-    error = thrd->copy_cap_to_thread(&src, SEL4UTILS_PD_SLOT);
-    if (error) {
-        goto error_add_thread;
-    }
 
     /* Create IPC buffer frame */
     error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
