@@ -12,6 +12,8 @@ constexpr size_t kProcTableSize = sizeof(ZxProcess) * kMaxProcCount;
 constexpr size_t kProcTableNumPages = (kProcTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 StackAlloc<ZxProcess> proc_table;
+/* XXX If proc count > 1024, make this an array! */
+seL4_CPtr proc_asid_pool;
 
 /* Limit for threads per process */
 constexpr size_t kMaxThreadPerProc = 256u;
@@ -19,12 +21,11 @@ constexpr size_t kProcThreadAllocSize = kMaxThreadPerProc / 8;
 
 int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
 {
-    /* XXX just use init asid pool for now */
-    int error = seL4_X86_ASIDPool_Assign(seL4_CapInitThreadASIDPool, pd);
+    int error = seL4_X86_ASIDPool_Assign(proc_asid_pool, pd);
     if (error) {
         dprintf(CRITICAL, "Failed to assign asid pool to process!\n");
     }
-    *ret_pool = seL4_CapInitThreadASIDPool;
+    *ret_pool = proc_asid_pool;
     return error;
 }
 
@@ -53,6 +54,20 @@ void init_proc_table(vspace_t *vspace)
     dprintf(ALWAYS, "Proc table created at %p, %lu pages\n", proc_pool, kProcTableNumPages);
     dprintf(ALWAYS, "End of proc table at %p\n", (void *)(((uintptr_t)proc_pool)
             + (kProcTableNumPages * BIT(seL4_PageBits))));
+}
+
+void init_asid_pool(vka_t *vka)
+{
+    using namespace ProcessCxx;
+
+    vka_object_t pool_ut;
+    cspacepath_t path;
+
+    assert(vka_alloc_untyped(vka, 12, &pool_ut) == 0);
+    assert(vka_cspace_alloc_path(vka, &path) == 0);
+    assert(seL4_X86_ASIDControl_MakePool(seL4_CapASIDControl, pool_ut.cptr,
+                path.root, path.capPtr, path.capDepth) == 0);
+    proc_asid_pool = path.capPtr;
 }
 
 ZxProcess *get_proc_from_badge(uint64_t badge)

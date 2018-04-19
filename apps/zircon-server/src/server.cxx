@@ -72,6 +72,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_vmo_kmap();
     init_prng();
     init_root_job();
+    init_asid_pool(server_vka);
 }
 
 void syscall_loop(void)

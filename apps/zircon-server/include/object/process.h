@@ -179,6 +179,7 @@ private:
 };
 
 void init_proc_table(vspace_t *vspace);
+void init_asid_pool(vka_t *vka);
 ZxProcess *get_proc_from_badge(uint64_t badge);
 
 template <>
