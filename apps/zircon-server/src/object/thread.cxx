@@ -99,7 +99,7 @@ void ZxThread::destroy()
 
     /* Delete ipc buffer */
     if (ipc_buffer_frame_.cptr != 0) {
-        seL4_X86_Page_Unmap(ipc_buffer_frame_.cptr);
+        seL4_ARCH_Page_Unmap(ipc_buffer_frame_.cptr);
         vka_free_object(vka, &ipc_buffer_frame_);
     }
 

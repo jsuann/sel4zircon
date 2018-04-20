@@ -171,7 +171,7 @@ void ZxVmo::decommit_page(uint32_t index)
         if (vmap->caps_[index] != 0) {
             cspacepath_t path;
             vka_cspace_make_path(vka, vmap->caps_[index], &path);
-            seL4_X86_Page_Unmap(vmap->caps_[index]);
+            seL4_ARCH_Page_Unmap(vmap->caps_[index]);
             vka_cnode_delete(&path);
             vka_cspace_free_path(vka, path);
             /* Reset cptr */
@@ -182,7 +182,7 @@ void ZxVmo::decommit_page(uint32_t index)
 
     /* Unmap page from kmap and free frame object */
     if (frames_[index].cptr != 0) {
-        seL4_X86_Page_Unmap(frames_[index].cptr);
+        seL4_ARCH_Page_Unmap(frames_[index].cptr);
         vka_free_object(vka, &frames_[index]);
         /* Reset frame object */
         memset(&frames_[index], 0, sizeof(vka_object_t));

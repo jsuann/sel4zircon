@@ -21,7 +21,7 @@ constexpr size_t kProcThreadAllocSize = kMaxThreadPerProc / 8;
 
 int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
 {
-    int error = seL4_X86_ASIDPool_Assign(proc_asid_pool, pd);
+    int error = seL4_ARCH_ASIDPool_Assign(proc_asid_pool, pd);
     if (error) {
         dprintf(CRITICAL, "Failed to assign asid pool to process!\n");
     }
@@ -65,7 +65,7 @@ void init_asid_pool(vka_t *vka)
 
     assert(vka_alloc_untyped(vka, 12, &pool_ut) == 0);
     assert(vka_cspace_alloc_path(vka, &path) == 0);
-    assert(seL4_X86_ASIDControl_MakePool(seL4_CapASIDControl, pool_ut.cptr,
+    assert(seL4_ARCH_ASIDControl_MakePool(seL4_CapASIDControl, pool_ut.cptr,
                 path.root, path.capPtr, path.capDepth) == 0);
     proc_asid_pool = path.capPtr;
 }
@@ -243,7 +243,7 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
 
     /* Otherwise we need to clean up */
     /* Unmap the page */
-    seL4_X86_Page_Unmap(frame_cap);
+    seL4_ARCH_Page_Unmap(frame_cap);
 
     /* Free nodes & PT objects */
     VkaObjectNode *curr = head;

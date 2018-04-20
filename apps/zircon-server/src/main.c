@@ -40,9 +40,11 @@
 
 #include "debug.h"
 
+/* TODO make defined flags config options */
+
 /* Use a two level cspace to allow for higher memory usage */
 /* A patch for libsel4simple-default is required for this to work */
-#define ZX_USE_TWO_LEVEL_CSPACE     1
+#define ZX_USE_TWO_LEVEL_CSPACE         1
 
 /* static memory for the allocator to bootstrap with */
 #define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 40)
@@ -52,8 +54,26 @@ static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 UNUSED static sel4utils_alloc_data_t data;
 
 /* dimensions of virtual memory for the allocator to use */
-#define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 32000)
+#define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 6000)
 #define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
+
+#define ZX_SERVER_STACK_START           0x30000000ul
+#define ZX_SERVER_STACK_NUM_PAGES       14
+
+/* Use a bigger static heap for the server vs. other processes.
+   Requires libsel4muslcsys patch. */
+#define ZX_USE_CUSTOM_HEAP              1
+
+#if ZX_USE_CUSTOM_HEAP
+/* Function in sys_morecore.c to change heap */
+extern void change_morecore_area(void *base, size_t size);
+
+/* Dimensions of heap */
+#define ZX_SERVER_HEAP_SIZE             0x2000000ul /* 32 MB */
+
+/* Heap decl */
+char server_heap[ZX_SERVER_HEAP_SIZE];
+#endif /* ZX_USE_CUSTOM_HEAP */
 
 /* zircon server calls */
 extern void do_cpp_test(void);
@@ -61,6 +81,8 @@ extern void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
 extern uint64_t init_zircon_test(void);
 extern void send_zircon_test_data(seL4_CPtr ep_cap);
 extern void syscall_loop(void);
+
+void *main_continued(void *arg);
 
 int main(void) {
     int error;
@@ -70,6 +92,12 @@ int main(void) {
     allocman_t *allocman;
     vspace_t vspace;
     seL4_timer_t timer;
+    vspace_new_pages_config_t config;
+
+#if ZX_USE_CUSTOM_HEAP
+    dprintf(SPEW, "Changing heap: base %p, size %lu\n", &server_heap, ZX_SERVER_HEAP_SIZE);
+    change_morecore_area(&server_heap, ZX_SERVER_HEAP_SIZE);
+#endif /* ZX_USE_CUSTOM_HEAP */
 
     /* get boot info */
     info = platsupport_get_bootinfo();
@@ -148,9 +176,6 @@ int main(void) {
     error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
     assert(error == 0);
 
-    /* Init the zircon server */
-    init_zircon_server(&vka, &vspace, ep_object.cptr);
-
 /*
     error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
     assert(error == 0);
@@ -180,14 +205,32 @@ int main(void) {
     while (1);
 */
 
-    //do_cpp_test();
+    /* Init the zircon server */
+    init_zircon_server(&vka, &vspace, ep_object.cptr);
 
     /* Init zircon test */
     init_zircon_test();
 
-    /* Enter syscall loop */
-    syscall_loop();
+    /* Configure new server stack */
+    default_vspace_new_pages_config(ZX_SERVER_STACK_NUM_PAGES, seL4_PageBits, &config);
+    vspace_new_pages_config_set_vaddr((void *)ZX_SERVER_STACK_START, &config);
+
+    /* Allocate server stack */
+    void *stack_base = vspace_new_pages_with_config(&vspace, &config, seL4_AllRights);
+    assert(stack_base != NULL);
+
+    /* Run on new stack */
+    void *stack_top = (void *)(ZX_SERVER_STACK_START + (ZX_SERVER_STACK_NUM_PAGES * BIT(seL4_PageBits)));
+    utils_run_on_stack(stack_top, main_continued, NULL);
 
     /* We shouldn't get here! */
     return 0;
+}
+
+void *main_continued(void *arg UNUSED)
+{
+    /* Enter syscall loop */
+    syscall_loop();
+
+    return NULL;
 }

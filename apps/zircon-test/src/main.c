@@ -12,10 +12,10 @@
 
 #include <autoconf.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include <sel4/sel4.h>
-#include <sel4utils/process.h>
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>

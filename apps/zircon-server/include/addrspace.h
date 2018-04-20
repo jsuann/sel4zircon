@@ -1,8 +1,8 @@
 #pragma once
 
 /* Zircon server address space allocation */
-#define ZX_HANDLE_TABLE_START       0x20000000ul
-#define ZX_PROCESS_TABLE_START      0x30000000ul
+#define ZX_HANDLE_TABLE_START       0x60000000ul
+#define ZX_PROCESS_TABLE_START      0x80000000ul
 
 #define ZX_VMO_SERVER_MAP_START     0x400000000ul
 
