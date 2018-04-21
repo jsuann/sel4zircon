@@ -42,6 +42,24 @@ private:
     };
     static_assert(sizeof(PageBuf) == PageBuf::kPageSize, "");
 
+    void append(PageBuf *pb) {
+        if (head_ == NULL) {
+            head_ = pb;
+        } else {
+            tail_->next_ = pb;
+        }
+        tail_ = pb;
+    }
+
+    PageBuf *pop() {
+        PageBuf *pb = head_;
+        head_ = pb->next_;
+        if (head_ == NULL) {
+            tail_ = NULL;
+        }
+        return pb;
+    }
+
     /* Read from head */
     PageBuf *head_ = NULL;
     /* Write to tail */

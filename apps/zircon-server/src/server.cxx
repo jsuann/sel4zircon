@@ -119,6 +119,7 @@ void syscall_loop(void)
 #include "object/vmo.cxx"
 #include "object/fifo.cxx"
 #include "object/mbuf.cxx"
+#include "object/channel.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"

@@ -26,7 +26,7 @@ static inline void sys_reply(zx_status_t res)
 /* Reply & return if a function returns error code */
 #define SYS_RET_IF_ERR(err) \
     do { \
-        if (err) { \
+        if (err != ZX_OK) { \
             return sys_reply(err); \
         } \
     } while (0)

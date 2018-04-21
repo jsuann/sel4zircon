@@ -88,12 +88,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len)
         len -= nbytes;
 
         /* Append to mbuf */
-        if (head_ == NULL) {
-            head_ = pb;
-        } else {
-            tail_->next_ = pb;
-        }
-        tail_ = pb;
+        append(pb);
     }
 
     size_ += bytes_written;
@@ -128,17 +123,8 @@ zx_status_t MBuf::read(uint8_t *dest, size_t len)
 
         /* If pagebuf drained, free it */
         if (head_->len_ == 0) {
-
             dprintf(SPEW, "Freeing pagebuf at %p\n", head_);
-
-            /* Remove from list */
-            PageBuf *pb = head_;
-            head_ = pb->next_;
-            if (head_ == NULL) {
-                tail_ = NULL;
-            }
-
-            /* Get pb index and free */
+            PageBuf *pb = pop();
             uint32_t index = get_pb_index((uintptr_t)pb);
             page_buf_table.free(index);
         }
@@ -146,4 +132,47 @@ zx_status_t MBuf::read(uint8_t *dest, size_t len)
 
     size_ -= bytes_read;
     return ZX_OK;
+}
+
+void MBuf::clear()
+{
+    using namespace MBufCxx;
+
+    while (head_ != NULL) {
+        PageBuf *pb = head_;
+        head_ = pb->next_;
+        uint32_t index = get_pb_index((uintptr_t)pb);
+        page_buf_table.free(index);
+    }
+
+    tail_ = NULL;
+    size_ = 0;
+}
+
+void MBuf::discard(size_t len)
+{
+    using namespace MBufCxx;
+
+    if (len > size_) {
+        len = size_;
+    }
+    size_t bytes_discarded = len;
+
+    while (len > 0) {
+        /* Update off & len of head pagebuf */
+        size_t nbytes = (len > head_->len_) ? head_->len_ : len;
+        head_->off_ += nbytes;
+        head_->len_ -= nbytes;
+        len -= nbytes;
+
+        /* If pagebuf drained, free it */
+        if (head_->len_ == 0) {
+            dprintf(SPEW, "Freeing pagebuf at %p\n", head_);
+            PageBuf *pb = pop();
+            uint32_t index = get_pb_index((uintptr_t)pb);
+            page_buf_table.free(index);
+        }
+    }
+
+    size_ -= bytes_discarded;
 }

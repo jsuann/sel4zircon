@@ -1,7 +1,7 @@
 #include "object/fifo.h"
 
 namespace FifoCxx {
-    static constexpr size_t kMaxFifoSize = (1 << seL4_PageBits);
+static constexpr size_t kMaxFifoSize = (1 << seL4_PageBits);
 }
 
 zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,

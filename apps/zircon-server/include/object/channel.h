@@ -15,23 +15,31 @@ extern "C" {
 #include "handle.h"
 #include "mbuf.h"
 
+class ZxProcess;
+
 class ZxChannel final : public ZxObject {
-friend zx_status_t create_channel_pair(ZxChannel *&ch1, ZxChannel *&ch2);
+friend zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
 public:
-    ZxChannel() = default;
+    ZxChannel() : handle_list_{this}, msg_list_{this} {}
 
     void destroy() override;
 
+    zx_status_t take_handles_from_proc(ZxProcess *proc, uint32_t num,
+            zx_handle_t *in, Handle **out);
+    /* TODO put handles in proc? */
+
     zx_status_t write_msg(void* bytes, uint32_t num_bytes,
-            zx_handle_t* handles, uint32_t num_handles);
+            Handle **handles, uint32_t num_handles);
 
     zx_status_t read_msg(void *bytes, uint32_t *num_bytes,
-            Handle **handles, uint32_t *num_handles);
+            Handle **handles, uint32_t *num_handles, bool may_discard);
 
 private:
     /* Messages in a channel simply describe the num
        handles/bytes written to their respective containers */
     struct Message : public Listable<Message> {
+        Message(uint32_t num_handles, uint32_t num_bytes) :
+                num_handles_{num_handles}, num_bytes_{num_bytes} {}
         uint32_t num_handles_;
         uint32_t num_bytes_;
     };
@@ -40,11 +48,13 @@ private:
     LinkedList<Handle> handle_list_;
 
     /* Mbuf for message data */
-    Mbuf data_buf_;
+    MBuf data_buf_;
 
     LinkedList<Message> msg_list_;
+
+    /* TODO threads waiting from channel call */
 
     ZxChannel *peer_ = NULL;
 };
 
-zx_status_t create_channel_pair(ZxChannel *&ch1, ZxChannel *&ch2);
+zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
