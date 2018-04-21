@@ -22,6 +22,7 @@ extern "C" {
 #include "object/job.h"
 #include "object/handle.h"
 #include "object/vmar.h"
+#include "object/mbuf.h"
 
 #include "utils/elf.h"
 #include "utils/rng.h"
@@ -73,6 +74,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_prng();
     init_root_job();
     init_asid_pool(server_vka);
+    init_page_buf(server_vka);
 }
 
 void syscall_loop(void)
@@ -116,6 +118,7 @@ void syscall_loop(void)
 #include "object/vmar.cxx"
 #include "object/vmo.cxx"
 #include "object/fifo.cxx"
+#include "object/mbuf.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
@@ -133,54 +136,20 @@ void do_cpp_test(void)
 {
     using namespace ServerCxx;
 
-    dprintf(SPEW, "Root vmar base: %lx, size: %lx, end: %lx\n", ZX_USER_ASPACE_BASE, ZX_USER_ASPACE_SIZE,
-            (ZX_USER_ASPACE_BASE+ZX_USER_ASPACE_SIZE));
+    /* Test mbuf */
+    MBuf buf;
 
-    dprintf(SPEW, "Size of IPC buffer: %lu, size of message info %lu\n",
-            sizeof(seL4_IPCBuffer), sizeof(seL4_MessageInfo_t));
+    size_t len = 30;
+    char test[len] = {0};
+    char str[] = "HELLO HELLO HELLO";
 
-    vka_object_t test_vka = {0};
-    test_vka.size_bits = 12;
-    test_vka = {0};
-    assert(test_vka.size_bits == 0);
-/*
-    ZxVmar *vmar1 = allocate_object<ZxVmar>();
-    assert(vmar1 != NULL);
-    ZxProcess *p1 = allocate_object<ZxProcess>(vmar1);
-    assert(p1 != NULL);
+    assert(buf.write((uint8_t*)&str[0], strlen(str) + 1) == ZX_OK);
 
-    Handle *h1 = vmar1->create_handle(ZX_RIGHT_READ);
-    assert(h1 != NULL);
-    Handle *h2 = p1->create_handle(ZX_RIGHT_READ);
-    assert(h2 != NULL);
+    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
 
-    p1->add_handle(h1);
-    p1->add_handle(h2);
+    assert(buf.read((uint8_t*)&test[0], len/2) == ZX_OK);
+    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
+    assert(buf.read((uint8_t*)&test[len/2], len/2) == ZX_OK);
 
-    ZxObject *o1 = p1;
-    dprintf(SPEW, "Type of p1: %u, should be: %u\n", p1->get_object_type(), ZX_OBJ_TYPE_PROCESS);
-    dprintf(SPEW, "Type of o1: %u, should be: %u\n", o1->get_object_type(), ZX_OBJ_TYPE_PROCESS);
-
-    p1->print_object_info();
-    vmar1->print_object_info();
-
-    dprintf(SPEW, "Handles:\n");
-    p1->print_handles();
-
-    // Object destroyal: destroy handle, destroy object if handle count == 0
-    p1->remove_handle(h1);
-    dprintf(SPEW, "Remove vmar handle!\n");
-    if (vmar1->destroy_handle(h1)) {
-        dprintf(SPEW, "Destroy vmar!\n");
-        free_object(vmar1);
-    }
-
-    p1->print_handles();
-
-    p1->remove_handle(h2);
-    if (p1->destroy_handle(h2)) {
-        dprintf(SPEW, "Destroy process!\n");
-        free_object(p1);
-    }
-*/
+    dprintf(SPEW, "str: %s\n", test);
 }

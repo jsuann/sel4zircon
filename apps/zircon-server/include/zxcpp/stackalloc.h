@@ -78,6 +78,10 @@ public:
         --num_alloc_;
     }
 
+    uint32_t num_avail() const {
+        return count_ - num_alloc_;
+    }
+
 private:
     T *pool_;
     size_t count_;

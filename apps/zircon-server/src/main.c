@@ -229,6 +229,8 @@ int main(void) {
 
 void *main_continued(void *arg UNUSED)
 {
+    do_cpp_test();
+
     /* Enter syscall loop */
     syscall_loop();
 
