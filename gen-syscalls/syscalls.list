@@ -6,6 +6,9 @@ sys_channel_create
 sys_channel_read
 sys_channel_write
 sys_channel_call
+sys_fifo_create
+sys_fifo_write
+sys_fifo_read
 sys_process_exit
 sys_process_create
 sys_process_start

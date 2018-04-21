@@ -47,9 +47,7 @@ static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t
     /* Get kvaddr of out */
     zx_handle_t *out;
     err = proc->get_kvaddr(user_out, out);
-    if (err) {
-        return sys_reply(err);
-    }
+    SYS_RET_IF_ERR(err);
 
     Handle *src = proc->get_handle(handle_val);
     if (src == NULL) {
@@ -66,7 +64,7 @@ static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t
         return sys_reply(ZX_ERR_INVALID_ARGS);
     }
 
-    /* Create a duplicate TODO make a common function? */
+    /* Create a duplicate */
     ZxObject *obj = src->get_object();
     Handle *dup = obj->create_handle(rights);
     if (dup == NULL) {

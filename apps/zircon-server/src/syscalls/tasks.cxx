@@ -16,7 +16,7 @@ void sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
 
 void sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    /* No reply */
 }
 
 void sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)

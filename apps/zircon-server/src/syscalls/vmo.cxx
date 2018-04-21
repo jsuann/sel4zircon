@@ -33,25 +33,19 @@ static void sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_w
     size_t *actual;
     /* XXX for this version of vmo_read, we read from 0 to len bytes */
     err = proc->uvaddr_to_kvaddr(user_data, 0, data);
-    if (err) {
-        return sys_reply(err);
-    }
+    SYS_RET_IF_ERR(err);
     err = proc->get_kvaddr(user_actual, actual);
-    if (err) {
-        return sys_reply(err);
-    }
+    SYS_RET_IF_ERR(err);
 
     /* Get VMO */
     ZxVmo *vmo;
     zx_rights_t required_right = (is_write) ? ZX_RIGHT_WRITE : ZX_RIGHT_READ;
     err = proc->get_object_with_rights(handle, required_right, vmo);
-    if (err) {
-        return sys_reply(err);
-    }
+    SYS_RET_IF_ERR(err);
 
     /* Check offset TODO also check cache state */
     if (offset >= vmo->get_size()) {
-        return sys_reply(err);
+        return sys_reply(ZX_ERR_OUT_OF_RANGE);
     }
 
     /* Work out how much we can actually read */

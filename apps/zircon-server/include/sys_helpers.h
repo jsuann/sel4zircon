@@ -22,3 +22,11 @@ static inline void sys_reply(zx_status_t res)
             return sys_reply(ZX_ERR_INVALID_ARGS); \
         } \
     } while (0)
+
+/* Reply & return if a function returns error code */
+#define SYS_RET_IF_ERR(err) \
+    do { \
+        if (err) { \
+            return sys_reply(err); \
+        } \
+    } while (0)

@@ -122,6 +122,7 @@ void syscall_loop(void)
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
+#include "syscalls/fifo.cxx"
 #include "syscalls/handle.cxx"
 #include "syscalls/other.cxx"
 #include "syscalls/tasks.cxx"

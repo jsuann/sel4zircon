@@ -14,7 +14,7 @@ extern "C" {
 
 class ZxFifo final : public ZxObject {
 friend zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
-        ZxFifo *&fifo1, ZxFifo *&fifo2);
+        ZxFifo *&fifo0, ZxFifo *&fifo1);
 public:
     ZxFifo(uint32_t elem_count, uint32_t elem_size) :
             elem_count_{elem_count}, elem_size_{elem_size} {}
@@ -46,4 +46,4 @@ private:
 };
 
 zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
-        ZxFifo *&fifo1, ZxFifo *&fifo2);
+        ZxFifo *&fifo0, ZxFifo *&fifo1);

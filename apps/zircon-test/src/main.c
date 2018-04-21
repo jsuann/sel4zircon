@@ -41,33 +41,17 @@ int main(int argc, char **argv) {
     printf("> Received handles: %u %u %u\n", vmar_handle, proc_handle, thrd_handle);
 
     zx_status_t err;
-    int a = 1;
-    int b = 2;
-    int c = 3;
-    int d = 4;
-    int e = 5;
-    int f = 6;
-    int g = 7;
-    int h = 8;
 
-    err = zx_syscall_test_0();
-    printf("zx_syscall_test_0 returned %d\n", err);
-    err = zx_syscall_test_1(a);
-    printf("zx_syscall_test_1 returned %d\n", err);
-    err = zx_syscall_test_2(a, b);
-    printf("zx_syscall_test_2 returned %d\n", err);
-    err = zx_syscall_test_3(a, b, c);
-    printf("zx_syscall_test_3 returned %d\n", err);
-    err = zx_syscall_test_4(a, b, c, d);
-    printf("zx_syscall_test_4 returned %d\n", err);
-    err = zx_syscall_test_5(a, b, c, d, e);
-    printf("zx_syscall_test_5 returned %d\n", err);
-    err = zx_syscall_test_6(a, b, c, d, e, f);
-    printf("zx_syscall_test_6 returned %d\n", err);
-    err = zx_syscall_test_7(a, b, c, d, e, f, g);
-    printf("zx_syscall_test_7 returned %d\n", err);
-    err = zx_syscall_test_8(a, b, c, d, e, f, g, h);
-    printf("zx_syscall_test_8 returned %d\n", err);
+    assert(zx_syscall_test_0() == 0);
+    assert(zx_syscall_test_1(1) == 1);
+    assert(zx_syscall_test_2(1,2) == 3);
+    assert(zx_syscall_test_3(1,2,3) == 6);
+    assert(zx_syscall_test_4(1,2,3,4) == 10);
+    assert(zx_syscall_test_5(1,2,3,4,5) == 15);
+    assert(zx_syscall_test_6(1,2,3,4,5,6) == 21);
+    assert(zx_syscall_test_7(1,2,3,4,5,6,7) == 28);
+    assert(zx_syscall_test_8(1,2,3,4,5,6,7,8) == 36);
+    assert(zx_syscall_test_wrapper(20, 20, 60) == 100);
 
     // try an invalid syscall no
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
@@ -75,24 +59,34 @@ int main(int argc, char **argv) {
     err = seL4_GetMR(0);
     assert(err == ZX_ERR_BAD_SYSCALL);
 
-    err = zx_handle_close(ZX_HANDLE_INVALID);
-    printf("zx_handle_close returned %d\n", err);
-
-    err = zx_handle_close(1231231313);
-    printf("zx_handle_close returned %d\n", err);
+    assert(zx_handle_close(ZX_HANDLE_INVALID) == ZX_OK);
+    assert(zx_handle_close(1231231313) == ZX_ERR_BAD_HANDLE);
 
     zx_handle_t thrd_handle2 = 0;
     err = zx_handle_replace(thrd_handle, ZX_RIGHT_SAME_RIGHTS, &thrd_handle2);
     printf("zx_handle_replace returned %d, new handle %u\n", err, thrd_handle2);
 
-    //err = zx_handle_close(vmar_handle);
-    //printf("zx_handle_close returned %d\n", err);
-
     int stk = 0;
     void *ptr = malloc(4);
     printf("&stk: %p, ptr: %p\n", &stk, ptr);
 
-    *((int *)0) = 0;
+    printf("FIFO TEST\n");
+    zx_handle_t fifo1, fifo2;
+    err = zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2);
+    printf("fifo create: ret %d, fifo1 %u, fifo2 %u\n", err, fifo1, fifo2);
+
+    uint64_t arr1[8] = {1,2,3,4,5,6,7,8};
+    uint64_t arr2[8] = {0};
+    uint32_t num;
+    size_t size = 8 * sizeof(uint64_t);
+    err = zx_fifo_write(fifo1, &arr1, size, &num);
+    printf("fifo write: ret %d\n", err);
+
+    err = zx_fifo_read(fifo2, &arr2, size, &num);
+    printf("fifo read: ret %d\n", err);
+    for (int i = 0; i < 8; ++i) {
+        assert(arr1[i] == arr2[i]);
+    }
 
     printf("Zircon test exiting!\n");
 
