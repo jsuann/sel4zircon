@@ -88,6 +88,10 @@ int main(int argc, char **argv) {
         assert(arr1[i] == arr2[i]);
     }
 
+    assert(!zx_handle_close(fifo1));
+    assert(!zx_handle_close(fifo2));
+    //assert(!zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2));
+
     printf("Zircon test exiting!\n");
 
     /* TODO move this to exit? */

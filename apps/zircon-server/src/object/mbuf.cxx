@@ -26,7 +26,7 @@ void init_page_buf(vka_t *vka)
     using namespace MBufCxx;
 
     /* Alloc the alloc table */
-    dprintf(SPEW, "Creating page bufs, num bufs: %lu\n", kNumPageBuf);
+    dprintf(INFO, "Creating page bufs, num bufs: %lu\n", kNumPageBuf);
     assert(page_buf_table.init((BufBlock *)ZX_PAGE_BUF_START, kNumPageBuf));
 
     /* Alloc pages at each block */
@@ -41,6 +41,9 @@ void init_page_buf(vka_t *vka)
                 frame.cptr, (void *)addr, seL4_AllRights, 1);
         assert(!err);
     }
+
+    dprintf(INFO, "End of page bufs at %p\n",
+            (void *)(ZX_PAGE_BUF_START + (sizeof(BufBlock) * kNumPageBuf)));
 }
 
 zx_status_t MBuf::write(uint8_t *src, size_t len)

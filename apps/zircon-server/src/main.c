@@ -62,7 +62,7 @@ UNUSED static sel4utils_alloc_data_t data;
 
 /* Use a bigger static heap for the server vs. other processes.
    Requires libsel4muslcsys patch. */
-#define ZX_USE_CUSTOM_HEAP              1
+#define ZX_USE_CUSTOM_HEAP              0
 
 #if ZX_USE_CUSTOM_HEAP
 /* Function in sys_morecore.c to change heap */

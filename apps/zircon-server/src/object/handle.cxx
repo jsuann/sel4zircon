@@ -46,7 +46,6 @@ void init_handle_table(vspace_t *vspace)
     /* Allocate handle pool */
     void *handle_pool = vspace_new_pages_with_config(vspace, &config, seL4_AllRights);
     assert(handle_pool != NULL);
-    memset(handle_pool, 0, kHandleTableSize); // XXX pages should be zero'd out anyway
 
     /* Create alloc object */
     assert(handle_table.init(handle_pool, kMaxHandleCount));

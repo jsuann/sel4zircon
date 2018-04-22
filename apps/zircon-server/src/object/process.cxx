@@ -4,20 +4,20 @@
 
 namespace ProcessCxx {
 
-/* If 1024 or greater, we need to create more ASID pools */
-constexpr size_t kMaxProcCount = 512u;
+/* If greater than 1024, we need to create more ASID pools */
+constexpr size_t kMaxProcCount = 1024u;
 
-constexpr uint32_t kProcIndexMask = kMaxProcCount - 1;
 constexpr size_t kProcTableSize = sizeof(ZxProcess) * kMaxProcCount;
 constexpr size_t kProcTableNumPages = (kProcTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 StackAlloc<ZxProcess> proc_table;
-/* XXX If proc count > 1024, make this an array! */
+
+/* If proc count > 1024, make this an array! */
 seL4_CPtr proc_asid_pool;
 
 /* Limit for threads per process */
 constexpr size_t kMaxThreadPerProc = 256u;
-constexpr size_t kProcThreadAllocSize = kMaxThreadPerProc / 8;
+constexpr size_t kIpcIndexAllocSize = kMaxThreadPerProc / 8;
 
 int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
 {
@@ -46,7 +46,6 @@ void init_proc_table(vspace_t *vspace)
     /* Allocate proc pool */
     void *proc_pool = vspace_new_pages_with_config(vspace, &config, seL4_AllRights);
     assert(proc_pool != NULL);
-    memset(proc_pool, 0, kProcTableSize);
 
     /* Create alloc object */
     assert(proc_table.init(proc_pool, kMaxProcCount));
@@ -74,8 +73,9 @@ ZxProcess *get_proc_from_badge(uint64_t badge)
 {
     using namespace ProcessCxx;
 
-    uint32_t index = (badge & kProcIndexMask);
-    return proc_table.get(index);
+    ZxThread *thrd = get_thread_from_badge(badge);
+    assert(thrd->get_owner() != NULL); // XXX sanity check
+    return (ZxProcess *)thrd->get_owner();
 }
 
 /* We use a different allocator for processes,
@@ -116,8 +116,8 @@ bool ZxProcess::init()
     /* If we fail at any point, destroy is capable of
        cleaning up a partially intialised proc */
 
-    /* Create thread id allocator */
-    if (!thrd_alloc_.init(kProcThreadAllocSize)) {
+    /* Create ipc index allocator */
+    if (!ipc_alloc_.init(kIpcIndexAllocSize)) {
         return false;
     }
 
@@ -142,11 +142,11 @@ void ZxProcess::destroy()
 
     vka_t *vka = get_server_vka();
 
-    /* Destroy thread index allocator */
-    thrd_alloc_.destroy();
-
     /* Threads should already be removed */
     assert(thread_list_.empty());
+
+    /* Destroy thread index allocator */
+    ipc_alloc_.destroy();
 
     /* Destroy handles */
     while (!handle_list_.empty()) {
@@ -175,38 +175,61 @@ bool ZxProcess::add_thread(ZxThread *thrd)
 
     vka_object_t ipc_frame = {0};
 
-    /* Thread index already allocated to make cleanup easier */
-    uint32_t thrd_index = thrd->get_thread_index();
+    /* Get index for ipc buf */
+    uint32_t ipc_index;
+    if (!ipc_alloc_.alloc(ipc_index)) {
+        return false;
+    }
 
     /* Calc address of IPC buffer */
-    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd_index * 2);
+    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * ipc_index * 2);
 
     /* Create IPC buffer frame */
     error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
     if (error) {
+        ipc_alloc_.free(ipc_index);
         return false;
     }
 
     /* Map IPC frame into vspace */
     error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights, 1);
     if (error) {
-        vka_free_object(vka, &ipc_frame);
-        return false;
+        goto error_add_thread;
     }
 
     /* Assign IPC buffer to thread */
-    thrd->set_ipc_buffer(ipc_frame, ipc_buf_addr);
+    thrd->set_ipc_buffer(ipc_frame, ipc_index);
 
     /* Configure TCB */
-    error = thrd->configure_tcb(pd_.cptr);
+    error = thrd->configure_tcb(pd_.cptr, ipc_buf_addr);
     if (error) {
-        /* Thread destroy can clean up if configure fails */
-        return false;
+        seL4_ARCH_Page_Unmap(ipc_frame.cptr);
+        goto error_add_thread;
     }
 
     /* Add thread to list */
     thread_list_.push_back(thrd);
     return true;
+
+error_add_thread:
+    ipc_alloc_.free(ipc_index);
+    vka_free_object(vka, &ipc_frame);
+    return false;
+}
+
+void ZxProcess::remove_thread(ZxThread *thrd)
+{
+    using namespace ProcessCxx;
+
+    /* TODO state check? */
+
+    /* Destroy IPC buffer & free ipc index */
+    uint32_t index = thrd->get_ipc_index();
+    thrd->destroy_ipc_buffer();
+    ipc_alloc_.free(index);
+
+    /* Remove thread from list */
+    thread_list_.remove(thrd);
 }
 
 int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,

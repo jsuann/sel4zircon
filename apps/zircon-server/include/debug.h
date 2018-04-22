@@ -10,7 +10,7 @@
 #define INFO        1
 #define SPEW        2
 
-#define ZX_DEBUGLEVEL   2
+#define ZX_DEBUGLEVEL   1
 
 #define ZX_PRINT_FLUSH  1
 

@@ -20,8 +20,7 @@ extern "C" {
 
 class ZxThread final : public ZxObject, public Listable<ZxThread> {
 public:
-    ZxThread(uint32_t proc_index, uint32_t thread_index) :
-            proc_index_{proc_index}, thread_index_{thread_index} {}
+    ZxThread(uint32_t thread_index) : thread_index_{thread_index} {}
 
     ~ZxThread() final {}
 
@@ -38,8 +37,7 @@ public:
 
     /* TODO can destroy() only when thread is dead */
 
-    int copy_cap_to_thread(cspacepath_t *src, seL4_CPtr slot);
-    int configure_tcb(seL4_CNode pd);
+    int configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr);
 
     int write_registers(seL4_UserContext *context, int resume) {
         return seL4_TCB_WriteRegisters(tcb_.cptr, resume, 0,
@@ -50,15 +48,23 @@ public:
         return thread_index_;
     }
 
-    void set_ipc_buffer(vka_object_t ipc_buf, uintptr_t ipc_buf_addr) {
-        ipc_buffer_frame_ = ipc_buf;
-        ipc_buffer_addr_ = ipc_buf_addr;
+    uint32_t get_ipc_index() const {
+        return ipc_index_;
     }
 
+    void set_ipc_buffer(vka_object_t ipc_buf, uintptr_t ipc_index) {
+        ipc_buffer_frame_ = ipc_buf;
+        ipc_index_ = ipc_index;
+    }
+
+    void destroy_ipc_buffer();
+
 private:
-    /* We need index of proc & thread to get badge value */
-    uint32_t proc_index_;
+    /* Use thread index to get badge values */
     uint32_t thread_index_;
+
+    /* Index used to calculate location of IPC buffer in addrspace */
+    uint32_t ipc_index_;
 
     /* Starting register values */
     uintptr_t user_entry_ = 0;
@@ -76,7 +82,6 @@ private:
 
     /* IPC buffer frame */
     vka_object_t ipc_buffer_frame_ = {0};
-    uintptr_t ipc_buffer_addr_ = 0;
 
     /* TCB */
     vka_object_t tcb_ = {0};
@@ -87,3 +92,12 @@ private:
     /* If waiting, slot for reply cap */
     seL4_CPtr reply_cap_ = 0;   // vka object for RT kernel
 };
+
+void init_thread_table(vspace_t *vspace);
+
+ZxThread *get_thread_from_badge(uint64_t badge);
+
+template <>
+ZxThread *allocate_object<ZxThread>();
+template <>
+void free_object<ZxThread>(ZxThread *obj);

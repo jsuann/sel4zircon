@@ -70,6 +70,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     /* init allocators and other things */
     init_handle_table(server_vspace);
     init_proc_table(server_vspace);
+    init_thread_table(server_vspace);
     init_vmo_kmap();
     init_prng();
     init_root_job();
@@ -145,13 +146,21 @@ void do_cpp_test(void)
     char test[len] = {0};
     char str[] = "HELLO HELLO HELLO";
 
-    assert(buf.write((uint8_t*)&str[0], strlen(str) + 1) == ZX_OK);
+    for (size_t i = 0; i < 10000; ++i) {
+        assert(buf.write((uint8_t*)&str[0], strlen(str) + 1) == ZX_OK);
+    }
 
     dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
 
-    assert(buf.read((uint8_t*)&test[0], len/2) == ZX_OK);
-    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
-    assert(buf.read((uint8_t*)&test[len/2], len/2) == ZX_OK);
+    for (size_t i = 0; i < 10000; ++i) {
+        assert(buf.read((uint8_t*)&test[0], strlen(str) + 1) == ZX_OK);
+        assert(strcmp(str, &test[0]) == 0);
+        memset(&test[0], 0, strlen(str) + 1);
+    }
 
-    dprintf(SPEW, "str: %s\n", test);
+    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
+
+    /* Object type test */
+    ZxChannel ch;
+    assert(is_object_type<ZxChannel>(&ch));
 }

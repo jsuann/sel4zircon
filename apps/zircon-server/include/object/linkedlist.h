@@ -162,7 +162,7 @@ public:
 
 #if ZX_LL_SANITY_CHECK
     void sanity_check(T *item, bool in_list) {
-        dprintf(INFO, "LL sanity check on %p, in list: %s\n",
+        dprintf(SPEW, "LL sanity check on %p, in list: %s\n",
                 item, ((in_list) ? "true" : "false"));
         /* Check ownership of item */
         if (in_list)

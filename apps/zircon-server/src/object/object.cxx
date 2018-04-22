@@ -74,6 +74,9 @@ void destroy_object(ZxObject *obj)
     case ZX_OBJ_TYPE_PROCESS:
         free_object<ZxProcess>((ZxProcess *)obj);
         break;
+    case ZX_OBJ_TYPE_THREAD:
+        free_object<ZxThread>((ZxThread *)obj);
+        break;
     default:
         free_object(obj);
     }

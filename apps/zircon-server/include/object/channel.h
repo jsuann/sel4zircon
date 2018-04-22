@@ -22,6 +22,8 @@ friend zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
 public:
     ZxChannel() : handle_list_{this}, msg_list_{this} {}
 
+    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
+
     void destroy() override;
 
     zx_status_t take_handles_from_proc(ZxProcess *proc, uint32_t num,

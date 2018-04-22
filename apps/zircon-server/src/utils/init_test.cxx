@@ -31,20 +31,17 @@ void init_zircon_test(void)
 
     /* Create a process */
     test_proc = allocate_object<ZxProcess>(test_vmar);
-    get_root_job()->add_process(test_proc);
     assert(test_proc != NULL);
     test_proc->set_name("zircon-test");
     assert(test_proc->init());
+    get_root_job()->add_process(test_proc);
 
     /* Create a thread */
-    uint32_t thrd_index;
-    uint32_t proc_index = test_proc->get_proc_index();
-    assert(test_proc->alloc_thread_index(thrd_index));
-    test_thread = allocate_object<ZxThread>(proc_index, thrd_index);
+    test_thread = allocate_object<ZxThread>();
     assert(test_thread != NULL);
     test_thread->set_name("zircon-test-thread");
     assert(test_thread->init());
-    test_proc->add_thread(test_thread);
+    assert(test_proc->add_thread(test_thread));
 
     /* Create VMOs for elf segments */
     int num_vmos;

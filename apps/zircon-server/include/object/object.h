@@ -21,7 +21,10 @@ public:
     ZxObject();
     virtual ~ZxObject() {}
 
-    virtual zx_obj_type_t get_object_type() const { return ZX_OBJ_TYPE_NONE; }
+    virtual zx_obj_type_t get_object_type() const {
+        assert(!"Object type wasn't set!");
+        return ZX_OBJ_TYPE_NONE;
+    }
 
     /* All objects need to define a destroy/cleanup function */
     virtual void destroy() { assert(!"Attempt to destroy base object!"); }

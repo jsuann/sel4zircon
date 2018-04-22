@@ -106,11 +106,9 @@ public:
 
     /* Thread funcs */
 
-    bool alloc_thread_index(uint32_t &index) {
-        return thrd_alloc_.alloc(index);
-    }
-
     bool add_thread(ZxThread *thrd);
+
+    void remove_thread(ZxThread *thrd);
 
     /* Addrspace funcs */
 
@@ -155,8 +153,8 @@ private:
     /* Thread list */
     LinkedList<ZxThread> thread_list_;
 
-    /* Thread index allocator */
-    BitAlloc thrd_alloc_;
+    /* IPC buffer index allocator */
+    BitAlloc ipc_alloc_;
 
     /* Mask for ID-ing handle */
     uint32_t handle_rand_ = 0;

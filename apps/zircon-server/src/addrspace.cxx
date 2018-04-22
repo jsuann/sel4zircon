@@ -22,7 +22,7 @@ StackAlloc<VmoBlock> vtable;
 
 void init_vmo_kmap(void)
 {
-    dprintf(SPEW, "Creating vtable for VMO kmap, num blocks: %lu\n", kNumVmoBlocks);
+    dprintf(INFO, "Creating vtable for VMO kmap, num blocks: %lu\n", kNumVmoBlocks);
     assert(vtable.init((VmoBlock *)ZX_VMO_SERVER_MAP_START, kNumVmoBlocks));
 }
 
