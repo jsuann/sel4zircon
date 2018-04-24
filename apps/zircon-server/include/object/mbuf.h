@@ -67,6 +67,3 @@ private:
     /* Amount written to mbuf */
     size_t size_ = 0u;
 };
-
-/* Initialise all page buffers */
-void init_page_buf(vka_t *vka);

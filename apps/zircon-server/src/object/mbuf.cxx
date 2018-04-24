@@ -1,50 +1,8 @@
 #include "object/mbuf.h"
 #include "addrspace.h"
+#include "utils/page_alloc.h"
 
-namespace MBufCxx {
-
-constexpr size_t kNumPageBuf = 4096;
-
-/* Allocate pagebufs with adjacent guard pages */
-constexpr size_t kBufBlockSize = (1 << seL4_PageBits) * 2;
-
-struct BufBlock {
-    char mem[kBufBlockSize];
-};
-
-StackAlloc<BufBlock> page_buf_table;
-
-uint32_t get_pb_index(uintptr_t pb)
-{
-    return (pb - ZX_PAGE_BUF_START) / sizeof(BufBlock);
-}
-
-} /* namespace MBufCxx */
-
-void init_page_buf(vka_t *vka)
-{
-    using namespace MBufCxx;
-
-    /* Alloc the alloc table */
-    dprintf(INFO, "Creating page bufs, num bufs: %lu\n", kNumPageBuf);
-    assert(page_buf_table.init((BufBlock *)ZX_PAGE_BUF_START, kNumPageBuf));
-
-    /* Alloc pages at each block */
-    for (uint32_t i = 0; i < kNumPageBuf; ++i) {
-        vka_object_t frame;
-        uintptr_t addr = ZX_PAGE_BUF_START + (i * sizeof(BufBlock));
-        /* Alloc a frame */
-        int err = vka_alloc_frame(vka, seL4_PageBits, &frame);
-        assert(!err);
-        /* Map the frame. Won't be unmapped so leak everything. */
-        err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
-                frame.cptr, (void *)addr, seL4_AllRights, 1);
-        assert(!err);
-    }
-
-    dprintf(INFO, "End of page bufs at %p\n",
-            (void *)(ZX_PAGE_BUF_START + (sizeof(BufBlock) * kNumPageBuf)));
-}
+namespace MBufCxx {}
 
 zx_status_t MBuf::write(uint8_t *src, size_t len)
 {
@@ -58,7 +16,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len)
     }
 
     /* Check we have enough page bufs available */
-    if (page_buf_table.num_avail() < num_buf) {
+    if (get_num_page_avail() < num_buf) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -77,9 +35,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len)
     /* Alloc page bufs and write to them */
     for (uint32_t i = 0; i < num_buf; ++i) {
         /* Alloc the page */
-        uint32_t index;
-        assert(page_buf_table.alloc(index));
-        PageBuf *pb = new (page_buf_table.get(index)) PageBuf();
+        PageBuf *pb = new (page_alloc()) PageBuf();
 
         dprintf(SPEW, "Allocd pagebuf at %p\n", pb);
 
@@ -126,10 +82,8 @@ zx_status_t MBuf::read(uint8_t *dest, size_t len)
 
         /* If pagebuf drained, free it */
         if (head_->len_ == 0) {
-            dprintf(SPEW, "Freeing pagebuf at %p\n", head_);
             PageBuf *pb = pop();
-            uint32_t index = get_pb_index((uintptr_t)pb);
-            page_buf_table.free(index);
+            page_free((void *)pb);
         }
     }
 
@@ -144,8 +98,7 @@ void MBuf::clear()
     while (head_ != NULL) {
         PageBuf *pb = head_;
         head_ = pb->next_;
-        uint32_t index = get_pb_index((uintptr_t)pb);
-        page_buf_table.free(index);
+        page_free((void *)pb);
     }
 
     tail_ = NULL;
@@ -170,10 +123,8 @@ void MBuf::discard(size_t len)
 
         /* If pagebuf drained, free it */
         if (head_->len_ == 0) {
-            dprintf(SPEW, "Freeing pagebuf at %p\n", head_);
             PageBuf *pb = pop();
-            uint32_t index = get_pb_index((uintptr_t)pb);
-            page_buf_table.free(index);
+            page_free((void *)pb);
         }
     }
 

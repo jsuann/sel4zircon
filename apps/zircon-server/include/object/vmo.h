@@ -13,6 +13,7 @@ extern "C" {
 #include "linkedlist.h"
 #include "object.h"
 #include "vmar.h"
+#include "../zxcpp/pagearray.h"
 
 class VmoMapping;
 
@@ -87,7 +88,7 @@ private:
     /* TODO Clone info */
 
     /* Frame objects of the vmo */
-    vka_object_t *frames_ = NULL;
+    PageArray<vka_object_t> frames_;
 
     /* process mappings of the vmo */
     LinkedList<VmoMapping> map_list_;
@@ -97,10 +98,8 @@ private:
 class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
     friend class ZxVmo;
 public:
-    VmoMapping(uintptr_t start_addr, seL4_CPtr *caps,
-            seL4_CapRights_t rights, ZxVmar *parent) :
-        start_addr_{start_addr}, caps_{caps},
-        rights_{rights}, parent_{parent} {}
+    VmoMapping(uintptr_t start_addr, seL4_CapRights_t rights, ZxVmar *parent) :
+        start_addr_{start_addr}, rights_{rights}, parent_{parent} {}
 
     uintptr_t get_base() const override { return start_addr_; }
     size_t get_size() const override { return ((ZxVmo*)get_owner())->get_size(); }
@@ -112,7 +111,7 @@ private:
     /* start address of vmo in process */
     uintptr_t start_addr_;
     /* caps to page frames */
-    seL4_CPtr *caps_;
+    PageArray<seL4_CPtr> caps_;
     /* access rights to frames */
     seL4_CapRights_t rights_;
     /* ptr back to owning vmar */

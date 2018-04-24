@@ -10,9 +10,12 @@ bool ZxVmo::init()
         return false;
     }
 
-    /* Create array of uninitialised frame objects */
-    frames_ = (vka_object_t *)calloc(num_pages_, sizeof(vka_object_t));
-    return (frames_ != NULL);
+    /* Init page array of uninitialised frame objects */
+    if (!frames_.init(num_pages_)) {
+        return false;
+    }
+
+    return true;
 }
 
 void ZxVmo::destroy()
@@ -23,16 +26,12 @@ void ZxVmo::destroy()
     assert(map_list_.empty());
 
     /* Free any allocated frame objects */
-    if (frames_ != NULL) {
-        for (size_t i = 0; i < num_pages_; ++i) {
-            if (frames_[i].cptr != 0) {
-                vka_free_object(vka, &frames_[i]);
-            }
+    auto free_func = [vka] (vka_object_t &frame) {
+        if (frame.cptr != 0) {
+            vka_free_object(vka, &frame);
         }
-    }
-
-    /* Free frame array */
-    free(frames_);
+    };
+    frames_.clear(free_func);
 
     /* Free kmap */
     if (kaddr_ != 0) {
@@ -48,13 +47,6 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
         return NULL;
     }
 
-    /* Alloc mem for cap array */
-    seL4_CPtr *caps = (seL4_CPtr *)calloc(num_pages_, sizeof(seL4_CPtr));
-    if (caps == NULL) {
-        free(vmap_mem);
-        return NULL;
-    }
-
     /* get frame access rights from mapping flags (should be valid by this point!) */
     seL4_CapRights_t rights;
     bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
@@ -62,7 +54,14 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
     rights = seL4_CapRights_new(0, can_read, can_write);
 
     /* Create mapping */
-    VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, caps, rights, vmar);
+    VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, rights, vmar);
+
+    /* Init page array for caps */
+    if (!vmap->caps_.init(num_pages_)) {
+        delete vmap;
+        return NULL;
+    }
+
     map_list_.push_back(vmap);
 
     /* Add vmap to vmar. We assume it has been checked for validity */
@@ -79,16 +78,16 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
     vka_t *vka = get_server_vka();
     assert(map_list_.contains(vmap));
 
-    /* Unmap all caps, free cap array */
-    for (uint32_t i = 0; i < num_pages_; ++i) {
-        if (vmap->caps_[i] != 0) {
+    /* Clear all caps */
+    auto free_func = [vka] (seL4_CPtr &cap) {
+        if (cap != 0) {
             cspacepath_t path;
-            vka_cspace_make_path(vka, vmap->caps_[i], &path);
+            vka_cspace_make_path(vka, cap, &path);
             assert(vka_cnode_delete(&path) == 0);
-            vka_cspace_free(vka, vmap->caps_[i]);
+            vka_cspace_free(vka, cap);
         }
-    }
-    free(vmap->caps_);
+    };
+    vmap->caps_.clear(free_func);
 
     /* Remove from vmap list, delete vmap */
     map_list_.remove(vmap);
@@ -101,6 +100,11 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     int err;
     vka_t *vka = get_server_vka();
     assert(index < num_pages_);
+
+    /* Ensure index backed in page array */
+    if (!frames_.alloc(index)) {
+        return false;
+    }
 
     /* If frame not yet allocated, alloc & map into server */
     if (frames_[index].cptr == 0) {
@@ -126,6 +130,11 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     if (vmap != NULL) {
         assert(map_list_.contains(vmap));
         assert(frames_[index].cptr != 0);
+        /* check for backing */
+        if (!vmap->caps_.alloc(index)) {
+            return false;
+        }
+
         if (vmap->caps_[index] == 0) {
             /* src is kmap slot, dest is vmap slot */
             cspacepath_t src, dest;
@@ -168,7 +177,7 @@ void ZxVmo::decommit_page(uint32_t index)
 
     /* For each mapping, unmap page and delete cap */
     auto unmap_func = [&vka, &index] (VmoMapping *vmap) {
-        if (vmap->caps_[index] != 0) {
+        if (vmap->caps_.has(index) && vmap->caps_[index] != 0) {
             cspacepath_t path;
             vka_cspace_make_path(vka, vmap->caps_[index], &path);
             seL4_ARCH_Page_Unmap(vmap->caps_[index]);
@@ -181,7 +190,7 @@ void ZxVmo::decommit_page(uint32_t index)
     map_list_.for_each(unmap_func);
 
     /* Unmap page from kmap and free frame object */
-    if (frames_[index].cptr != 0) {
+    if (frames_.has(index) && frames_[index].cptr != 0) {
         seL4_ARCH_Page_Unmap(frames_[index].cptr);
         vka_free_object(vka, &frames_[index]);
         /* Reset frame object */

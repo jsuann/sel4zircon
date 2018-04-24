@@ -26,6 +26,7 @@ extern "C" {
 
 #include "utils/elf.h"
 #include "utils/rng.h"
+#include "utils/page_alloc.h"
 
 /* Wrap globals in a namespace to prevent access outside this file */
 namespace ServerCxx {
@@ -75,7 +76,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_prng();
     init_root_job();
     init_asid_pool(server_vka);
-    init_page_buf(server_vka);
+    init_page_alloc(server_vka);
 }
 
 void syscall_loop(void)
@@ -133,6 +134,9 @@ void syscall_loop(void)
 
 #include "utils/elf.cxx"
 #include "utils/init_test.cxx"
+#include "utils/page_alloc.cxx"
+
+#include "zxcpp/pagearray.h"
 
 /* Extra test function */
 void do_cpp_test(void)
@@ -163,4 +167,23 @@ void do_cpp_test(void)
     /* Object type test */
     ZxChannel ch;
     assert(is_object_type<ZxChannel>(&ch));
+
+    /* Page array test */
+    PageArray<vka_object_t> test_pa;
+    size_t pa_size = 1 * 1024 * 1024; // 1MB of pages = 4GB
+    test_pa.init(pa_size);
+    test_pa.alloc(0);
+    test_pa.alloc(1);
+    test_pa.alloc(600000);
+    test_pa[0].cptr = 1;
+    dprintf(INFO, "%p %lu\n", &test_pa[0], test_pa[0].cptr);
+    dprintf(INFO, "%p %lu\n", &test_pa[1], test_pa[1].cptr);
+    dprintf(INFO, "%p %lu\n", &test_pa[600000], test_pa[600000].cptr);
+
+    assert(!test_pa.has(800000));
+
+    auto clean_func = [] (vka_object_t &frame) {
+        frame.cptr = 0;
+    };
+    test_pa.clear(clean_func);
 }
