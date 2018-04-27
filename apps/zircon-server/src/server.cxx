@@ -122,6 +122,7 @@ void syscall_loop(void)
 #include "object/fifo.cxx"
 #include "object/mbuf.cxx"
 #include "object/channel.cxx"
+#include "object/socket.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
@@ -151,7 +152,7 @@ void do_cpp_test(void)
     char str[] = "HELLO HELLO HELLO";
 
     for (size_t i = 0; i < 10000; ++i) {
-        assert(buf.write((uint8_t*)&str[0], strlen(str) + 1) == ZX_OK);
+        assert(buf.write((uint8_t*)&str[0], strlen(str) + 1, true) == ZX_OK);
     }
 
     dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());

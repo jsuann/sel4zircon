@@ -26,9 +26,11 @@ public:
 
     void destroy() override;
 
+    /* TODO move these to syscall/channel.cxx */
     zx_status_t take_handles_from_proc(ZxProcess *proc, uint32_t num,
             zx_handle_t *in, Handle **out);
-    /* TODO put handles in proc? */
+    void put_handles_in_proc(ZxProcess *proc, uint32_t num,
+            Handle **in, zx_handle_t *out);
 
     zx_status_t write_msg(void* bytes, uint32_t num_bytes,
             Handle **handles, uint32_t num_handles);

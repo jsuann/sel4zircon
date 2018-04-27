@@ -4,9 +4,17 @@
 
 namespace MBufCxx {}
 
-zx_status_t MBuf::write(uint8_t *src, size_t len)
+zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
 {
     using namespace MBufCxx;
+
+    if (len + size_ > kSizeMax) {
+        if (datagram) {
+            return ZX_ERR_SHOULD_WAIT;
+        }
+        /* Otherwise do a short write */
+        len = kSizeMax - size_;
+    }
 
     /* Figure out how many page bufs we need to allocate */
     size_t rem = (tail_ != NULL) ? tail_->rem() : 0;

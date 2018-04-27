@@ -15,13 +15,22 @@ class MBuf {
 public:
     MBuf() = default;
 
-    zx_status_t write(uint8_t *src, size_t len);
+    zx_status_t write(uint8_t *src, size_t len, bool datagram);
     zx_status_t read(uint8_t *dest, size_t len);
+
     void discard(size_t len);
     void clear();
 
     size_t get_size() const {
         return size_;
+    }
+
+    bool is_full() const {
+        return size_ >= kSizeMax;
+    }
+
+    bool is_empty() const {
+        return size_ == 0;
     }
 
 private:
@@ -41,6 +50,9 @@ private:
         }
     };
     static_assert(sizeof(PageBuf) == PageBuf::kPageSize, "");
+
+    /* Max size of an mbuf, i.e. max num pages allocated! */
+    static constexpr size_t kSizeMax = 128 * PageBuf::kPayloadSize;
 
     void append(PageBuf *pb) {
         if (head_ == NULL) {

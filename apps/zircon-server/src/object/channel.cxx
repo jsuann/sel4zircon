@@ -90,6 +90,19 @@ zx_status_t ZxChannel::take_handles_from_proc(ZxProcess *proc, uint32_t num,
     return ZX_OK;
 }
 
+void ZxChannel::put_handles_in_proc(ZxProcess *proc, uint32_t num,
+        Handle **in, zx_handle_t *out)
+{
+    for (size_t i = 0; i < num; ++i) {
+        /* Add to proc */
+        /* TODO cancel state tracker/waiter? */
+        proc->add_handle(in[i]);
+
+        /* Get user val */
+        out[i] = proc->get_handle_user_val(in[i]);
+    }
+}
+
 /* Called by peer channel */
 zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
         Handle **handles, uint32_t num_handles)
@@ -112,7 +125,7 @@ zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
     msg->num_handles_ = num_handles;
 
     /* Write to data buf */
-    int err = data_buf_.write((uint8_t *)bytes, num_bytes);
+    int err = data_buf_.write((uint8_t *)bytes, num_bytes, true);
     if (err != ZX_OK) {
         delete msg;
         return err;
