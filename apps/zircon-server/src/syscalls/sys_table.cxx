@@ -96,7 +96,7 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_undefined,
     sys_undefined,
     sys_undefined,
-    sys_undefined,
+    sys_debug_write,
     sys_undefined,
     sys_undefined,
     sys_undefined,

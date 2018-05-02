@@ -14,6 +14,7 @@ void sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_fifo_read(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_fifo_write(seL4_MessageInfo_t tag, uint64_t badge);
+void sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_0(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_1(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_2(seL4_MessageInfo_t tag, uint64_t badge);

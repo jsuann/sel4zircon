@@ -14,6 +14,7 @@ sys_process_create
 sys_process_start
 sys_process_read_memory
 sys_process_write_memory
+sys_debug_write
 sys_syscall_test_0
 sys_syscall_test_1
 sys_syscall_test_2

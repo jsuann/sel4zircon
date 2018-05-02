@@ -34,6 +34,7 @@
 #include <sel4utils/mapping.h>
 #include <sel4utils/process.h>
 
+#include <sel4platsupport/platsupport.h>
 #include <sel4platsupport/timer.h>
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
@@ -115,6 +116,7 @@ int main(void) {
     //simple_print(&simple);
 
     /* Additional bootinfo cap prints */
+    /*
     dprintf(SPEW, "cap count: %d\n", simple_get_cap_count(&simple));
     dprintf(SPEW, "empty: %lu, %lu\n", info->empty.start, info->empty.end);
     dprintf(SPEW, "shared frames: %lu, %lu\n", info->sharedFrames.start, info->sharedFrames.end);
@@ -123,6 +125,7 @@ int main(void) {
     dprintf(SPEW, "user img paging: %lu, %lu\n", info->userImagePaging.start, info->userImagePaging.end);
     dprintf(SPEW, "Extra boot info frames: %lu, %lu\n", info->extraBIPages.start, info->extraBIPages.end);
     dprintf(SPEW, "untyped: %lu, %lu\n", info->untyped.start, info->untyped.end);
+    */
 
     size_t cap_count = simple_get_cap_count(&simple);
     for (size_t i = 0; i < cap_count; ++i) {
@@ -162,6 +165,10 @@ int main(void) {
     assert(virtual_reservation.res);
     bootstrap_configure_virtual_pool(allocman, vaddr, ALLOCATOR_VIRTUAL_POOL_SIZE, simple_get_pd(&simple));
     error = allocman_fill_reserves(allocman);
+    assert(!error);
+
+    /* Configure serial driver */
+    error = platsupport_serial_setup_simple(&vspace, &simple, &vka);
     assert(!error);
 
     /* Create an endpoint for zircon server to wait on */
