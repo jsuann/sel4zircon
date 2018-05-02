@@ -13,6 +13,7 @@ extern "C" {
 #include <zircon/types.h>
 #include <zircon/rights.h>
 #include <vspace/vspace.h>
+#include <sel4platsupport/timer.h>
 #include "debug.h"
 }
 
@@ -35,11 +36,15 @@ namespace ServerCxx {
 vka_t *server_vka;
 vspace_t *server_vspace;
 seL4_CPtr server_ep;
+seL4_timer_t *server_timer;
+
+seL4_Word timer_badge;
 
 } /* namespace ServerCxx */
 
 extern "C" void do_cpp_test(void);
-extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
+extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace,
+        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn);
 extern "C" void syscall_loop(void);
 
 vspace_t *get_server_vspace()
@@ -57,7 +62,8 @@ seL4_CPtr get_server_ep()
     return ServerCxx::server_ep;
 }
 
-void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
+void init_zircon_server(vka_t *vka, vspace_t *vspace,
+        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn)
 {
     using namespace ServerCxx;
 
@@ -67,6 +73,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     server_vka = vka;
     server_vspace = vspace;
     server_ep = new_ep;
+    server_timer = timer;
 
     /* init allocators and other things */
     init_handle_table(server_vspace);
@@ -77,6 +84,16 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep)
     init_root_job();
     init_asid_pool(server_vka);
     init_page_alloc(server_vka);
+
+    /* save the timer badge. a bit hacky but we know x86 has one irq */
+    /* XXX hpet can't be set correctly on qemu? */
+    assert(ltimer_set_timeout(&timer->ltimer, 1 * NS_IN_MS, TIMEOUT_PERIODIC) == 0);
+    seL4_Wait(ntfn, &timer_badge);
+    sel4platsupport_handle_timer_irq(timer, timer_badge);
+    dprintf(INFO, "Timer badge: %lu\n", timer_badge);
+
+    /* Bind notification to the tcb */
+    assert(seL4_TCB_BindNotification(seL4_CapInitThreadTCB, ntfn) == 0);
 }
 
 void syscall_loop(void)
@@ -85,6 +102,11 @@ void syscall_loop(void)
 
     seL4_Word badge = 0;
     seL4_MessageInfo_t tag;
+
+    /* XXX test timer tick */
+    uint64_t timeacc = 0;
+    uint64_t prevtime = 0;
+    uint64_t count = 0;
 
     dprintf(INFO, "Entering syscall loop\n");
     for (;;) {
@@ -100,6 +122,21 @@ void syscall_loop(void)
                 sys_reply(ZX_ERR_BAD_SYSCALL);
             } else {
                 DO_SYSCALL(syscall, tag, badge);
+            }
+        } else if (badge == timer_badge) {
+            /* Received timer interrupt */
+            sel4platsupport_handle_timer_irq(server_timer, timer_badge);
+            //dprintf(INFO, "Got timer IRQ! Badge %lu\n", timer_badge);
+
+            /* XXX test timer tick */
+            uint64_t time;
+            ltimer_get_time(&server_timer->ltimer, &time);
+            timeacc += (time - prevtime);
+            prevtime = time;
+            ++count;
+            if (count == 5000) {
+                dprintf(INFO, "Tick is %lu\n", (timeacc/count));
+                assert(!"dead");
             }
         } else {
             dprintf(INFO, "Received non-zircon IPC!\n");

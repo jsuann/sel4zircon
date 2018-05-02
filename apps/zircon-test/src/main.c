@@ -13,6 +13,7 @@
 #include <autoconf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include <sel4/sel4.h>
@@ -20,8 +21,6 @@
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 #include <sel4zircon/cspace.h>
-
-#include "test.h"
 
 /* constants */
 #define EP_CPTR ZX_THREAD_SYSCALL_SLOT
@@ -38,7 +37,10 @@ int main(int argc, char **argv) {
     zx_handle_t thrd_handle = seL4_GetMR(2);
 
     printf(">=== Zircon Test ===\n");
-    printf("> Received handles: %u %u %u\n", vmar_handle, proc_handle, thrd_handle);
+    printf("Received handles: %u %u %u\n", vmar_handle, proc_handle, thrd_handle);
+
+    char *hello_msg = "Hello zircon server!";
+    zx_debug_write((void *)hello_msg, strlen(hello_msg));
 
     zx_status_t err;
 

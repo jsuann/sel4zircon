@@ -19,11 +19,6 @@ all: app-images
 
 include tools/common/project.mk
 
-# tests to run
-ifeq (${TEST}y,y)
-	TEST=".*"
-endif
-
 # objdump args
 ifeq (${OBJFLAGS}y,y)
     OBJFLAGS="Dlx"
@@ -44,12 +39,6 @@ objdump-driver:
 # objdump tests app
 objdump-tests:
 	${CONFIG_CROSS_COMPILER_PREFIX}objdump -${OBJFLAGS} stage/${ARCH}/${PLAT}/bin/sel4test-tests
-
-# pick a test or subset of tests to run
-# usage: make select-test TEST=<regexp>
-select-test:
-	sed -i "s/CONFIG_TESTPRINTER_REGEX=\".*\"/CONFIG_TESTPRINTER_REGEX=\"${TEST}\"/" .config
-	@echo "Selected test ${TEST}"
 
 simulate-x86_64:
 	qemu-system-x86_64 \

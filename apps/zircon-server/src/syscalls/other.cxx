@@ -42,9 +42,12 @@ void sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge)
     err = proc->uvaddr_to_kvaddr(user_ptr, len, buf);
     SYS_RET_IF_ERR(err);
 
+    dprintf(INFO, "(%s): ", proc->get_name());
+
     for (uint32_t i = 0; i < len; ++i) {
         putchar(((char *)buf)[i]);
     }
+    putchar('\n');
 
     sys_reply(len);
 }

@@ -76,9 +76,18 @@ extern void change_morecore_area(void *base, size_t size);
 char server_heap[ZX_SERVER_HEAP_SIZE];
 #endif /* ZX_USE_CUSTOM_HEAP */
 
+/* server structs */
+seL4_BootInfo *info;
+simple_t simple;
+vka_t vka;
+allocman_t *allocman;
+vspace_t vspace;
+seL4_timer_t timer;
+
 /* zircon server calls */
 extern void do_cpp_test(void);
-extern void init_zircon_server(vka_t *vka, vspace_t *vspace, seL4_CPtr new_ep);
+extern void init_zircon_server(vka_t *vka, vspace_t *vspace,
+        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn);
 extern uint64_t init_zircon_test(void);
 extern void send_zircon_test_data(seL4_CPtr ep_cap);
 extern void syscall_loop(void);
@@ -87,12 +96,6 @@ void *main_continued(void *arg);
 
 int main(void) {
     int error;
-    seL4_BootInfo *info;
-    simple_t simple;
-    vka_t vka;
-    allocman_t *allocman;
-    vspace_t vspace;
-    seL4_timer_t timer;
     vspace_new_pages_config_t config;
 
 #if ZX_USE_CUSTOM_HEAP
@@ -116,7 +119,7 @@ int main(void) {
     //simple_print(&simple);
 
     /* Additional bootinfo cap prints */
-    /*
+#ifdef SEL4_DEBUG_KERNEL
     dprintf(SPEW, "cap count: %d\n", simple_get_cap_count(&simple));
     dprintf(SPEW, "empty: %lu, %lu\n", info->empty.start, info->empty.end);
     dprintf(SPEW, "shared frames: %lu, %lu\n", info->sharedFrames.start, info->sharedFrames.end);
@@ -125,7 +128,7 @@ int main(void) {
     dprintf(SPEW, "user img paging: %lu, %lu\n", info->userImagePaging.start, info->userImagePaging.end);
     dprintf(SPEW, "Extra boot info frames: %lu, %lu\n", info->extraBIPages.start, info->extraBIPages.end);
     dprintf(SPEW, "untyped: %lu, %lu\n", info->untyped.start, info->untyped.end);
-    */
+#endif
 
     size_t cap_count = simple_get_cap_count(&simple);
     for (size_t i = 0; i < cap_count; ++i) {
@@ -176,44 +179,15 @@ int main(void) {
     error = vka_alloc_endpoint(&vka, &ep_object);
     assert(error == 0);
 
-    /* TODO use this for zircon timer objects, waiting, etc. */
+    /* Create ntfn and init timer */
     vka_object_t ntfn_object = {0};
     error = vka_alloc_notification(&vka, &ntfn_object);
     assert(error == 0);
     error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
     assert(error == 0);
 
-/*
-    error = ltimer_set_timeout(&timer.ltimer, NS_IN_MS, TIMEOUT_PERIODIC);
-    assert(error == 0);
-
-    int count = 0;
-    while (1) {
-
-        seL4_Word badge;
-        seL4_Wait(ntfn_object.cptr, &badge);
-        sel4platsupport_handle_timer_irq(&timer, badge);
-        printf("badge: %lu\n", badge);
-
-        count++;
-        if (count == 10) {
-            break;
-        }
-    }
-
-    uint64_t time;
-    ltimer_get_time(&timer.ltimer, &time);
-
-    msg = (uint32_t) time;
-    seL4_SetMR(0, msg);
-    seL4_Reply(tag);
-
-    sel4platsupport_destroy_timer(&timer, &vka);
-    while (1);
-*/
-
     /* Init the zircon server */
-    init_zircon_server(&vka, &vspace, ep_object.cptr);
+    init_zircon_server(&vka, &vspace, &timer, ep_object.cptr, ntfn_object.cptr);
 
     /* Init zircon test */
     init_zircon_test();
@@ -228,6 +202,7 @@ int main(void) {
 
     /* Run on new stack */
     void *stack_top = (void *)(ZX_SERVER_STACK_START + (ZX_SERVER_STACK_NUM_PAGES * BIT(seL4_PageBits)));
+    fflush(stdout);
     utils_run_on_stack(stack_top, main_continued, NULL);
 
     /* We shouldn't get here! */
