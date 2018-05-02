@@ -1,0 +1,3 @@
+# The following is a list of additions syscalls specific to the
+# sel4zircon server. Must have zx_ prefix. Do not edit.
+zx_debug_putchar

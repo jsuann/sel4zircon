@@ -13,6 +13,7 @@ SYSNO_FILE=../libzircon/src/sys_def.h
 
 DEFINED_LIST=syscalls.list
 SKIP_LIST=skip-sys.list
+EXTRA_SYSCALLS=extra-sys.list
 
 LIBZIRCON_HEADER=../libzircon/include/zircon/zx_calls.h
 LIBZIRCON_DEFS=../libzircon/src/zx_calls.def
@@ -40,6 +41,8 @@ echo "${AUTOGEN_TEXT}" > "${LIBZIRCON_DEFS}"
 
 syscall=
 syscall_num=0
+
+# add regular zx calls from abigen
 while read -r line || [ -n "${line}" ]
 do
     # skip empty lines, comments
@@ -166,6 +169,38 @@ ${syscall_decl}
     syscall=
     syscall_num=$((syscall_num + 1))
 done < "${ZIRCON_PATH}/${SYSCALL_ABIGEN}"
+
+# add extra sel4zircon syscalls
+# first note this in relevant files
+EXTRA_SYS_TEXT="/* sel4zircon syscalls defined below */"
+echo "${EXTRA_SYS_TEXT}" >> "${SYSNO_FILE}"
+echo "${EXTRA_SYS_TEXT}" >> "${DEFS_FILE}"
+echo "    ${EXTRA_SYS_TEXT}" >> "${TABLE_FILE}"
+
+# add extra call defs
+while read -r line || [ -n "${line}" ]
+do
+    # skip empty lines, comments
+    [ -z "${line}" ] && continue
+    [[ "${line}" =~ ^# ]] && continue
+
+    # get name
+    syscall_name=$(sed -e 's/^zx_\([a-z0-9_]*\).*$/\1/' <<< "${line}")
+
+    # get name for syscall number definition
+    syscall_def="ZX_SYS_$(tr '[:lower:]' '[:upper:]' <<< "${syscall_name}")"
+
+    # define syscall number
+    echo "#define ${syscall_def} ${syscall_num}" >> "${SYSNO_FILE}"
+
+    # declare kernel-side handler and add to syscall table
+    echo "void sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
+    echo "    sys_${syscall_name}," >> "${TABLE_FILE}"
+
+    # user side call definitions are done manually
+
+    syscall_num=$((syscall_num + 1))
+done < "${EXTRA_SYSCALLS}"
 
 # define total number of syscalls
 echo "

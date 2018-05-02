@@ -144,3 +144,5 @@
 #define ZX_SYS_SYSCALL_TEST_7 142
 #define ZX_SYS_SYSCALL_TEST_8 143
 #define ZX_SYS_SYSCALL_TEST_WRAPPER 144
+/* sel4zircon syscalls defined below */
+#define ZX_SYS_DEBUG_PUTCHAR 145

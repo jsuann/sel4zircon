@@ -147,4 +147,6 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_syscall_test_7,
     sys_syscall_test_8,
     sys_syscall_test_wrapper,
+    /* sel4zircon syscalls defined below */
+    sys_debug_putchar,
 };

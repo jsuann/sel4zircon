@@ -18,6 +18,7 @@
 #include <autoconf.h>
 
 #include <sel4/sel4.h>
+#include <sel4zircon/debug.h>
 
 /* avoid main falling off the end of the world */
 void abort(void) {
@@ -29,7 +30,8 @@ void __arch_putchar(int c) {
 #ifdef CONFIG_DEBUG_BUILD
     seL4_DebugPutChar(c);
 #else
-    zx_debug_write((void *)&c, 1);
+    //zx_debug_write((void *)&c, 1);
+    zx_debug_putchar(c);
 #endif
 }
 
@@ -39,5 +41,3 @@ void name_thread(seL4_CPtr tcb, char *name) {
     seL4_DebugNameThread(tcb, name);
 #endif
 }
-
-

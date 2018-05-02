@@ -48,3 +48,12 @@ void sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge)
 
     sys_reply(len);
 }
+
+/* sel4zircon syscalls */
+void sys_debug_putchar(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    char c = seL4_GetMR(0);
+    putchar(c);
+    seL4_Reply(seL4_MessageInfo_new(0, 0, 0, 0));
+}

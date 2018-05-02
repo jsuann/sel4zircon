@@ -25,5 +25,7 @@ void sys_syscall_test_6(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_7(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_8(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_syscall_test_wrapper(seL4_MessageInfo_t tag, uint64_t badge);
+/* sel4zircon syscalls defined below */
+void sys_debug_putchar(seL4_MessageInfo_t tag, uint64_t badge);
 
-#define NUM_SYSCALLS 145
+#define NUM_SYSCALLS 146
