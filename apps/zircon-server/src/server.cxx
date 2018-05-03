@@ -25,6 +25,7 @@ extern "C" {
 #include "object/vmar.h"
 #include "object/mbuf.h"
 
+#include "utils/clock.h"
 #include "utils/elf.h"
 #include "utils/rng.h"
 #include "utils/page_alloc.h"
@@ -36,8 +37,6 @@ namespace ServerCxx {
 vka_t *server_vka;
 vspace_t *server_vspace;
 seL4_CPtr server_ep;
-seL4_timer_t *server_timer;
-
 seL4_Word timer_badge;
 
 } /* namespace ServerCxx */
@@ -73,7 +72,9 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace,
     server_vka = vka;
     server_vspace = vspace;
     server_ep = new_ep;
-    server_timer = timer;
+
+    /* Init timer */
+    init_timer(timer, ntfn, seL4_CapInitThreadTCB, &timer_badge);
 
     /* init allocators and other things */
     init_handle_table(server_vspace);
@@ -84,17 +85,6 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace,
     init_root_job();
     init_asid_pool(server_vka);
     init_page_alloc(server_vka);
-
-    /* save the timer badge. a bit hacky but we know x86 has one irq */
-    /* XXX newer versions of QEMU seem to constantly fire interrupts, in addition
-       to when we program the hpet to fire. Don't use hpet with TIMEOUT_PERIODIC */
-    assert(ltimer_set_timeout(&timer->ltimer, 1 * NS_IN_MS, TIMEOUT_RELATIVE) == 0);
-    seL4_Wait(ntfn, &timer_badge);
-    sel4platsupport_handle_timer_irq(timer, timer_badge);
-    dprintf(INFO, "Timer badge: %lu\n", timer_badge);
-
-    /* Bind notification to the tcb */
-    assert(seL4_TCB_BindNotification(seL4_CapInitThreadTCB, ntfn) == 0);
 }
 
 void syscall_loop(void)
@@ -103,11 +93,6 @@ void syscall_loop(void)
 
     seL4_Word badge = 0;
     seL4_MessageInfo_t tag;
-
-    /* XXX test timer tick */
-    uint64_t timeacc = 0;
-    uint64_t prevtime = 0;
-    uint64_t count = 0;
 
     dprintf(INFO, "Entering syscall loop\n");
     for (;;) {
@@ -125,20 +110,8 @@ void syscall_loop(void)
                 DO_SYSCALL(syscall, tag, badge);
             }
         } else if (badge == timer_badge) {
-            /* Received timer interrupt */
-            sel4platsupport_handle_timer_irq(server_timer, timer_badge);
-            //dprintf(INFO, "Got timer IRQ! Badge %lu\n", timer_badge);
-
-            /* XXX test timer tick */
-            uint64_t time;
-            ltimer_get_time(&server_timer->ltimer, &time);
-            timeacc += (time - prevtime);
-            prevtime = time;
-            ++count;
-            if (count == 5000) {
-                dprintf(INFO, "Tick is %lu\n", (timeacc/count));
-                assert(!"dead");
-            }
+            /* Handle timer interrupt */
+            handle_timer(badge);
         } else {
             dprintf(INFO, "Received non-zircon IPC!\n");
         }
@@ -171,6 +144,7 @@ void syscall_loop(void)
 #include "syscalls/tests.cxx"
 #include "syscalls/vmo.cxx"
 
+#include "utils/clock.cxx"
 #include "utils/elf.cxx"
 #include "utils/init_test.cxx"
 #include "utils/page_alloc.cxx"

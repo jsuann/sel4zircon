@@ -17,6 +17,7 @@ extern "C" {
 
 #include "listable.h"
 #include "object.h"
+#include "../utils/clock.h"
 
 class ZxThread final : public ZxObject, public Listable<ZxThread> {
 public:
@@ -74,6 +75,9 @@ private:
 
     /* State */
     /* Exception port */
+
+    /* TODO things thread is waiting on */
+    /* TODO list of waiters on thread: Waitable class? */
 
     char name_[ZX_MAX_NAME_LEN] = {0};
 
