@@ -48,7 +48,7 @@
 #define ZX_USE_TWO_LEVEL_CSPACE         1
 
 /* static memory for the allocator to bootstrap with */
-#define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 40)
+#define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 100)
 static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 
 /* static memory for virtual memory bootstrapping */

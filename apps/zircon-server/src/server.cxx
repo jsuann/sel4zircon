@@ -86,8 +86,9 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace,
     init_page_alloc(server_vka);
 
     /* save the timer badge. a bit hacky but we know x86 has one irq */
-    /* XXX hpet can't be set correctly on qemu? */
-    assert(ltimer_set_timeout(&timer->ltimer, 1 * NS_IN_MS, TIMEOUT_PERIODIC) == 0);
+    /* XXX newer versions of QEMU seem to constantly fire interrupts, in addition
+       to when we program the hpet to fire. Don't use hpet with TIMEOUT_PERIODIC */
+    assert(ltimer_set_timeout(&timer->ltimer, 1 * NS_IN_MS, TIMEOUT_RELATIVE) == 0);
     seL4_Wait(ntfn, &timer_badge);
     sel4platsupport_handle_timer_irq(timer, timer_badge);
     dprintf(INFO, "Timer badge: %lu\n", timer_badge);
