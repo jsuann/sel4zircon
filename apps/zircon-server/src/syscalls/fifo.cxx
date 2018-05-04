@@ -20,7 +20,7 @@ void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     zx_status_t err;
-    ZxProcess *proc = get_proc_from_badge(badge); // TODO policy check
+    ZxProcess *proc = get_proc_from_badge(badge);
 
     /* Get ptrs */
     zx_handle_t *out0, *out1;
@@ -44,7 +44,7 @@ void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
         }
         destroy_object(fifo0);
         destroy_object(fifo1);
-        sys_reply(ZX_ERR_NO_MEMORY);
+        return sys_reply(ZX_ERR_NO_MEMORY);
     }
 
     /* Add handles to proc */

@@ -209,7 +209,7 @@ void zx_thread_exit(void)
     ZX_SYSCALL_SEND(ZX_SYS_THREAD_EXIT, 0);
 }
 
-zx_status_t zx_thread_create(zx_handle_t process, char* name, uint32_t name_len, uint32_t options, zx_handle_t* out)
+zx_status_t zx_thread_create(zx_handle_t process, const char* name, uint32_t name_len, uint32_t options, zx_handle_t* out)
 {
     ZX_SYSCALL_SEND(ZX_SYS_THREAD_CREATE, 5, process, name, name_len, options, out);
     return seL4_GetMR(0);
@@ -244,7 +244,7 @@ void zx_process_exit(int retcode)
     ZX_SYSCALL_SEND(ZX_SYS_PROCESS_EXIT, 1, retcode);
 }
 
-zx_status_t zx_process_create(zx_handle_t job, char* name, uint32_t name_len, uint32_t options, zx_handle_t* proc_handle, zx_handle_t* vmar_handle)
+zx_status_t zx_process_create(zx_handle_t job, const char* name, uint32_t name_len, uint32_t options, zx_handle_t* proc_handle, zx_handle_t* vmar_handle)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PROCESS_CREATE, 6, job, name, name_len, options, proc_handle, vmar_handle);
     return seL4_GetMR(0);

@@ -14,18 +14,12 @@ namespace SysTime {
 int64_t utc_offset = 0;
 }
 
-/* We can't use sys_reply, since it uses zx_status_t */
-#define SYS_REPLY_TIME(x) \
-    tag = seL4_MessageInfo_new(0, 0, 0, 1); \
-    seL4_SetMR(0, x); \
-    seL4_Reply(tag);
-
 void sys_deadline_after(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 1);
     uint64_t nanoseconds = seL4_GetMR(0);
     uint64_t deadline = get_system_time() + nanoseconds;
-    SYS_REPLY_TIME(deadline);
+    sys_reply(deadline);
 }
 
 void sys_nanosleep(seL4_MessageInfo_t tag, uint64_t badge)
@@ -53,7 +47,5 @@ void sys_clock_get(seL4_MessageInfo_t tag, uint64_t badge)
         time = 0;
     }
 
-    SYS_REPLY_TIME(time);
+    sys_reply(time);
 }
-
-#undef SYS_REPLY_TIME

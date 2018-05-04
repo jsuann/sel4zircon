@@ -63,6 +63,7 @@ void init_zircon_test(void)
     /* Start test process */
     assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
             "zircon-test", entry));
+    test_proc->run_proc();
 
     /* Get handles to test objects */
     zx_handle_t vmar_uval = test_proc->create_handle_get_uval(test_vmar);

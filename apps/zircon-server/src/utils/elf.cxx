@@ -159,7 +159,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
     return entry_point;
 }
 
-/* Spawns zircon process. Requires elf & stack vmos ready. */
+/* Spawns zircon process with vsyscall. Requires elf & stack vmos ready. */
 bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
         uintptr_t stack_base, const char *image_name, uintptr_t entry)
 {
@@ -217,14 +217,8 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
     assert(stack_ptr % kStackAlign == 0);
     dprintf(INFO, "New proc, entry %lx, stack %lx\n", entry, stack_ptr);
 
-    /* Init context */
-    seL4_UserContext context = {0};
-    if (sel4utils_arch_init_context((void *)entry, (void *)stack_ptr, &context)) {
-        return false;
-    }
-
-    /* Write to registers & start process */
-    if (thrd->write_registers(&context, 1)) {
+    /* Start thread */
+    if (thrd->start_execution(entry, stack_ptr, 0, 0) != 0) {
         return false;
     }
 

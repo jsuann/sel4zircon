@@ -19,6 +19,7 @@ extern "C" {
 #include "object.h"
 #include "waiter.h"
 #include "../utils/clock.h"
+#include "../addrspace.h"
 
 class ZxThread final : public ZxObject, public Listable<ZxThread> {
 public:
@@ -41,10 +42,8 @@ public:
 
     int configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr);
 
-    int write_registers(seL4_UserContext *context, int resume) {
-        return seL4_TCB_WriteRegisters(tcb_.cptr, resume, 0,
-                sizeof(*context) / sizeof(seL4_Word), context);
-    }
+    int start_execution(uintptr_t entry, uintptr_t stack,
+            uintptr_t arg1, uintptr_t arg2);
 
     uint32_t get_thread_index() const {
         return thread_index_;

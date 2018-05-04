@@ -8,7 +8,7 @@ extern "C" {
 }
 
 /* generic reply function */
-static inline void sys_reply(zx_status_t res)
+static inline void sys_reply(seL4_Word res)
 {
     seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, res);

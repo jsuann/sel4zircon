@@ -123,6 +123,11 @@ do
             arg_type=${arg_type# }
             arg_type=${arg_type% }
 
+            # special case: if arg name is "name", we need to make const
+            if [ "${arg_name}" = "name" ]; then
+                arg_type="const ${arg_type}"
+            fi
+
             # check if arg type is a pointer, or has leftover abigen info
             # XXX pci_get_nth_device and vcpu_resume require specific handling!
             if [[ "${arg_type}" =~ \[ ]]; then

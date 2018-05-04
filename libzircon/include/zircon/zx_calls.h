@@ -70,7 +70,7 @@ extern zx_status_t zx_socket_accept(zx_handle_t handle, zx_handle_t* out_socket)
 
 extern void zx_thread_exit(void);
 
-extern zx_status_t zx_thread_create(zx_handle_t process, char* name, uint32_t name_len, uint32_t options, zx_handle_t* out);
+extern zx_status_t zx_thread_create(zx_handle_t process, const char* name, uint32_t name_len, uint32_t options, zx_handle_t* out);
 
 extern zx_status_t zx_thread_start(zx_handle_t handle, uintptr_t thread_entry, uintptr_t stack, uintptr_t arg1, uintptr_t arg2);
 
@@ -82,7 +82,7 @@ extern zx_status_t zx_thread_set_priority(int32_t prio);
 
 extern void zx_process_exit(int retcode);
 
-extern zx_status_t zx_process_create(zx_handle_t job, char* name, uint32_t name_len, uint32_t options, zx_handle_t* proc_handle, zx_handle_t* vmar_handle);
+extern zx_status_t zx_process_create(zx_handle_t job, const char* name, uint32_t name_len, uint32_t options, zx_handle_t* proc_handle, zx_handle_t* vmar_handle);
 
 extern zx_status_t zx_process_start(zx_handle_t process_handle, zx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, zx_handle_t arg_handle, uintptr_t arg2);
 

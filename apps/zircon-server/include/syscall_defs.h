@@ -9,6 +9,8 @@ void sys_channel_create(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_channel_read(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_channel_call(seL4_MessageInfo_t tag, uint64_t badge);
+void sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge);
+void sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_process_create(seL4_MessageInfo_t tag, uint64_t badge);
 void sys_process_start(seL4_MessageInfo_t tag, uint64_t badge);

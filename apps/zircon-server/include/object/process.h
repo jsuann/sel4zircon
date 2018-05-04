@@ -72,6 +72,9 @@ public:
         DEAD,       /* All threads dead */
     };
 
+    void run_proc() { state_ = State::RUNNING; } //XXX
+    bool is_running() { return (state_ == State::RUNNING); }
+
     /* Handle funcs */
 
     void add_handle(Handle *h) {
@@ -166,6 +169,8 @@ private:
     uint32_t proc_index_;
 
     /* State */
+    State state_ = State::INITIAL;
+
     /* Exception port */
 
     /* vspace */

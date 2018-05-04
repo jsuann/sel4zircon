@@ -26,6 +26,16 @@
 #define EP_CPTR ZX_THREAD_SYSCALL_SLOT
 #define MSG_DATA 0x2 //  arbitrary data to send
 
+/* TODO replace with actual vmo */
+uint8_t thrd_stack[8000];
+
+__attribute__((noreturn))
+void thread_entry(uintptr_t arg1, uintptr_t arg2)
+{
+    printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
+    while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(60)));
+}
+
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
     seL4_Word msg;
@@ -92,10 +102,17 @@ int main(int argc, char **argv) {
 
     assert(!zx_handle_close(fifo1));
     assert(!zx_handle_close(fifo2));
-    //assert(!zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2));
+
+    /* Create a test thread */
+    zx_handle_t new_thrd;
+    const char *name = "thrd2";
+    assert(!zx_thread_create(proc_handle, name, strlen(name), 0, &new_thrd));
+
+    uintptr_t stack = ((uintptr_t)&thrd_stack[0]) + 8000;
+    assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack, 9, 6));
+
     zx_time_t deadline;
-    deadline = zx_deadline_after(ZX_SEC(3));
-    printf("Sleeping until %lu\n", deadline);
+    deadline = zx_deadline_after(ZX_SEC(10));
     zx_nanosleep(deadline);
 
     printf("Zircon test exiting!\n");

@@ -40,7 +40,7 @@ public:
         return tail_;
     }
 
-    int size() const {
+    size_t size() const {
         return num_items_;
     }
 
@@ -171,8 +171,8 @@ public:
             assert(item->owner_ == NULL);
 
         /* Check forward */
-        int item_count = 0;
-        int i = 0;
+        size_t item_count = 0;
+        size_t i = 0;
         T *t = head_;
         while (t != NULL) {
             assert(t->owner_ == list_owner_);
@@ -212,7 +212,7 @@ public:
 private:
     T *head_;
     T *tail_;
-    int num_items_;
+    size_t num_items_;
     /* Linked lists have a single owning object */
     ZxObject * const list_owner_;
 };

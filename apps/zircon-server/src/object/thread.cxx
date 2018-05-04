@@ -145,9 +145,27 @@ int ZxThread::configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr)
 
     seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0, seL4_WordBits - kThreadCspaceBits);
     seL4_CapData_t null_cap_data = {{0}};
-    return seL4_TCB_Configure(tcb_.cptr, ZX_THREAD_FAULT_SLOT, seL4_PrioProps_new(0,0),
-                            cspace_.cptr, cspace_root_data, pd, null_cap_data,
-                            (seL4_Word)ipc_buffer_addr, ipc_buffer_frame_.cptr);
+    return seL4_TCB_Configure(tcb_.cptr, ZX_THREAD_FAULT_SLOT, seL4_PrioProps_new(0,0), cspace_.cptr,
+                        cspace_root_data, pd, null_cap_data, ipc_buffer_addr, ipc_buffer_frame_.cptr);
+}
+
+int ZxThread::start_execution(uintptr_t entry, uintptr_t stack,
+        uintptr_t arg1, uintptr_t arg2)
+{
+#ifdef CONFIG_ARCH_X86_64
+    seL4_UserContext context = {0};
+    size_t context_size = sizeof(context) / sizeof(seL4_Word);
+
+    context.rsp = stack;
+    context.rip = entry;
+    context.rdi = arg1;
+    context.rsi = arg2;
+
+    /* Note that we always resume the thread */
+    return seL4_TCB_WriteRegisters(tcb_.cptr, 1, 0, context_size, &context);
+#else
+    return -1;
+#endif
 }
 
 void ZxThread::destroy()
