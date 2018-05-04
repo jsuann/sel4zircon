@@ -16,6 +16,11 @@ extern "C" {
 
 class Handle;
 
+struct CookieJar {
+    zx_koid_t scope_ = ZX_KOID_INVALID;
+    uint64_t cookie_ = 0u;
+};
+
 class ZxObject {
 public:
     ZxObject();
@@ -35,6 +40,15 @@ public:
            This must be overriden if there are additional refs to account for. */
         return (handle_count_ == 0);
     }
+
+    /* Override if object is waitable in some way */
+    virtual bool has_state_tracker() const { return false; }
+    virtual void update_waiters() {}
+
+    /* Override if object can store cookie */
+    virtual CookieJar* get_cookie_jar() { return NULL; }
+
+    virtual zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
 
     /* Helper for when can_destroy is overriden */
     bool zero_handles() const { return (handle_count_ == 0); }
@@ -67,9 +81,13 @@ public:
     }
 
     void update_state(zx_signals_t clear_mask, zx_signals_t set_mask) {
+        zx_signals_t prev = signals_;
         signals_ &= ~clear_mask;
         signals_ |= set_mask;
-        /* TODO wake up waiters */
+
+        if (prev != signals_) {
+            update_waiters();
+        }
     }
 
 private:

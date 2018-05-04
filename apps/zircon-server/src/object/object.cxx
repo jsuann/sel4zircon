@@ -104,3 +104,19 @@ Handle *create_handle_default_rights(T *obj)
     zx_rights_t default_rights = ObjectCxx::ZxObjectType<T>::RIGHTS;
     return obj->create_handle(default_rights);
 }
+
+zx_status_t ZxObject::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
+{
+    if (peer || !has_state_tracker()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    /* Generic objects can set all USER_SIGNALs. Particular object
+       types (events and eventpairs) may be able to set more. */
+    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    update_state(clear_mask, set_mask);
+    return ZX_OK;
+}
