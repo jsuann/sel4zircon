@@ -25,3 +25,6 @@ sys_syscall_test_6
 sys_syscall_test_7
 sys_syscall_test_8
 sys_syscall_test_wrapper
+sys_deadline_after
+sys_nanosleep
+sys_clock_get

@@ -60,6 +60,22 @@ public:
 
     void destroy_ipc_buffer();
 
+    void wait(timer_callback_func cb, void *data,
+            uint64_t expire_time, uint32_t flags);
+
+    void resume_from_wait(zx_status_t ret) {
+        /* Send to reply cap */
+        seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 1);
+        seL4_SetMR(0, ret);
+        seL4_Send(reply_cap_, tag);
+    }
+
+    uint64_t runtime_ns() {
+        /* Should be amount of actual cpu time, but just
+           get time from creation for now */
+        return get_system_time() - start_time_;
+    }
+
 private:
     /* Use thread index to get badge values */
     uint32_t thread_index_;
@@ -72,6 +88,11 @@ private:
     uintptr_t user_sp_ = 0;
     uintptr_t user_arg1_ = 0;
     uintptr_t user_arg2_ = 0;
+
+    uint64_t start_time_ = 0;
+
+    /* TimerNode for waits */
+    TimerNode timer_;
 
     /* State */
     /* Exception port */
@@ -91,7 +112,7 @@ private:
     vka_object_t tcb_ = {0};
 
     /* TODO RT scheduler */
-    vka_object_t sched_context_ = {0};
+    //vka_object_t sched_context_ = {0};
 
     /* If waiting, slot for reply cap */
     seL4_CPtr reply_cap_ = 0;   // vka object for RT kernel
@@ -105,3 +126,6 @@ template <>
 ZxThread *allocate_object<ZxThread>();
 template <>
 void free_object<ZxThread>(ZxThread *obj);
+
+/* timer callback funcs */
+void nanosleep_cb(void *data);

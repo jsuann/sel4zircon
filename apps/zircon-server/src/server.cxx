@@ -142,6 +142,7 @@ void syscall_loop(void)
 #include "syscalls/other.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"
+#include "syscalls/time.cxx"
 #include "syscalls/vmo.cxx"
 
 #include "utils/clock.cxx"

@@ -87,7 +87,7 @@ void handle_timer(seL4_Word badge)
         t->waiting_ = false;
 
         /* do callback */
-        t->timer_callback();
+        t->cb_(t->data_);
 
         progress = true;
     }
@@ -151,4 +151,13 @@ void remove_timer(TimerNode *t)
     t->expire_time_ = 0;
     t->slack_early_ = false;
     t->waiting_ = false;
+}
+
+uint64_t get_system_time()
+{
+    using namespace ClockCxx;
+
+    ltimer_get_time(&server_timer->ltimer, &curr_time);
+    dprintf(INFO, "time: %lu\n", curr_time);
+    return curr_time;
 }

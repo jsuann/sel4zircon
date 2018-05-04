@@ -2,11 +2,11 @@
 #include "syscalls.h"
 
 zx_syscall_func sys_table[NUM_SYSCALLS] = {
+    sys_clock_get,
+    sys_nanosleep,
     sys_undefined,
     sys_undefined,
-    sys_undefined,
-    sys_undefined,
-    sys_undefined,
+    sys_deadline_after,
     sys_undefined,
     sys_undefined,
     sys_undefined,

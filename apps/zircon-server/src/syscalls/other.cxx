@@ -7,6 +7,7 @@ extern "C" {
 #include "debug.h"
 }
 
+#include "object/process.h"
 #include "sys_helpers.h"
 
 namespace SysOther {

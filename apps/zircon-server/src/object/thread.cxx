@@ -127,6 +127,15 @@ bool ZxThread::init()
         return false;
     }
 
+    /* Allocate reply cap slot */
+    error = vka_cspace_alloc(vka, &reply_cap_ );
+    if (error) {
+        reply_cap_ = 0;
+        return false;
+    }
+
+    start_time_ = get_system_time();
+
     return true;
 }
 
@@ -160,7 +169,10 @@ void ZxThread::destroy()
         vka_free_object(vka, &tcb_);
     }
 
-    /* TODO: if reply cap saved, free slot */
+    /* Free reply cap slot */
+    if (reply_cap_ != 0) {
+        vka_cspace_free(vka, reply_cap_);
+    }
 }
 
 void ZxThread::destroy_ipc_buffer()
@@ -168,4 +180,27 @@ void ZxThread::destroy_ipc_buffer()
     vka_t *vka = get_server_vka();
     seL4_ARCH_Page_Unmap(ipc_buffer_frame_.cptr);
     vka_free_object(vka, &ipc_buffer_frame_);
+}
+
+void ZxThread::wait(timer_callback_func cb, void *data,
+        uint64_t expire_time, uint32_t flags)
+{
+    vka_t *vka = get_server_vka();
+    cspacepath_t path;
+    vka_cspace_make_path(vka, reply_cap_, &path);
+
+    int error = vka_cnode_saveCaller(&path);
+    if (error) {
+        dprintf(CRITICAL, "Save caller returned %d\n", error);
+    }
+
+    /* Set callback & add timer */
+    timer_.set_callback(cb, data);
+    add_timer(&timer_, expire_time, flags);
+}
+
+void nanosleep_cb(void *data)
+{
+    ZxThread *thrd = (ZxThread *)data;
+    thrd->resume_from_wait(ZX_OK);
 }

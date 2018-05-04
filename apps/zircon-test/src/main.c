@@ -93,6 +93,10 @@ int main(int argc, char **argv) {
     assert(!zx_handle_close(fifo1));
     assert(!zx_handle_close(fifo2));
     //assert(!zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2));
+    zx_time_t deadline;
+    deadline = zx_deadline_after(ZX_SEC(3));
+    printf("Sleeping until %lu\n", deadline);
+    zx_nanosleep(deadline);
 
     printf("Zircon test exiting!\n");
 
