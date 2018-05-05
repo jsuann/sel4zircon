@@ -6,7 +6,7 @@ extern "C" {
 
 #include "sys_helpers.h"
 
-void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     uint32_t count = seL4_GetMR(0);
@@ -16,7 +16,7 @@ void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
     uintptr_t user_out1 = seL4_GetMR(4);
 
     if (options != 0) {
-        return sys_reply(ZX_ERR_INVALID_ARGS);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     zx_status_t err;
@@ -44,7 +44,7 @@ void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
         }
         destroy_object(fifo0);
         destroy_object(fifo1);
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* Add handles to proc */
@@ -55,10 +55,10 @@ void sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
     *out0 = proc->get_handle_user_val(h0);
     *out1 = proc->get_handle_user_val(h1);
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-void sys_fifo_read(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_fifo_read(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 4);
     zx_handle_t handle = seL4_GetMR(0);
@@ -86,10 +86,10 @@ void sys_fifo_read(seL4_MessageInfo_t tag, uint64_t badge)
     err = fifo->read((uint8_t *)buf, len, actual);
     SYS_RET_IF_ERR(err);
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-void sys_fifo_write(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_fifo_write(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 4);
     zx_handle_t handle = seL4_GetMR(0);
@@ -114,12 +114,12 @@ void sys_fifo_write(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     if (fifo->get_peer() == NULL) {
-        return sys_reply(ZX_ERR_PEER_CLOSED);
+        return ZX_ERR_PEER_CLOSED;
     }
 
     /* Write to peer */
     err = fifo->get_peer()->write((uint8_t *)buf, len, actual);
     SYS_RET_IF_ERR(err);
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }

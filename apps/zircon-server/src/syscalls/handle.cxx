@@ -10,29 +10,29 @@ extern "C" {
 #include "object/handle.h"
 #include "sys_helpers.h"
 
-void sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 1);
     zx_handle_t handle_value = seL4_GetMR(0);
 
     /* Closing a null handle is valid */
     if (handle_value == ZX_HANDLE_INVALID) {
-        return sys_reply(ZX_OK);
+        return ZX_OK;
     }
 
     ZxProcess *proc = get_proc_from_badge(badge);
 
     Handle *h = proc->get_handle(handle_value);
     if (h == NULL) {
-        return sys_reply(ZX_ERR_BAD_HANDLE);
+        return ZX_ERR_BAD_HANDLE;
     }
 
     proc->remove_handle(h);
     destroy_handle_maybe_object(h);
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t badge)
+static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 3);
     zx_handle_t handle_val = seL4_GetMR(0);
@@ -51,24 +51,24 @@ static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t
 
     Handle *src = proc->get_handle(handle_val);
     if (src == NULL) {
-        return sys_reply(ZX_ERR_BAD_HANDLE);
+        return ZX_ERR_BAD_HANDLE;
     }
 
     if (!is_replace && !src->has_rights(ZX_RIGHT_DUPLICATE)) {
-        return sys_reply(ZX_ERR_ACCESS_DENIED);
+        return ZX_ERR_ACCESS_DENIED;
     }
 
     if (rights == ZX_RIGHT_SAME_RIGHTS) {
         rights = src->get_rights();
     } else if ((src->get_rights() & rights) != rights) {
-        return sys_reply(ZX_ERR_INVALID_ARGS);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Create a duplicate */
     ZxObject *obj = src->get_object();
     Handle *dup = obj->create_handle(rights);
     if (dup == NULL) {
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
     proc->add_handle(dup);
     *out = proc->get_handle_user_val(dup);
@@ -80,15 +80,15 @@ static void handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t
         assert(!obj->zero_handles());
     }
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-void sys_handle_replace(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_handle_replace(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    handle_dup_replace(true, tag, badge);
+    return handle_dup_replace(true, tag, badge);
 }
 
-void sys_handle_duplicate(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_handle_duplicate(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    handle_dup_replace(false, tag, badge);
+    return handle_dup_replace(false, tag, badge);
 }

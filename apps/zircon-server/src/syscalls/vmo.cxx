@@ -11,12 +11,12 @@ extern "C" {
 #include "object/process.h"
 #include "sys_helpers.h"
 
-void sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_write)
+static uint64_t sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_write)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     zx_handle_t handle = seL4_GetMR(0);
@@ -45,7 +45,7 @@ static void sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_w
 
     /* Check offset TODO also check cache state */
     if (offset >= vmo->get_size()) {
-        return sys_reply(ZX_ERR_OUT_OF_RANGE);
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     /* Work out how much we can actually read */
@@ -53,7 +53,7 @@ static void sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_w
 
     /* Ensure required pages have been commited */
     if (!vmo->commit_range(offset, actual_len)) {
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* Do read/write */
@@ -64,15 +64,15 @@ static void sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_w
     }
     *actual = actual_len;
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-void sys_vmo_read(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_vmo_read(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_vmo_read_write(tag, badge, false);
+    return sys_vmo_read_write(tag, badge, false);
 }
 
-void sys_vmo_write(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_vmo_write(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_vmo_read_write(tag, badge, false);
+    return sys_vmo_read_write(tag, badge, false);
 }

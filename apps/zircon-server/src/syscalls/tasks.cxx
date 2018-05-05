@@ -18,34 +18,36 @@ constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
 
 /* Process syscalls */
 
-void sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-void sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
 {
     /* No reply */
+    server_should_not_reply();
+    return 0;
 }
 
-void sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-void sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-void sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    sys_reply(ZX_ERR_NOT_SUPPORTED);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 /* Thread syscalls */
 
-void sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     zx_handle_t proc_handle = seL4_GetMR(0);
@@ -55,7 +57,7 @@ void sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
     uintptr_t user_out = seL4_GetMR(4);
 
     if (options != 0) {
-        return sys_reply(ZX_ERR_INVALID_ARGS);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     zx_status_t err;
@@ -76,28 +78,28 @@ void sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
     ZxThread *thrd;
     thrd = allocate_object<ZxThread>();
     if (thrd == NULL) {
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
     thrd->set_name((char *)name_buf);
 
     /* Init thread, add to target proc */
     if (!thrd->init() || !target_proc->add_thread(thrd)) {
         destroy_object(thrd);
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* Create handle */
     zx_handle_t thrd_handle = proc->create_handle_get_uval(thrd);
     if (thrd_handle == ZX_HANDLE_INVALID) {
         destroy_object(thrd);
-        return sys_reply(ZX_ERR_NO_MEMORY);
+        return ZX_ERR_NO_MEMORY;
     }
 
     *out = thrd_handle;
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }
 
-void sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     zx_handle_t thrd_handle = seL4_GetMR(0);
@@ -115,7 +117,7 @@ void sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Check this isn't the first thread */
     if (!((ZxProcess *)thrd->get_owner())->is_running()) {
-        return sys_reply(ZX_ERR_BAD_STATE);
+        return ZX_ERR_BAD_STATE;
     }
 
     /* Prepare stack: align, and pretend a return address is pushed */
@@ -124,8 +126,8 @@ void sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Start thread */
     if (thrd->start_execution(entry, aligned_stack, arg1, arg2) != 0) {
-        return sys_reply(ZX_ERR_BAD_STATE);
+        return ZX_ERR_BAD_STATE;
     }
 
-    sys_reply(ZX_OK);
+    return ZX_OK;
 }

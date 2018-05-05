@@ -33,7 +33,7 @@ __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
 {
     printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
-    while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(60)));
+    while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(600)));
 }
 
 int main(int argc, char **argv) {
@@ -112,8 +112,23 @@ int main(int argc, char **argv) {
     assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack, 9, 6));
 
     zx_time_t deadline;
-    deadline = zx_deadline_after(ZX_SEC(10));
+    deadline = zx_deadline_after(ZX_SEC(3));
     zx_nanosleep(deadline);
+    printf("Main thread woke from sleep.\n");
+
+    uint64_t time1, time2;
+    time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    printf("Get time overhead: %lu\n", time2 - time1);
+    uint64_t overhead = time2 - time1;
+
+    time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    for (size_t i = 0; i < 100000000; ++i) {
+        //zx_syscall_test_0();
+        zx_syscall_test_8(1,2,3,4,5,6,7,8);
+    }
+    time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    printf("zx_syscall_test_0 time: %lu\n", ((time2 - time1) - overhead) / 100000000);
 
     printf("Zircon test exiting!\n");
 

@@ -5,18 +5,18 @@ namespace ClockCxx {
 /* On x86_64 this should normally use hpet */
 seL4_timer_t *server_timer;
 
-/* Last timestamp */
-uint64_t curr_time = 0;
-
 /* Head of timer list */
 TimerNode *head = NULL;
 
 /* Amount of slack */
 constexpr uint64_t kTimerSlack = 500 * NS_IN_US;
 
-void update_timeout(uint64_t expire_time) {
-    /* Try to make sure next timeout isn't too soon */
+void update_timeout(uint64_t expire_time)
+{
+    uint64_t curr_time = 0;
     ltimer_get_time(&server_timer->ltimer, &curr_time);
+
+    /* Try to make sure next timeout isn't too soon */
     uint64_t min_time = curr_time + kTimerSlack;
     uint64_t next_timeout = (expire_time > min_time) ? expire_time : min_time;
 
@@ -61,6 +61,7 @@ void handle_timer(seL4_Word badge)
     using namespace ClockCxx;
 
     /* Get time */
+    uint64_t curr_time;
     ltimer_get_time(&server_timer->ltimer, &curr_time);
 
     /* Ack the timer irq */
@@ -157,7 +158,7 @@ uint64_t get_system_time()
 {
     using namespace ClockCxx;
 
+    uint64_t curr_time;
     ltimer_get_time(&server_timer->ltimer, &curr_time);
-    dprintf(INFO, "time: %lu\n", curr_time);
     return curr_time;
 }

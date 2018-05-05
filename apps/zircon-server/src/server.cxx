@@ -39,6 +39,8 @@ vspace_t *server_vspace;
 seL4_CPtr server_ep;
 seL4_Word timer_badge;
 
+bool should_reply;
+
 } /* namespace ServerCxx */
 
 extern "C" void do_cpp_test(void);
@@ -59,6 +61,11 @@ vka_t *get_server_vka()
 seL4_CPtr get_server_ep()
 {
     return ServerCxx::server_ep;
+}
+
+void server_should_not_reply()
+{
+    ServerCxx::should_reply = false;
 }
 
 void init_zircon_server(vka_t *vka, vspace_t *vspace,
@@ -91,24 +98,29 @@ void syscall_loop(void)
 {
     using namespace ServerCxx;
 
-    seL4_Word badge = 0;
+    uint64_t badge, ret;
     seL4_MessageInfo_t tag;
 
-    dprintf(INFO, "Entering syscall loop\n");
+    dprintf(INFO, "Entering syscall loop!\n");
+
     for (;;) {
+        should_reply = true;
         tag = seL4_Recv(server_ep, &badge);
-        /* Check for fault, irq, syscall */
-        if (badge & ZxFaultBadge) {
-            seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
-            dprintf(INFO, "Received fault, type %lu\n", fault_type);
-        } else if (badge & ZxSyscallBadge) {
+        if (badge & ZxSyscallBadge) {
             seL4_Word syscall = seL4_MessageInfo_get_label(tag);
-            if (syscall >= NUM_SYSCALLS) {
+            if (unlikely(syscall >= NUM_SYSCALLS)) {
                 /* syscall doesn't exist */
                 sys_reply(ZX_ERR_BAD_SYSCALL);
             } else {
-                DO_SYSCALL(syscall, tag, badge);
+                ret = DO_SYSCALL(syscall, tag, badge);
+                /* nearly all syscalls reply immediately */
+                if (likely(should_reply)) {
+                    sys_reply(ret);
+                }
             }
+        } else if (badge & ZxFaultBadge) {
+            seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
+            dprintf(INFO, "Received fault, type %lu\n", fault_type);
         } else if (badge == timer_badge) {
             /* Handle timer interrupt */
             handle_timer(badge);

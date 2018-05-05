@@ -16,3 +16,4 @@ constexpr seL4_Word ZxBadgeMask = (1 << 20) - 1;
 seL4_CPtr get_server_ep();
 vspace_t *get_server_vspace();
 vka_t *get_server_vka();
+void server_should_not_reply();

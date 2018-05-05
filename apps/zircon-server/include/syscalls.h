@@ -11,13 +11,13 @@ extern "C" {
 #include <zircon/types.h>
 }
 
-typedef void (*zx_syscall_func)(seL4_MessageInfo_t tag, uint64_t badge);
+typedef uint64_t (*zx_syscall_func)(seL4_MessageInfo_t tag, uint64_t badge);
 
 /* generated file containing syscall handlers */
 #include "syscall_defs.h"
 
 /* Generic handler for unimplemented syscalls */
-void sys_undefined(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_undefined(seL4_MessageInfo_t tag, uint64_t badge);
 
 extern zx_syscall_func sys_table[];
 

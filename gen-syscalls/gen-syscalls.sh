@@ -72,7 +72,7 @@ do
     # check if syscall has server side implementation
     if grep -q "^sys_${syscall_name}$" "${DEFINED_LIST}"; then
         # declare kernel-side handler
-        echo "void sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
+        echo "uint64_t sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
         # add to syscall table
         echo "    sys_${syscall_name}," >> "${TABLE_FILE}"
     else
@@ -199,7 +199,7 @@ do
     echo "#define ${syscall_def} ${syscall_num}" >> "${SYSNO_FILE}"
 
     # declare kernel-side handler and add to syscall table
-    echo "void sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
+    echo "uint64_t sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
     echo "    sys_${syscall_name}," >> "${TABLE_FILE}"
 
     # user side call definitions are done manually
