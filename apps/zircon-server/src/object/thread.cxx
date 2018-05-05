@@ -217,8 +217,64 @@ void ZxThread::wait(timer_callback_func cb, void *data,
     add_timer(&timer_, expire_time, flags);
 }
 
+zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
+        zx_time_t deadline, zx_signals_t *observed)
+{
+    /* Allocate a waiter */
+    StateWaiter *sw = allocate_object<StateWaiter>((ZxObject *)this);
+    if (sw == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    /* Assume a state match already checked */
+    zx_signals_t initial_state = h->get_object()->get_signals();
+    sw->init_wait(signals, initial_state, h);
+    sw->set_data((void *)observed);
+
+    wait(obj_wait_cb, (void *)this, deadline, 0);
+    return ZX_OK;
+}
+
+void ZxThread::signal_observed(StateWaiter *sw)
+{
+    /* If num waiters set to zero, we are doing a wait one */
+    if (num_waiting_on_ == 0) {
+        /* Set the ret val */
+        zx_signals_t *observed = (zx_signals_t *)sw->get_data();
+        *observed = sw->get_observed();
+        /* Clean up waiter */
+        delete sw;
+        waiting_on_ = NULL;
+        /* Wake thread */
+        resume_from_wait(ZX_OK);
+        return;
+    }
+
+    /* Otherwise we have a wait many. */
+    // TODO
+}
+
+/*
+ * Timer callbacks
+ */
 void nanosleep_cb(void *data)
 {
     ZxThread *thrd = (ZxThread *)data;
     thrd->resume_from_wait(ZX_OK);
+}
+
+void obj_wait_cb(void *data)
+{
+    ZxThread *thrd = (ZxThread *)data;
+    StateWaiter *sw = (StateWaiter *)thrd->waiting_on_;
+    if (thrd->num_waiting_on_ == 0) {
+        /* We still set observed signals */
+        zx_signals_t *observed = (zx_signals_t *)sw->get_data();
+        *observed = sw->get_observed();
+        delete sw;
+        thrd->waiting_on_ = NULL;
+        thrd->resume_from_wait(ZX_ERR_TIMED_OUT);
+        return;
+    }
+    // TODO wait many
 }

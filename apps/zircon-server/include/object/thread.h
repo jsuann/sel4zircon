@@ -22,6 +22,7 @@ extern "C" {
 #include "../addrspace.h"
 
 class ZxThread final : public ZxObject, public Listable<ZxThread> {
+friend void obj_wait_cb(void *data);
 public:
     ZxThread(uint32_t thread_index) : thread_index_{thread_index} {}
 
@@ -60,6 +61,7 @@ public:
 
     void destroy_ipc_buffer();
 
+    /* Generic wait function */
     void wait(timer_callback_func cb, void *data,
             uint64_t expire_time, uint32_t flags);
 
@@ -74,11 +76,11 @@ public:
 
     void cancel_waiters();
 
-    bool obj_wait_one(Handle *h, zx_signals_t,
+    zx_status_t obj_wait_one(Handle *h, zx_signals_t signals,
             zx_time_t deadline, zx_signals_t *observed);
     bool obj_wait_many(Handle *handles, uint32_t count,
             zx_time_t deadline, zx_wait_item_t* items);
-    void signal_observed(StateWaiter *sw) {}; //XXX
+    void signal_observed(StateWaiter *sw);
 
     uint64_t runtime_ns() {
         /* Should be amount of actual cpu time, but just
@@ -93,24 +95,13 @@ private:
     /* Index used to calculate location of IPC buffer in addrspace */
     uint32_t ipc_index_;
 
-    /* Starting register values */
-    /*
-    uintptr_t user_entry_ = 0;
-    uintptr_t user_sp_ = 0;
-    uintptr_t user_arg1_ = 0;
-    uintptr_t user_arg2_ = 0;
-    */
-
-    uint64_t start_time_ = 0;
-
     /* TimerNode for waits */
     TimerNode timer_;
+    uint64_t start_time_ = 0;
 
     /* Non-null if we are waiting on 1+ objects */
     Waiter *waiting_on_ = NULL;
-    void *wait_data_ = NULL;
     uint32_t num_waiting_on_ = 0;
-    uint32_t rem_waiting_on_ = 0;
 
     /* List of waiters on this */
 
@@ -147,3 +138,4 @@ void free_object<ZxThread>(ZxThread *obj);
 
 /* timer callback funcs */
 void nanosleep_cb(void *data);
+void obj_wait_cb(void *data);

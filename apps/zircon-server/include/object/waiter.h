@@ -13,6 +13,8 @@ extern "C" {
 #include "linkedlist.h"
 
 class ZxThread;
+class ZxPort;
+struct PortPacket;
 
 #define WAITER_TYPE_NONE        0
 #define WAITER_TYPE_STATE       1
@@ -21,43 +23,60 @@ class ZxThread;
 
 class Waiter {
 public:
-    Waiter(ZxThread *thrd) : thrd_{thrd} {}
+    Waiter(ZxObject *observer) : observer_{observer} {}
     ~Waiter() {}
 
     virtual uint32_t type() const { return WAITER_TYPE_NONE; }
 
-    ZxThread *get_thread() const { return thrd_; }
+    ZxObject *get_observer() const { return observer_; }
+
+    /* Note: should check for correct object type before calling! */
+    ZxThread *get_thread() const { return (ZxThread *)observer_; }
+    ZxPort *get_port() const { return (ZxPort *)observer_; }
 
 private:
-    /* The waiting thread */
-    ZxThread *thrd_;
+    /* The waiting object (thread/port) */
+    ZxObject *observer_;
 };
 
 /* Waits for state change of an object */
-class StateWaiter final : public Waiter, public Listable<StateWaiter>  {
+class StateWaiter final : public Waiter, public Listable<StateWaiter> {
 public:
-    StateWaiter(ZxThread *thrd) : Waiter(thrd) {}
+    StateWaiter(ZxObject *observer) : Waiter(observer) {}
     ~StateWaiter() {}
 
     virtual uint32_t type() const { return WAITER_TYPE_STATE; }
 
-    bool init(zx_signals_t initial_state, Handle *h) {
+    zx_signals_t get_observed() { return observed_; }
+    void *get_data() const { return data_; }
+
+    void set_data(void *data) { data_ = data; }
+
+    bool init_wait(zx_signals_t watching, zx_signals_t initial_state, Handle *h) {
         handle_ = h;
-        wakeup_reasons_ = watched_signals_ = initial_state;
-        return (wakeup_reasons_ & watched_signals_) ? true : false;
+        watching_ = watching;
+        observed_ = initial_state;
+        return (observed_ & watching_) ? true : false;
     }
 
     bool state_change(zx_signals_t new_state) {
-        wakeup_reasons_ |= new_state;
-        return (wakeup_reasons_ & watched_signals_) ? true : false;
+        observed_ |= new_state;
+        return (observed_ & watching_) ? true : false;
     }
 
     bool cancel(Handle *h);
 
 private:
+    /* Handle to object we are watching */
     Handle *handle_ = NULL;
-    zx_signals_t watched_signals_ = 0u;
-    zx_signals_t wakeup_reasons_ = 0u;
+    /* Signals we are waiting for */
+    zx_signals_t watching_ = 0u;
+    /* Signals we have observed */
+    zx_signals_t observed_ = 0u;
+
+    /* For threads, data stores ptr to return val(s).
+       For ports, this is a ptr to a PortPacket. */
+    void *data_;
 };
 
 /* Waits for packet delivered to a port */
