@@ -123,12 +123,12 @@ int main(int argc, char **argv) {
     uint64_t overhead = time2 - time1;
 
     time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    for (size_t i = 0; i < 100000000; ++i) {
-        //zx_syscall_test_0();
-        zx_syscall_test_8(1,2,3,4,5,6,7,8);
+    for (size_t i = 0; i < 1000000; ++i) {
+        zx_syscall_test_0();
+        //zx_syscall_test_8(1,2,3,4,5,6,7,8);
     }
     time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    printf("zx_syscall_test_0 time: %lu\n", ((time2 - time1) - overhead) / 100000000);
+    printf("zx_syscall_test_0 time: %lu\n", ((time2 - time1) - overhead) / 1000000);
 
     printf("Zircon test exiting!\n");
 

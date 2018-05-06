@@ -47,7 +47,8 @@ public:
 
     virtual uint32_t type() const { return WAITER_TYPE_STATE; }
 
-    zx_signals_t get_observed() { return observed_; }
+    Handle *get_handle() const { return handle_; }
+    zx_signals_t get_observed() const { return observed_; }
     void *get_data() const { return data_; }
 
     void set_data(void *data) { data_ = data; }
@@ -63,8 +64,6 @@ public:
         observed_ |= new_state;
         return (observed_ & watching_) ? true : false;
     }
-
-    bool cancel(Handle *h);
 
 private:
     /* Handle to object we are watching */
@@ -90,3 +89,26 @@ class ChannelWaiter final : public Waiter, public Listable<ChannelWaiter> {
 };
 
 void update_state_waiters(LinkedList<StateWaiter> &waiter_list, zx_signals_t signals);
+
+
+/* Objects that can be waited on for signal assertions changes */
+class ZxObjectWaitable : public ZxObject {
+public:
+    ZxObjectWaitable(zx_signals_t signals = 0u) :
+        ZxObject(signals), waiter_list_{this} {}
+
+    bool has_state_tracker() const final { return true; }
+    void update_waiters(zx_signals_t signals) final;
+    void cancel_waiters(Handle *h) final;
+
+    void add_waiter(StateWaiter *sw) {
+        waiter_list_.push_back(sw);
+    }
+
+    void remove_waiter(StateWaiter *sw) {
+        waiter_list_.remove(sw);
+    }
+
+private:
+    LinkedList<StateWaiter> waiter_list_;
+};

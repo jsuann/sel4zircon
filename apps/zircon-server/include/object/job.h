@@ -13,9 +13,10 @@ extern "C" {
 #include "linkedlist.h"
 #include "process.h"
 
-class ZxJob final : public ZxObject, public Listable<ZxJob> {
+class ZxJob final : public ZxObjectWaitable, public Listable<ZxJob> {
 public:
-    ZxJob() : job_list_{this}, proc_list_{this} {}
+    ZxJob() : ZxObjectWaitable(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
+            job_list_{this}, proc_list_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_JOB; }
 
@@ -28,16 +29,20 @@ public:
 
     void add_process(ZxProcess *proc) {
         proc_list_.push_back(proc);
+        if (proc_list_.size() == 1) {
+            update_state(ZX_JOB_NO_PROCESSES, 0u);
+        }
     }
 
     void add_job(ZxJob *job) {
         job_list_.push_back(job);
+        if (job_list_.size() == 1) {
+            update_state(ZX_JOB_NO_JOBS, 0u);
+        }
     }
 
 private:
-    /* XXX We don't deal with job importance currently. */
-
-    /* TODO policies? */
+    /* We don't deal with job importance currently, nor policies. */
 
     /* Exception port */
 

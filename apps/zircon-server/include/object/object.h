@@ -23,7 +23,7 @@ struct CookieJar {
 
 class ZxObject {
 public:
-    ZxObject();
+    ZxObject(zx_signals_t signals = 0u);
     virtual ~ZxObject() {}
 
     virtual zx_obj_type_t get_object_type() const {
@@ -41,9 +41,10 @@ public:
         return (handle_count_ == 0);
     }
 
-    /* Override if object is waitable in some way */
+    /* Overridden by ZxObjectWaitable if object can have state waiters */
     virtual bool has_state_tracker() const { return false; }
-    virtual void update_waiters() {}
+    virtual void update_waiters(zx_signals_t signals) {}
+    virtual void cancel_waiters(Handle *h) {}
 
     /* Override if object can store cookie */
     virtual CookieJar* get_cookie_jar() { return NULL; }
@@ -64,6 +65,7 @@ public:
     }
 
     void destroy_handle(Handle *h) {
+        cancel_waiters(h);
         free_handle(h);
         --handle_count_;
     }
@@ -86,7 +88,7 @@ public:
         signals_ |= set_mask;
 
         if (prev != signals_) {
-            update_waiters();
+            update_waiters(signals_);
         }
     }
 

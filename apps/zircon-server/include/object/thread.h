@@ -21,7 +21,7 @@ extern "C" {
 #include "../utils/clock.h"
 #include "../addrspace.h"
 
-class ZxThread final : public ZxObject, public Listable<ZxThread> {
+class ZxThread final : public ZxObjectWaitable, public Listable<ZxThread> {
 friend void obj_wait_cb(void *data);
 public:
     ZxThread(uint32_t thread_index) : thread_index_{thread_index} {}
@@ -74,13 +74,14 @@ public:
         seL4_Send(reply_cap_, tag);
     }
 
-    void cancel_waiters();
-
     zx_status_t obj_wait_one(Handle *h, zx_signals_t signals,
             zx_time_t deadline, zx_signals_t *observed);
     bool obj_wait_many(Handle *handles, uint32_t count,
             zx_time_t deadline, zx_wait_item_t* items);
-    void signal_observed(StateWaiter *sw);
+
+    /* Resume from obj wait one/many, whether success,
+       timeout, or handle deleted. */
+    void obj_wait_resume(StateWaiter *sw, zx_status_t ret);
 
     uint64_t runtime_ns() {
         /* Should be amount of actual cpu time, but just

@@ -15,11 +15,12 @@ extern "C" {
 #include "handle.h"
 #include "mbuf.h"
 
-class ZxSocket final : public ZxObject {
+class ZxSocket final : public ZxObjectWaitable {
 friend zx_status_t create_socket_pair(uint32_t flags, ZxSocket *&sock0,
         ZxSocket *&sock1);
 public:
-    ZxSocket(uint32_t flags) : flags_{flags}, datagrams_{this} {}
+    ZxSocket(zx_signals_t starting_signals, uint32_t flags) :
+            ZxObjectWaitable(starting_signals), flags_{flags}, datagrams_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_SOCKET; }
 

@@ -17,10 +17,11 @@ extern "C" {
 
 class ZxProcess;
 
-class ZxChannel final : public ZxObject {
+class ZxChannel final : public ZxObjectWaitable {
 friend zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
 public:
-    ZxChannel() : handle_list_{this}, msg_list_{this} {}
+    ZxChannel() : ZxObjectWaitable(ZX_CHANNEL_WRITABLE),
+            handle_list_{this}, msg_list_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
 

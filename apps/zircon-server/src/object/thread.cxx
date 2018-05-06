@@ -235,18 +235,24 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
     return ZX_OK;
 }
 
-void ZxThread::signal_observed(StateWaiter *sw)
+void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
 {
     /* If num waiters set to zero, we are doing a wait one */
     if (num_waiting_on_ == 0) {
         /* Set the ret val */
         zx_signals_t *observed = (zx_signals_t *)sw->get_data();
-        *observed = sw->get_observed();
+        if (observed != NULL) {
+            *observed = sw->get_observed();
+        }
+        /* If this isn't a timeout, remove timer */
+        if (ret != ZX_ERR_TIMED_OUT) {
+            remove_timer(&timer_);
+        }
         /* Clean up waiter */
         delete sw;
         waiting_on_ = NULL;
         /* Wake thread */
-        resume_from_wait(ZX_OK);
+        resume_from_wait(ret);
         return;
     }
 
@@ -267,14 +273,5 @@ void obj_wait_cb(void *data)
 {
     ZxThread *thrd = (ZxThread *)data;
     StateWaiter *sw = (StateWaiter *)thrd->waiting_on_;
-    if (thrd->num_waiting_on_ == 0) {
-        /* We still set observed signals */
-        zx_signals_t *observed = (zx_signals_t *)sw->get_data();
-        *observed = sw->get_observed();
-        delete sw;
-        thrd->waiting_on_ = NULL;
-        thrd->resume_from_wait(ZX_ERR_TIMED_OUT);
-        return;
-    }
-    // TODO wait many
+    thrd->obj_wait_resume(sw, ZX_ERR_TIMED_OUT);
 }

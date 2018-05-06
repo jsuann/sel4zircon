@@ -17,7 +17,7 @@ extern "C" {
 
 class VmoMapping;
 
-class ZxVmo final : public ZxObject {
+class ZxVmo final : public ZxObjectWaitable {
 public:
     ZxVmo(uint32_t num_pages) : num_pages_{num_pages}, map_list_{this} {
         size_ = num_pages * (1 << seL4_PageBits);

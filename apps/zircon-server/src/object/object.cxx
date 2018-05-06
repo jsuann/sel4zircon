@@ -34,8 +34,8 @@ DECL_OBJ_TYPE(ZxTimer, ZX_OBJ_TYPE_TIMER, ZX_DEFAULT_TIMERS_RIGHTS)
 
 #undef DECL_OBJ_TYPE
 
-ZxObject::ZxObject() : koid_{ObjectCxx::global_koid},
-    handle_count_{0}, signals_{0}
+ZxObject::ZxObject(zx_signals_t signals) : koid_{ObjectCxx::global_koid},
+    handle_count_{0}, signals_{signals}
 {
     ++ObjectCxx::global_koid;
 }

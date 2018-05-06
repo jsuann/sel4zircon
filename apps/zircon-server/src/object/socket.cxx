@@ -5,8 +5,16 @@ zx_status_t create_socket_pair(uint32_t flags, ZxSocket *&sock0,
 {
     sock0 = sock1 = NULL;
 
-    sock0 = allocate_object<ZxSocket>(flags);
-    sock1 = allocate_object<ZxSocket>(flags);
+    zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
+    if (flags & ZX_SOCKET_HAS_ACCEPT) {
+        starting_signals |= ZX_SOCKET_SHARE;
+    }
+    if (flags & ZX_SOCKET_HAS_CONTROL) {
+        starting_signals |= ZX_SOCKET_CONTROL_WRITABLE;
+    }
+
+    sock0 = allocate_object<ZxSocket>(starting_signals, flags);
+    sock1 = allocate_object<ZxSocket>(starting_signals, flags);
     if (sock0 == NULL || sock1 == NULL) {
         goto error_socket_pair;
     }

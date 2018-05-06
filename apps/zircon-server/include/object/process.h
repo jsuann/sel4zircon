@@ -27,7 +27,7 @@ extern "C" {
 
 class ZxJob;
 
-class ZxProcess final : public ZxObject, public Listable<ZxProcess> {
+class ZxProcess final : public ZxObjectWaitable, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
             root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
