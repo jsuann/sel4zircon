@@ -150,8 +150,11 @@ void syscall_loop(void)
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
+#include "syscalls/event.cxx"
 #include "syscalls/fifo.cxx"
 #include "syscalls/handle.cxx"
+#include "syscalls/object.cxx"
+#include "syscalls/object_wait.cxx"
 #include "syscalls/other.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"

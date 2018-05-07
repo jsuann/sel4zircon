@@ -143,6 +143,7 @@ void remove_timer(TimerNode *t)
         }
         if (t == curr) {
             *pt = t->next_;
+            break;
         }
         pt = &curr->next_;
     }

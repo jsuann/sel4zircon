@@ -95,6 +95,8 @@ public:
         --num_items_;
         if (num_items_ > 0) {
             tail_->next_ = NULL;
+        } else {
+            head_ = NULL;
         }
         item->next_ = NULL;
         item->prev_ = NULL;
@@ -114,6 +116,8 @@ public:
         --num_items_;
         if (num_items_ > 0) {
             head_->prev_ = NULL;
+        } else {
+            tail_ = NULL;
         }
         item->next_ = NULL;
         item->prev_ = NULL;

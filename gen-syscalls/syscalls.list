@@ -30,3 +30,7 @@ sys_syscall_test_wrapper
 sys_deadline_after
 sys_nanosleep
 sys_clock_get
+sys_event_create
+sys_object_wait_one
+sys_object_signal
+sys_object_signal_peer

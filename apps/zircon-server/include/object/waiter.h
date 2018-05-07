@@ -62,7 +62,7 @@ public:
 
     bool state_change(zx_signals_t new_state) {
         observed_ |= new_state;
-        return (observed_ & watching_) ? true : false;
+        return (new_state & watching_) ? true : false;
     }
 
 private:
@@ -112,3 +112,9 @@ public:
 private:
     LinkedList<StateWaiter> waiter_list_;
 };
+
+static inline void add_waiter_to_object(StateWaiter *sw, Handle *h)
+{
+    ZxObjectWaitable *o = (ZxObjectWaitable *)h->get_object();
+    o->add_waiter(sw);
+}

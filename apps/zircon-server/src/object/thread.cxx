@@ -231,6 +231,11 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
     sw->init_wait(signals, initial_state, h);
     sw->set_data((void *)observed);
 
+    add_waiter_to_object(sw, h);
+
+    /* Ensure this is zero so thread knows it is doing a wait one */
+    num_waiting_on_ = 0;
+
     wait(obj_wait_cb, (void *)this, deadline, 0);
     return ZX_OK;
 }

@@ -29,10 +29,16 @@
 /* TODO replace with actual vmo */
 uint8_t thrd_stack[8000];
 
+zx_handle_t event_handle;
+
 __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
 {
     printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
+
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+    assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_2));
+
     while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(600)));
 }
 
@@ -103,6 +109,9 @@ int main(int argc, char **argv) {
     assert(!zx_handle_close(fifo1));
     assert(!zx_handle_close(fifo2));
 
+    /* Create event */
+    assert(!zx_event_create(0, &event_handle));
+
     /* Create a test thread */
     zx_handle_t new_thrd;
     const char *name = "thrd2";
@@ -110,6 +119,11 @@ int main(int argc, char **argv) {
 
     uintptr_t stack = ((uintptr_t)&thrd_stack[0]) + 8000;
     assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack, 9, 6));
+
+    zx_signals_t observed;
+    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2,
+            zx_deadline_after(ZX_SEC(10)), &observed));
+    printf("Main thread woke from wait one.\n");
 
     zx_time_t deadline;
     deadline = zx_deadline_after(ZX_SEC(3));
