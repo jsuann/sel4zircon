@@ -7,7 +7,6 @@ namespace JobCxx {
 void init_root_job()
 {
     using namespace JobCxx;
-
     root_job = allocate_object<ZxJob>();
     assert(root_job != NULL);
 }
