@@ -3,6 +3,7 @@
 #include "object/job.h"
 #include "object/process.h"
 #include "object/vmar.h"
+#include "object/resource.h"
 #include "utils/elf.h"
 
 namespace InitTestCxx {
@@ -24,6 +25,9 @@ void init_zircon_test(void)
     ZxThread *test_thread;
     ZxVmo **elf_vmos;
     ZxVmo *stack_vmo;
+
+    /* Get root objects */
+    ZxResource *root_rsrc = get_root_resource();
 
     /* Create a root vmar */
     test_vmar = allocate_object<ZxVmar>();
@@ -69,20 +73,23 @@ void init_zircon_test(void)
     zx_handle_t vmar_uval = test_proc->create_handle_get_uval(test_vmar);
     zx_handle_t proc_uval = test_proc->create_handle_get_uval(test_proc);
     zx_handle_t thrd_uval = test_proc->create_handle_get_uval(test_thread);
+    zx_handle_t rsrc_uval = test_proc->create_handle_get_uval(root_rsrc);
 
     assert(vmar_uval != ZX_HANDLE_INVALID);
     assert(proc_uval != ZX_HANDLE_INVALID);
     assert(thrd_uval != ZX_HANDLE_INVALID);
+    assert(rsrc_uval != ZX_HANDLE_INVALID);
 
-    /* We don't send vmo handles. Vmar has refs to them */
+    /* We don't send vmo handles atm. Vmar has refs to them */
 
     test_proc->print_handles();
 
     /* Send handles to zircon test */
     dprintf(SPEW, "Sending test data to zircon test!\n");
-    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 4);
     seL4_SetMR(0, vmar_uval);
     seL4_SetMR(1, proc_uval);
     seL4_SetMR(2, thrd_uval);
+    seL4_SetMR(3, rsrc_uval);
     seL4_Send(get_server_ep(), tag);
 }

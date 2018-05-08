@@ -146,3 +146,6 @@
 #define ZX_SYS_SYSCALL_TEST_WRAPPER 144
 /* sel4zircon syscalls defined below */
 #define ZX_SYS_DEBUG_PUTCHAR 145
+#define ZX_SYS_ENDPOINT_CREATE 146
+#define ZX_SYS_ENDPOINT_MINT_CAP 147
+#define ZX_SYS_ENDPOINT_DELETE_CAP 148

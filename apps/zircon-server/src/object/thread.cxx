@@ -12,7 +12,7 @@ constexpr size_t kThreadTableNumPages = (kThreadTableSize + BIT(seL4_PageBits) -
 
 /* Thread cspace size. Should be as small as possible */
 constexpr size_t kThreadCspaceBits = 3;
-constexpr size_t kThreadBadgeShift = 12;
+constexpr size_t kThreadCspaceSlots = 1 << kThreadCspaceBits;
 
 StackAlloc<ZxThread> thread_table;
 
@@ -299,6 +299,30 @@ void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
     /* Wake thread */
     resume_from_wait(ret);
     waiting_on_ = NULL;
+}
+
+
+int ZxThread::mint_cap(cspacepath_t *src, seL4_CPtr slot,
+        seL4_Word badge, seL4_CapRights_t rights)
+{
+    using namespace ThreadCxx;
+
+    assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);
+
+    cspacepath_t dest;
+    set_dest_slot(&dest, cspace_.cptr, slot);
+    return vka_cnode_mint(&dest, src, rights, seL4_CapData_Badge_new(badge));
+}
+
+int ZxThread::delete_cap(seL4_CPtr slot)
+{
+    using namespace ThreadCxx;
+
+    assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);
+
+    cspacepath_t src;
+    set_dest_slot(&src, cspace_.cptr, slot);
+    return vka_cnode_delete(&src);
 }
 
 /*

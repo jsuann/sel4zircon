@@ -89,6 +89,11 @@ public:
         return get_system_time() - start_time_;
     }
 
+    /* Mint/delete for endpoint caps */
+    int mint_cap(cspacepath_t *src, seL4_CPtr slot,
+            seL4_Word badge, seL4_CapRights_t rights);
+    int delete_cap(seL4_CPtr slot);
+
 private:
     /* Use thread index to get badge values */
     uint32_t thread_index_;
@@ -103,8 +108,6 @@ private:
     /* Non-null if we are waiting on 1+ objects */
     Waiter *waiting_on_ = NULL;
     uint32_t num_waiting_on_ = 0;
-
-    /* List of waiters on this */
 
     /* State */
 

@@ -3,6 +3,7 @@
 #include <zircon/syscalls.h>
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/debug.h>
+#include <sel4zircon/endpoint.h>
 
 #include "sys_def.h"
 
@@ -47,4 +48,25 @@
 void zx_debug_putchar(char c)
 {
     ZX_SYSCALL_SEND(ZX_SYS_DEBUG_PUTCHAR, 1, c);
+}
+
+zx_status_t zx_endpoint_create(zx_handle_t resource,
+        uint64_t id, zx_handle_t *out)
+{
+    ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_CREATE, 3, resource, id, out);
+    return seL4_GetMR(0);
+}
+
+zx_status_t zx_endpoint_mint_cap(zx_handle_t endpoint,
+        zx_handle_t thread, seL4_CPtr slot, seL4_Word badge, seL4_Word rights)
+{
+    ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_MINT_CAP, 5, endpoint, thread, slot, badge, rights);
+    return seL4_GetMR(0);
+}
+
+zx_status_t zx_endpoint_delete_cap(zx_handle_t endpoint,
+        zx_handle_t thread, seL4_CPtr slot)
+{
+    ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_DELETE_CAP, 3, endpoint, thread, slot);
+    return seL4_GetMR(0);
 }

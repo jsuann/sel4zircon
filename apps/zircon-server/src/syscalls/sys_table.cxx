@@ -149,4 +149,7 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_syscall_test_wrapper,
     /* sel4zircon syscalls defined below */
     sys_debug_putchar,
+    sys_endpoint_create,
+    sys_endpoint_mint_cap,
+    sys_endpoint_delete_cap,
 };

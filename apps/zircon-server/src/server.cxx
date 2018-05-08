@@ -24,6 +24,7 @@ extern "C" {
 #include "object/handle.h"
 #include "object/vmar.h"
 #include "object/mbuf.h"
+#include "object/resource.h"
 
 #include "utils/clock.h"
 #include "utils/elf.h"
@@ -90,6 +91,7 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace,
     init_vmo_kmap();
     init_prng();
     init_root_job();
+    init_root_resource();
     init_asid_pool(server_vka);
     init_page_alloc(server_vka);
 }
@@ -149,9 +151,11 @@ void syscall_loop(void)
 #include "object/waiter.cxx"
 #include "object/resource.cxx"
 #include "object/event.cxx"
+#include "object/endpoint.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
+#include "syscalls/endpoint.cxx"
 #include "syscalls/event.cxx"
 #include "syscalls/fifo.cxx"
 #include "syscalls/handle.cxx"

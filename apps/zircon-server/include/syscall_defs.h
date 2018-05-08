@@ -38,5 +38,8 @@ uint64_t sys_syscall_test_8(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_syscall_test_wrapper(seL4_MessageInfo_t tag, uint64_t badge);
 /* sel4zircon syscalls defined below */
 uint64_t sys_debug_putchar(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_endpoint_delete_cap(seL4_MessageInfo_t tag, uint64_t badge);
 
-#define NUM_SYSCALLS 146
+#define NUM_SYSCALLS 149

@@ -51,9 +51,11 @@ int main(int argc, char **argv) {
     zx_handle_t vmar_handle = seL4_GetMR(0);
     zx_handle_t proc_handle = seL4_GetMR(1);
     zx_handle_t thrd_handle = seL4_GetMR(2);
+    zx_handle_t rsrc_handle = seL4_GetMR(3);
 
     printf(">=== Zircon Test ===\n");
-    printf("Received handles: %u %u %u\n", vmar_handle, proc_handle, thrd_handle);
+    printf("Received handles: %u %u %u %u\n", vmar_handle, proc_handle,
+            thrd_handle, rsrc_handle);
 
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));

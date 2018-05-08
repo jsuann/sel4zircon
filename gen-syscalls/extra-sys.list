@@ -1,3 +1,6 @@
 # The following is a list of additions syscalls specific to the
 # sel4zircon server. Must have zx_ prefix. Do not edit.
 zx_debug_putchar
+zx_endpoint_create
+zx_endpoint_mint_cap
+zx_endpoint_delete_cap
