@@ -6,6 +6,7 @@ uint64_t sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_handle_duplicate(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_handle_replace(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_object_wait_one(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_object_wait_many(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_object_signal(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_object_signal_peer(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_channel_create(seL4_MessageInfo_t tag, uint64_t badge);

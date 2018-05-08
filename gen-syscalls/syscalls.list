@@ -33,5 +33,6 @@ sys_clock_get
 sys_event_create
 sys_eventpair_create
 sys_object_wait_one
+sys_object_wait_many
 sys_object_signal
 sys_object_signal_peer

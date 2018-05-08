@@ -233,9 +233,36 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
 
     add_waiter_to_object(sw, h);
 
-    /* Ensure this is zero so thread knows it is doing a wait one */
+    /* By making this zero thread knows it is doing a wait one */
     num_waiting_on_ = 0;
+    waiting_on_ = (Waiter *)sw;
 
+    wait(obj_wait_cb, (void *)this, deadline, 0);
+    return ZX_OK;
+}
+
+zx_status_t ZxThread::obj_wait_many(Handle **handles, uint32_t count,
+            zx_time_t deadline, zx_wait_item_t* items)
+{
+    /* Allocate array of waiters */
+    StateWaiter *sw = (StateWaiter *)malloc(sizeof(StateWaiter) * count);
+    if (sw == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    for (uint32_t i = 0; i < count; ++i) {
+        /* Do the actual construction */
+        void *mem = (void *)(&sw[i]);
+        new (mem) StateWaiter((ZxObject *)this);
+        /* Do the rest of the init */
+        zx_signals_t initial_state = handles[i]->get_object()->get_signals();
+        sw[i].init_wait(items[i].waitfor, initial_state, handles[i]);
+        sw[i].set_data((void *)&items[i]);
+        add_waiter_to_object(&sw[i], handles[i]);
+    }
+
+    waiting_on_ = (Waiter *)sw;
+    num_waiting_on_ = count;
     wait(obj_wait_cb, (void *)this, deadline, 0);
     return ZX_OK;
 }
@@ -249,20 +276,29 @@ void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
         if (observed != NULL) {
             *observed = sw->get_observed();
         }
-        /* If this isn't a timeout, remove timer */
-        if (ret != ZX_ERR_TIMED_OUT) {
-            remove_timer(&timer_);
-        }
         /* Clean up waiter */
         delete sw;
-        waiting_on_ = NULL;
-        /* Wake thread */
-        resume_from_wait(ret);
-        return;
+    } else {
+        /* We have a wait many. Reset sw so it is at start
+           of waiters, then loop through */
+        sw = (StateWaiter *)waiting_on_;
+        for (uint32_t i = 0; i < num_waiting_on_; ++i) {
+            /* Set the ret val */
+            zx_wait_item_t *item = (zx_wait_item_t *)sw->get_data();
+            item->pending = sw[i].get_observed();
+        }
+        /* Clean up waiter array */
+        delete[] sw;
     }
 
-    /* Otherwise we have a wait many. */
-    // TODO
+    /* If this isn't a timeout, remove timer */
+    if (ret != ZX_ERR_TIMED_OUT) {
+        remove_timer(&timer_);
+    }
+
+    /* Wake thread */
+    resume_from_wait(ret);
+    waiting_on_ = NULL;
 }
 
 /*
@@ -272,6 +308,12 @@ void nanosleep_cb(void *data)
 {
     ZxThread *thrd = (ZxThread *)data;
     thrd->resume_from_wait(ZX_OK);
+}
+
+void timeout_cb(void *data)
+{
+    ZxThread *thrd = (ZxThread *)data;
+    thrd->resume_from_wait(ZX_ERR_TIMED_OUT);
 }
 
 void obj_wait_cb(void *data)

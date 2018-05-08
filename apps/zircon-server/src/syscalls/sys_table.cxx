@@ -16,7 +16,7 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_handle_duplicate,
     sys_handle_replace,
     sys_object_wait_one,
-    sys_undefined,
+    sys_object_wait_many,
     sys_undefined,
     sys_object_signal,
     sys_object_signal_peer,

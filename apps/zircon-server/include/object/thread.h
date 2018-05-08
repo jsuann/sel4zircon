@@ -76,7 +76,7 @@ public:
 
     zx_status_t obj_wait_one(Handle *h, zx_signals_t signals,
             zx_time_t deadline, zx_signals_t *observed);
-    bool obj_wait_many(Handle *handles, uint32_t count,
+    zx_status_t obj_wait_many(Handle **handles, uint32_t count,
             zx_time_t deadline, zx_wait_item_t* items);
 
     /* Resume from obj wait one/many, whether success,
@@ -139,4 +139,5 @@ void free_object<ZxThread>(ZxThread *obj);
 
 /* timer callback funcs */
 void nanosleep_cb(void *data);
+void timeout_cb(void *data);
 void obj_wait_cb(void *data);
