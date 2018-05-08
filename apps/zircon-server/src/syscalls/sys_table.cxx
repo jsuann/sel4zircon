@@ -54,7 +54,7 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_undefined,
     sys_undefined,
     sys_event_create,
-    sys_undefined,
+    sys_eventpair_create,
     sys_undefined,
     sys_undefined,
     sys_undefined,

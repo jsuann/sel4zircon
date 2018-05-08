@@ -30,6 +30,7 @@ void ZxChannel::destroy()
     ZxChannel *other = peer_;
     if (other != NULL) {
         other->peer_ = NULL;
+        other->update_state(0u, ZX_CHANNEL_PEER_CLOSED);
     }
 
     /* Destroy handles */

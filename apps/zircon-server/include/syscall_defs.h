@@ -20,6 +20,7 @@ uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_event_create(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_eventpair_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_fifo_read(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_fifo_write(seL4_MessageInfo_t tag, uint64_t badge);

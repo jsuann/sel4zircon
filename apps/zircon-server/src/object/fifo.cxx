@@ -42,8 +42,6 @@ zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
     fifo1->data_ = (uint8_t *)data1;
     fifo0->peer_ = fifo1;
     fifo1->peer_ = fifo0;
-    fifo0->update_state(0, ZX_FIFO_WRITABLE);
-    fifo1->update_state(0, ZX_FIFO_WRITABLE);
 
     return ZX_OK;
 
@@ -65,6 +63,7 @@ void ZxFifo::destroy()
     ZxFifo *other = peer_;
     if (other != NULL) {
         other->peer_ = NULL;
+        other->update_state(0u, ZX_FIFO_PEER_CLOSED);
     }
 
     /* Free data buf */

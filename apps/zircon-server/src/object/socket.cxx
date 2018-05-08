@@ -52,6 +52,7 @@ void ZxSocket::destroy()
     ZxSocket *other = peer_;
     if (other != NULL) {
         other->peer_ = NULL;
+        other->update_state(0u, ZX_SOCKET_PEER_CLOSED);
     }
 
     /* Clear data buf */
