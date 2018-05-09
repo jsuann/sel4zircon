@@ -49,61 +49,6 @@ void ZxChannel::destroy()
     data_buf_.clear();
 }
 
-/* Called by peer channel! Extract handles from proc so they can
-   be written to this channel. */
-zx_status_t ZxChannel::take_handles_from_proc(ZxProcess *proc, uint32_t num,
-        zx_handle_t *in, Handle **out)
-{
-    /* num handles should be sanity checked beforehand! */
-
-    /* Get handle ptrs, validate */
-    for (size_t i = 0; i < num; ++i) {
-        Handle *h = proc->get_handle(in[i]);
-        if (h == NULL) {
-            return ZX_ERR_BAD_HANDLE;
-        }
-
-        /* Can't write a handle that points to this channel! */
-        if (h->get_object() == this) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-
-        if (!h->has_rights(ZX_RIGHT_TRANSFER)) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-
-        out[i] = h;
-    }
-
-    /* Remove from proc */
-    for (size_t i = 0; i < num; ++i) {
-        if (!proc->has_handle(out[i])) {
-            /* We've already removed this handles, which means
-               there was a duplicate. Add back handles & return. */
-            for (size_t j = 0; j < i; ++j) {
-                proc->add_handle(out[j]);
-            }
-            return ZX_ERR_INVALID_ARGS;
-        }
-        proc->remove_handle(out[i]);
-    }
-
-    return ZX_OK;
-}
-
-void ZxChannel::put_handles_in_proc(ZxProcess *proc, uint32_t num,
-        Handle **in, zx_handle_t *out)
-{
-    for (size_t i = 0; i < num; ++i) {
-        /* Add to proc */
-        /* TODO cancel state tracker/waiter? */
-        proc->add_handle(in[i]);
-
-        /* Get user val */
-        out[i] = proc->get_handle_user_val(in[i]);
-    }
-}
-
 /* Called by peer channel */
 zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
         Handle **handles, uint32_t num_handles)

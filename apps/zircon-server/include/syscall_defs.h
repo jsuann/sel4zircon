@@ -11,6 +11,7 @@ uint64_t sys_object_signal(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_object_signal_peer(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_channel_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_channel_read(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_channel_read_etc(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_channel_call(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge);

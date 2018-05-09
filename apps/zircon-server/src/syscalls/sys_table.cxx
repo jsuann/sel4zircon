@@ -28,7 +28,7 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_undefined,
     sys_channel_create,
     sys_channel_read,
-    sys_undefined,
+    sys_channel_read_etc,
     sys_channel_write,
     sys_channel_call,
     sys_undefined,

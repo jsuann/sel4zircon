@@ -39,6 +39,10 @@ public:
     zx_status_t read_msg(void *bytes, uint32_t *num_bytes,
             Handle **handles, uint32_t *num_handles, bool may_discard);
 
+    ZxChannel *get_peer() const {
+        return peer_;
+    }
+
 private:
     /* Messages in a channel simply describe the num
        handles/bytes written to their respective containers */

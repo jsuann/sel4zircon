@@ -85,10 +85,13 @@ class PortWaiter final : public Waiter, public Listable<PortWaiter> {
 
 /* Waits for message in channel */
 class ChannelWaiter final : public Waiter, public Listable<ChannelWaiter> {
+public:
     virtual uint32_t type() const { return WAITER_TYPE_CHANNEL; }
+    zx_txid_t get_txid() const { return txid_; }
+private:
+    zx_txid_t txid_;
+    zx_status_t status_;
 };
-
-void update_state_waiters(LinkedList<StateWaiter> &waiter_list, zx_signals_t signals);
 
 
 /* Objects that can be waited on for signal assertions changes */
