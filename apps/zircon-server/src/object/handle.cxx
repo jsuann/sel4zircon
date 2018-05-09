@@ -81,5 +81,10 @@ Handle *base_value_to_addr(uint32_t base_value)
     using namespace HandleCxx;
 
     uint32_t index = (base_value & kHandleIndexMask);
-    return (handle_table.is_alloc(index)) ? handle_table.get(index) : NULL;
+    if (unlikely(!handle_table.is_alloc(index))) {
+        return NULL;
+    }
+    Handle *h = handle_table.get(index);
+    /* Sanity check the base value */
+    return likely(h->get_value() == base_value) ? h : NULL;
 }

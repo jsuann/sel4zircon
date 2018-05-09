@@ -1,5 +1,9 @@
 #include "object/object.h"
 
+extern "C" {
+#include <sel4zircon/endpoint.h>
+}
+
 namespace ObjectCxx {
 
 zx_koid_t global_koid = 1024ULL;
@@ -19,6 +23,7 @@ template <> struct ZxObjectType<T> { \
 }; \
 }
 
+/* zircon object decls */
 DECL_OBJ_TYPE(ZxJob, ZX_OBJ_TYPE_JOB, ZX_DEFAULT_JOB_RIGHTS)
 DECL_OBJ_TYPE(ZxProcess, ZX_OBJ_TYPE_PROCESS, ZX_DEFAULT_PROCESS_RIGHTS)
 DECL_OBJ_TYPE(ZxThread, ZX_OBJ_TYPE_THREAD, ZX_DEFAULT_THREAD_RIGHTS)
@@ -32,6 +37,9 @@ DECL_OBJ_TYPE(ZxEventPair, ZX_OBJ_TYPE_EVENT_PAIR, ZX_DEFAULT_EVENT_PAIR_RIGHTS)
 DECL_OBJ_TYPE(ZxPort, ZX_OBJ_TYPE_PORT, ZX_DEFAULT_PORT_RIGHTS)
 DECL_OBJ_TYPE(ZxTimer, ZX_OBJ_TYPE_TIMER, ZX_DEFAULT_TIMERS_RIGHTS)
 DECL_OBJ_TYPE(ZxResource, ZX_OBJ_TYPE_RESOURCE, ZX_DEFAULT_RESOURCE_RIGHTS)
+
+/* sel4zircon object decls */
+DECL_OBJ_TYPE(ZxEndpoint, ZX_OBJ_TYPE_ENDPOINT, ZX_DEFAULT_ENDPOINT_RIGHTS)
 
 #undef DECL_OBJ_TYPE
 

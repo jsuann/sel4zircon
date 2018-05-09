@@ -51,9 +51,9 @@ void zx_debug_putchar(char c)
 }
 
 zx_status_t zx_endpoint_create(zx_handle_t resource,
-        uint64_t id, zx_handle_t *out)
+        uint64_t id, uint32_t options, zx_handle_t *out)
 {
-    ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_CREATE, 3, resource, id, out);
+    ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_CREATE, 4, resource, id, options, out);
     return seL4_GetMR(0);
 }
 

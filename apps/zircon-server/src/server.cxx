@@ -123,6 +123,7 @@ void syscall_loop(void)
         } else if (badge & ZxFaultBadge) {
             seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
             dprintf(INFO, "Received fault, type %lu\n", fault_type);
+            /* TODO proper fault handling */
         } else if (badge == timer_badge) {
             /* Handle timer interrupt */
             handle_timer(badge);

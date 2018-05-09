@@ -17,18 +17,25 @@ extern "C" {
 
 class ZxEndpoint final : public ZxObject {
 public:
-    ZxEndpoint(uint64_t id) : id_{id} {}
+    ZxEndpoint(uint64_t id, bool is_extern) :
+            id_{id}, is_extern_{is_extern} {}
     ~ZxEndpoint() final {}
+
+    zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_ENDPOINT; }
 
     bool init();
     void destroy() override;
 
     seL4_CPtr get_ep_cap() const { return ep_.cptr; }
     uint64_t get_id() const { return id_; }
+    bool extern_creator() const { return is_extern_; }
 
 private:
     vka_object_t ep_ = {0};
     uint64_t id_;
+
+    /* This is set if ep created by native seL4 process */
+    bool is_extern_;
 };
 
 /* ep table funcs */

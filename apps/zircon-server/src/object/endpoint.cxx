@@ -83,4 +83,6 @@ void ZxEndpoint::destroy()
         /* Free the ep object */
         vka_free_object(vka, &ep_);
     }
+
+    free_ep_slot(this);
 }
