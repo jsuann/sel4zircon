@@ -5,6 +5,10 @@ zx_status_t create_socket_pair(uint32_t flags, ZxSocket *&sock0,
 {
     sock0 = sock1 = NULL;
 
+    if (flags & ~ZX_SOCKET_CREATE_MASK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
     if (flags & ZX_SOCKET_HAS_ACCEPT) {
         starting_signals |= ZX_SOCKET_SHARE;
