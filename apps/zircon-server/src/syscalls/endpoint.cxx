@@ -130,7 +130,7 @@ uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge)
     err = target_thrd->mint_cap(&src, ep_slot, ep_badge,
             seL4_CapRights_new(can_grant, can_read, can_write));
     if (err) {
-        dprintf(INFO, "mint cap returned %d\n", err);
+        dprintf(INFO, "Mint cap returned %d\n", err);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -139,5 +139,35 @@ uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge)
 
 uint64_t sys_endpoint_delete_cap(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    SYS_CHECK_NUM_ARGS(tag, 3);
+    zx_handle_t ep_handle = seL4_GetMR(0);
+    zx_handle_t thrd_handle = seL4_GetMR(1);
+    seL4_CPtr ep_slot = seL4_GetMR(2);
+
+    /* We really don't want to delete the fault or syscall ep caps! */
+    if (ep_slot < ZX_THREAD_FIRST_FREE || ep_slot >= ZX_THREAD_NUM_CSPACE_SLOTS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    /* Get endpoint & thread objects */
+    ZxEndpoint *ep;
+    ZxThread *target_thrd;
+    /* For now, both ep and thread are expected to have ZX_RIGHT_WRITE to
+       permit a write to the cspace */
+    err = proc->get_object_with_rights(ep_handle, ZX_RIGHT_WRITE, ep);
+    SYS_RET_IF_ERR(err);
+    err = proc->get_object_with_rights(thrd_handle, ZX_RIGHT_WRITE, target_thrd);
+
+    /* Attempt deletion of cap in thread cspace. If this fails, we
+       assume it is due to the slot being empty. */
+    err = target_thrd->delete_cap(ep_slot);
+    if (err) {
+        dprintf(INFO, "Delete cap returned %d\n", err);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ZX_OK;
 }

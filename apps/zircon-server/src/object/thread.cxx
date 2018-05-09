@@ -301,7 +301,6 @@ void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
     waiting_on_ = NULL;
 }
 
-
 int ZxThread::mint_cap(cspacepath_t *src, seL4_CPtr slot,
         seL4_Word badge, seL4_CapRights_t rights)
 {

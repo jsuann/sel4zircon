@@ -35,6 +35,9 @@ extern zx_status_t zx_endpoint_delete_cap(zx_handle_t endpoint,
 #define ZX_ENDPOINT_CAN_WRITE   (1u << 1)
 #define ZX_ENDPOINT_CAN_GRANT   (1u << 2)
 
+#define ZX_ENDPOINT_ALL_RIGHTS \
+    (ZX_ENDPOINT_CAN_READ | ZX_ENDPOINT_CAN_WRITE | ZX_ENDPOINT_CAN_GRANT)
+
 /* This option signifies that a native seL4 process has created the endpoint,
    and we simply wish to craft a handle to the endpoint. */
 #define ZX_ENDPOINT_EXTERN_CREATOR  (1u << 0)

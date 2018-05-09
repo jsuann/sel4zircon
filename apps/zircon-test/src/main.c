@@ -27,9 +27,7 @@
 #define TEST_EP_ID      0xfee
 #define TEST_EP_MSG     0xbce
 #define TEST_EP_SLOT    ZX_THREAD_FIRST_FREE
-#define TEST_EP_RIGHTS  (ZX_ENDPOINT_CAN_READ | \
-                         ZX_ENDPOINT_CAN_WRITE | \
-                         ZX_ENDPOINT_CAN_GRANT)
+#define TEST_EP_RIGHTS  ZX_ENDPOINT_ALL_RIGHTS
 
 /* TODO replace with actual vmo */
 uint8_t thrd_stack[8000];
@@ -157,9 +155,14 @@ int main(int argc, char **argv) {
     seL4_Send(TEST_EP_SLOT, tag);
 
     zx_time_t deadline;
-    deadline = zx_deadline_after(ZX_SEC(3));
+    deadline = zx_deadline_after(ZX_SEC(2));
     zx_nanosleep(deadline);
     printf("Main thread woke from sleep.\n");
+
+    /* Delete endpoint caps from threads */
+    assert(!zx_endpoint_delete_cap(ep_handle, thrd_handle, TEST_EP_SLOT));
+    assert(!zx_endpoint_delete_cap(ep_handle, new_thrd, TEST_EP_SLOT));
+    printf("Deleted endpoint caps.\n");
 
     uint64_t time1, time2;
     time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
