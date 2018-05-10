@@ -20,6 +20,47 @@ constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
 
 uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
 {
+    SYS_CHECK_NUM_ARGS(tag, 6);
+    zx_handle_t job_handle = seL4_GetMR(0);
+    uintptr_t user_buf = seL4_GetMR(1);
+    uint32_t name_len = seL4_GetMR(2);
+    uint32_t options = seL4_GetMR(3);
+    uintptr_t user_proc_handle = seL4_GetMR(4);
+    uintptr_t user_vmar_handle = seL4_GetMR(5);
+
+    if (options != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    void *name_buf;
+    zx_handle_t *proc_handle, *vmar_handle;
+    err = proc->uvaddr_to_kvaddr(user_buf, name_len, name_buf);
+    SYS_RET_IF_ERR(err);
+    err = proc->get_kvaddr(user_proc_handle, proc_handle);
+    SYS_RET_IF_ERR(err);
+    err = proc->get_kvaddr(user_vmar_handle, vmar_handle);
+    SYS_RET_IF_ERR(err);
+
+    /* Get the job we are adding the process to */
+    ZxJob *job;
+    err = proc->get_object_with_rights(job_handle, ZX_RIGHT_WRITE, job);
+    SYS_RET_IF_ERR(err);
+
+    /* Create the root vmar */
+    ZxVmar *root_vmar;
+    root_vmar = allocate_object<ZxVmar>();
+    if (root_vmar == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    /* Create the new process */
+    ZxProcess *new_proc;
+    new_proc = allocate_object<ZxProcess>();
+
+    //return ZX_OK;
     return ZX_ERR_NOT_SUPPORTED;
 }
 
