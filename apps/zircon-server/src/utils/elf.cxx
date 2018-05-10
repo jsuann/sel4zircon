@@ -195,7 +195,8 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
     auxv[4].a_type = AT_SYSINFO;
     auxv[4].a_un.a_val = vsyscall;
 
-    /* XXX We do not support envp or argv > 0, these can be sent with send/recv instead */
+    /* We do not support envp or argv > 0, these can be sent with
+       send/recv or a channel instead */
 
     /* Ensure alignment of stack ptr (double word alignment) */
     size_t to_push = (5 * sizeof(seL4_Word)) + (sizeof(auxv[0]) * auxc);

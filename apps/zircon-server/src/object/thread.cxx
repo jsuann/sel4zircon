@@ -162,10 +162,24 @@ int ZxThread::start_execution(uintptr_t entry, uintptr_t stack,
     context.rsi = arg2;
 
     /* Note that we always resume the thread */
-    return seL4_TCB_WriteRegisters(tcb_.cptr, 1, 0, context_size, &context);
+    int err = seL4_TCB_WriteRegisters(tcb_.cptr, 1, 0, context_size, &context);
+    if (!err) {
+        state_ = State::RUNNING;
+    }
+    return err;
 #else
     return -1;
 #endif
+}
+
+void ZxThread::kill()
+{
+    /* Sanity check: ensure thread was running or suspended */
+    assert(state_ == State::RUNNING || state_ == State::SUSPENDED);
+    /* Suspend execution if running */
+    suspend();
+    /* Mark state as dead */
+    state_ = State::DEAD;
 }
 
 void ZxThread::destroy()
@@ -191,6 +205,8 @@ void ZxThread::destroy()
     if (reply_cap_ != 0) {
         vka_cspace_free(vka, reply_cap_);
     }
+
+    /* TODO clean up any waiter */
 }
 
 void ZxThread::destroy_ipc_buffer()

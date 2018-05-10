@@ -41,10 +41,18 @@ public:
         }
     }
 
+    void remove_process(ZxProcess *proc) {
+        proc_list_.remove(proc);
+    }
+
+    void remove_job(ZxJob *job) {
+        job_list_.remove(job);
+    }
+
 private:
     /* We don't deal with job importance currently, nor policies. */
 
-    /* Exception port */
+    /* TODO Exception port */
 
     LinkedList<ZxJob> job_list_;
     LinkedList<ZxProcess> proc_list_;

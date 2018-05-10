@@ -14,6 +14,14 @@ namespace SysTasks {
 constexpr uint64_t kStackAlign = 16;
 constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
 
+uintptr_t get_aligned_stack(uintptr_t stack)
+{
+    /* Prepare stack: align, and pretend a return address is pushed */
+    uintptr_t aligned_stack = stack & kStackAlignMask;
+    aligned_stack -= sizeof(uintptr_t);
+    return aligned_stack;
+}
+
 }
 
 /* Process syscalls */
@@ -58,22 +66,118 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Create the new process */
     ZxProcess *new_proc;
-    new_proc = allocate_object<ZxProcess>();
+    new_proc = allocate_object<ZxProcess>(root_vmar);
+    if (new_proc == NULL) {
+        free_object(root_vmar);
+        return ZX_ERR_NO_MEMORY;
+    }
+    new_proc->set_name((char *)name_buf);
 
-    //return ZX_OK;
-    return ZX_ERR_NOT_SUPPORTED;
-}
+    if (!new_proc->init()) {
+        /* This will also destroy vmar */
+        destroy_object(new_proc);
+        return ZX_ERR_NO_MEMORY;
+    }
 
-uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
-{
-    /* No reply */
-    server_should_not_reply();
-    return 0;
+    /* Create the handles */
+    Handle *ph, *vh;
+    vh = create_handle_default_rights(root_vmar);
+    ph = create_handle_default_rights(new_proc);
+    if (vh == NULL || ph == NULL) {
+        if (vh != NULL) {
+            root_vmar->destroy_handle(vh);
+        }
+        destroy_object(new_proc);
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    proc->add_handle(vh);
+    proc->add_handle(ph);
+
+    /* Add new process to job */
+    job->add_process(new_proc);
+
+    /* Return handles */
+    *proc_handle = proc->get_handle_user_val(ph);
+    *vmar_handle = proc->get_handle_user_val(vh);
+    return ZX_OK;
 }
 
 uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    SYS_CHECK_NUM_ARGS(tag, 6);
+    zx_handle_t proc_handle = seL4_GetMR(0);
+    zx_handle_t thrd_handle = seL4_GetMR(1);
+    uintptr_t entry = seL4_GetMR(2);
+    uintptr_t stack = seL4_GetMR(3);
+    zx_handle_t arg1 = seL4_GetMR(4);
+    uintptr_t arg2 = seL4_GetMR(5);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    ZxProcess *target_proc;
+    err = proc->get_object_with_rights(proc_handle, ZX_RIGHT_WRITE, target_proc);
+    SYS_RET_IF_ERR(err);
+
+    ZxThread *target_thrd;
+    err = proc->get_object_with_rights(thrd_handle, ZX_RIGHT_WRITE, target_thrd);
+    SYS_RET_IF_ERR(err);
+
+    /* Check that the thread is owned by target proc */
+    if ((ZxProcess *)target_thrd->get_owner() != target_proc) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    /* Transfer arg1 handle to target proc */
+    Handle *arg_handle = proc->get_handle(arg1);
+    if (arg_handle == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    } else if (!arg_handle->has_rights(ZX_RIGHT_TRANSFER)) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+    proc->remove_handle(arg_handle);
+
+    zx_handle_t arg_uval;
+    target_proc->add_handle(arg_handle);
+    arg_uval = target_proc->get_handle_user_val(arg_handle);
+
+    /* Start thread */
+    uintptr_t aligned_stack = SysTasks::get_aligned_stack(stack);
+    if (thrd->start_execution(entry, aligned_stack, arg_uval, arg2) != 0) {
+        /* Transfer the arg handle back to calling proc */
+        target_proc->remove_handle(arg_handle);
+        proc->add_handle(arg_handle);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    /* Put proc in running state */
+    target_proc->start();
+
+    return ZX_OK;
+}
+
+uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    int retcode = seL4_GetMR(0);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    /* Get owning job */
+    ZxJob *job = (ZxJob *)proc->get_owner();
+
+    proc->set_retcode(retcode);
+    proc->kill();
+
+    /* Destroy the proc if possible */
+    if (proc->can_destroy()) {
+        destroy_object(proc);
+    }
+
+    server_should_not_reply();
+    return 0;
 }
 
 uint64_t sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge)
@@ -113,7 +217,7 @@ uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Get the process we are adding the thread to */
     ZxProcess *target_proc;
-    err = proc->get_object(proc_handle, target_proc);
+    err = proc->get_object_with_rights(proc_handle, ZX_RIGHT_WRITE, target_proc);
     SYS_RET_IF_ERR(err);
 
     ZxThread *thrd;
@@ -161,11 +265,8 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
         return ZX_ERR_BAD_STATE;
     }
 
-    /* Prepare stack: align, and pretend a return address is pushed */
-    uintptr_t aligned_stack = stack & SysTasks::kStackAlignMask;
-    aligned_stack -= sizeof(uintptr_t);
-
     /* Start thread */
+    uintptr_t aligned_stack = SysTasks::get_aligned_stack(stack);
     if (thrd->start_execution(entry, aligned_stack, arg1, arg2) != 0) {
         return ZX_ERR_BAD_STATE;
     }

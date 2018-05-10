@@ -142,8 +142,14 @@ void ZxProcess::destroy()
 
     vka_t *vka = get_server_vka();
 
-    /* Threads should already be removed */
-    assert(thread_list_.empty());
+    if (state == State::INITIAL) {
+        /* Safe to remove all threads, no need to make them exit */
+        remove_all_threads(false);
+        /* TODO also remove ourselves from owning job, if still attached */
+    } else {
+        /* Threads should already be removed */
+        assert(thread_list_.empty());
+    }
 
     /* Destroy thread index allocator */
     ipc_alloc_.destroy();
@@ -221,8 +227,6 @@ void ZxProcess::remove_thread(ZxThread *thrd)
 {
     using namespace ProcessCxx;
 
-    /* TODO state check? */
-
     /* Destroy IPC buffer & free ipc index */
     uint32_t index = thrd->get_ipc_index();
     thrd->destroy_ipc_buffer();
@@ -230,6 +234,31 @@ void ZxProcess::remove_thread(ZxThread *thrd)
 
     /* Remove thread from list */
     thread_list_.remove(thrd);
+}
+
+void ZxProcess::remove_all_threads(bool exit)
+{
+    while (!thread_list_.empty()) {
+        /* We don't pop front, since we remove later */
+        ZxThread *thrd = thread_list_.front();
+        if (exit) {
+            thrd->exit();
+        }
+        remove_thread(thrd);
+        if (thrd->can_destroy()) {
+            destroy_object(thrd);
+        }
+    }
+}
+
+void ZxProcess::kill()
+{
+    /* Sanity check: ensure process was in running state */
+    assert(state_ == State::RUNNING);
+    /* Set state to dead */
+    state_ = State::DEAD;
+    /* Make all threads exit, destroying them if required */
+    remove_all_threads(true);
 }
 
 int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,

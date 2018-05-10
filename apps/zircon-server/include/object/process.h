@@ -44,8 +44,13 @@ public:
     void destroy() override;
 
     bool can_destroy() override {
-        /* End of life when all threads exited */
-        return (zero_handles() && thread_list_.empty());
+        if (state_ == State::INITIAL) {
+            /* Safe to remove on zero handles */
+            return zero_handles();
+        }
+        /* If running/dead we need to be detached from owning
+           job & have all threads removed */
+        return (zero_handles() && thread_list_.empty() && get_owner() == NULL);
     }
 
     void set_name(const char *name) {
@@ -68,15 +73,16 @@ public:
     enum class State {
         INITIAL,    /* Proc created, but no thread started yet */
         RUNNING,    /* First thread started */
-        DYING,      /* Kill signal sent to threads */
         DEAD,       /* All threads dead */
     };
 
-    void run_proc() { state_ = State::RUNNING; } //XXX
     bool is_running() { return (state_ == State::RUNNING); }
 
-    /* Handle funcs */
+    void start() { state_ = State::RUNNING; }
+    void set_retcode(int retcode) { retcode_ = retcode; }
+    void kill();
 
+    /* Handle funcs */
     void add_handle(Handle *h) {
         handle_list_.push_back(h);
     }
@@ -108,16 +114,13 @@ public:
     }
 
     /* Thread funcs */
-
     bool add_thread(ZxThread *thrd);
-
     void remove_thread(ZxThread *thrd);
+    void remove_all_threads(bool exit);
 
     /* Addrspace funcs */
-
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
-
     zx_status_t uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, void *&kvaddr);
 
     /* Wrapper for above when getting specific types */
@@ -127,7 +130,6 @@ public:
     }
 
     /* Object funcs */
-
     template <typename T>
     zx_status_t get_object_with_rights(zx_handle_t handle_val,
             zx_rights_t rights, T *&obj);

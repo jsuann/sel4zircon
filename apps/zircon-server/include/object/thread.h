@@ -39,12 +39,38 @@ public:
     bool init();
     void destroy() override;
 
-    /* TODO can destroy() only when thread is dead */
+    bool can_destroy() override {
+        /* Destroy when zero handles & detached from owner proc.
+           For now, we don't give any special treatment in
+           initial state - process needs to be destroyed first. */
+        return (zero_handles() && get_owner() == NULL);
+    }
+
+    enum class State {
+        INITIAL,    /* Thread created */
+        RUNNING,
+        SUSPENDED,
+        DEAD,       /* Thread exited & not running */
+    };
 
     int configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr);
-
     int start_execution(uintptr_t entry, uintptr_t stack,
             uintptr_t arg1, uintptr_t arg2);
+    void exit();
+
+    void suspend() {
+        if (state_ == State::RUNNING) {
+            seL4_TCB_Suspend(tcb_.cptr);
+            state_ = State::SUSPENDED;
+        }
+    }
+
+    void resume() {
+        if (state_ == State::SUSPENDED) {
+            seL4_TCB_Resume(tcb_.cptr);
+            state_ = State::RUNNING;
+        }
+    }
 
     uint32_t get_thread_index() const {
         return thread_index_;
@@ -110,6 +136,7 @@ private:
     uint32_t num_waiting_on_ = 0;
 
     /* State */
+    State state_ = State::INITIAL;
 
     /* Exception port */
 
