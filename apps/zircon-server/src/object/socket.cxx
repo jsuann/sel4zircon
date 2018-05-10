@@ -81,6 +81,11 @@ void ZxSocket::destroy()
 /* called by peer */
 zx_status_t ZxSocket::write(void *src, size_t len, size_t* written)
 {
+    if (len == 0) {
+        *written = 0;
+        return ZX_OK;
+    }
+
     if (data_buf_.is_full()) {
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -224,6 +229,17 @@ zx_status_t ZxSocket::read_control(void *dest, size_t len, size_t* nread)
     }
 
     *nread = copy_len;
+    return ZX_OK;
+}
+
+zx_status_t ZxSocket::check_shareable(ZxSocket *to_send)
+{
+    /* We can't share ourselves or our peer, nor
+       any other socket capable of sharing */
+    if (to_send == this || to_send == peer_ ||
+            to_send->flags_ & ZX_SOCKET_HAS_ACCEPT) {
+        return ZX_ERR_BAD_STATE;
+    }
     return ZX_OK;
 }
 

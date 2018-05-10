@@ -13,6 +13,8 @@ sys_fifo_read
 sys_socket_create
 sys_socket_read
 sys_socket_write
+sys_socket_share
+sys_socket_accept
 sys_process_exit
 sys_process_create
 sys_process_start

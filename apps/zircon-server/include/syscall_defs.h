@@ -17,6 +17,8 @@ uint64_t sys_channel_call(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_socket_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_socket_write(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_socket_read(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_socket_share(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_socket_accept(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge);

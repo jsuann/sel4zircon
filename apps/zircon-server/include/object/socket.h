@@ -35,11 +35,16 @@ public:
     zx_status_t read_control(void *dest, size_t len, size_t* nread);
 
     /* share/accept socket handle */
+    zx_status_t check_shareable(ZxSocket *to_send);
     zx_status_t share(Handle *h);
     zx_status_t accept(Handle **h);
 
     zx_status_t shutdown(uint32_t how);
     zx_status_t shutdown_by_peer(uint32_t how);
+
+    ZxSocket *get_peer() const {
+        return peer_;
+    }
 
     struct ControlMsg {
         static constexpr size_t kSize = 1024;

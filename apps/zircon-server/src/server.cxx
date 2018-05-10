@@ -163,6 +163,7 @@ void syscall_loop(void)
 #include "syscalls/object.cxx"
 #include "syscalls/object_wait.cxx"
 #include "syscalls/other.cxx"
+#include "syscalls/socket.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"
 #include "syscalls/time.cxx"
