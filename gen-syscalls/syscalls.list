@@ -15,6 +15,7 @@ sys_socket_read
 sys_socket_write
 sys_socket_share
 sys_socket_accept
+sys_job_create
 sys_process_exit
 sys_process_create
 sys_process_start
@@ -46,3 +47,9 @@ sys_object_wait_one
 sys_object_wait_many
 sys_object_signal
 sys_object_signal_peer
+sys_vmo_create
+sys_vmo_read
+sys_vmo_write
+sys_vmo_get_size
+sys_vmo_set_size
+sys_vmo_op_range

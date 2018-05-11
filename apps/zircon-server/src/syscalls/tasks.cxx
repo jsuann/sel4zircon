@@ -25,6 +25,53 @@ uintptr_t get_aligned_stack(uintptr_t stack)
 
 }
 
+/* Job syscalls */
+
+uint64_t sys_job_create(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 6);
+    zx_handle_t parent_handle = seL4_GetMR(0);
+    uint32_t options = seL4_GetMR(1);
+    uintptr_t user_out = seL4_GetMR(2);
+
+    if (options != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    zx_handle_t* out;
+    err = proc->get_kvaddr(user_out, out);
+    SYS_RET_IF_ERR(err);
+
+    ZxJob *parent_job;
+    err = proc->get_object_with_rights(parent_handle, ZX_RIGHT_WRITE, parent_job);
+    SYS_RET_IF_ERR(err);
+
+    /* We can't add new jobs to a dead parent */
+    if (parent_job->is_dead()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    ZxJob *new_job = allocate_object<ZxJob>();
+    if (new_job == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_handle_t job_handle = proc->create_handle_get_uval(new_job);
+    if (job_handle == ZX_HANDLE_INVALID) {
+        destroy_object(new_job);
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    /* Add new job to parent */
+    parent_job->add_job(new_job);
+
+    *out = job_handle;
+    return ZX_OK;
+}
+
 /* Process syscalls */
 
 uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
@@ -290,6 +337,8 @@ uint64_t sys_thread_exit(seL4_MessageInfo_t tag, uint64_t badge)
     return 0;
 }
 
+/* Task syscalls */
+
 uint64_t sys_task_kill(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 1);
@@ -324,7 +373,7 @@ uint64_t sys_task_suspend(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    /* Only supports threads on native Zircon */
+    /* Only supports threads on native Zircon, so we do the same */
     ZxThread *target_thrd;
     err = proc->get_object_with_rights(handle, ZX_RIGHT_WRITE, target_thrd);
     SYS_RET_IF_ERR(err);
@@ -345,7 +394,7 @@ uint64_t sys_task_resume(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    /* Only supports threads on native Zircon */
+    /* Only supports threads on native Zircon, so we do the same */
     ZxThread *target_thrd;
     err = proc->get_object_with_rights(handle, ZX_RIGHT_WRITE, target_thrd);
     SYS_RET_IF_ERR(err);

@@ -265,6 +265,7 @@ void ZxProcess::kill()
     }
 
     /* Set state to dead */
+    update_state(0u, ZX_TASK_TERMINATED);
     state_ = State::DEAD;
 }
 

@@ -197,3 +197,53 @@ void ZxVmo::decommit_page(uint32_t index)
         memset(&frames_[index], 0, sizeof(vka_object_t));
     }
 }
+
+zx_status_t ZxVmo::resize(size_t new_num_pages)
+{
+    if (new_num_pages == num_pages_) {
+        return ZX_OK;
+    }
+
+    /* To resize, we create a new page array, and try to copy
+       all objs from the old one. For now, we only support this
+       when no user mappings currently exist. */
+    if (map_list_.size() > 0) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    /* Make a new page array */
+    PageArray<vka_object_t> new_pa;
+    if (!new_pa.init(new_num_pages)) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    /* Copy over old vka objects */
+    size_t to_copy = (new_num_pages < num_pages_) ? new_num_pages : num_pages_;
+    for (size_t i = 0; i < to_copy; ++i) {
+        if (frames_.has(i) && frames_[i].cptr != 0) {
+            if (!new_pa.alloc(i)) {
+                /* Not enough pages for resize! Clear the new pagearray.
+                   We don't need to do any internal cleanup. */
+                new_pa.clear([] (vka_object_t &frame) {});
+                return ZX_ERR_NO_MEMORY;
+            }
+            /* Copy the frame vka object */
+            new_pa[i] = frames_[i];
+        }
+    }
+
+    /* If we are shrinking vmo, free the vka objects now
+       out of range */
+    if (new_num_pages < num_pages_) {
+        for (size_t i = new_num_pages; i < num_pages_; ++i) {
+            decommit_page(i);
+        }
+    }
+
+    /* Resize successful. Swap the pagearrays, and update size params */
+    frames_.swap(new_pa);
+    num_pages_ = new_num_pages;
+    size_ = new_num_pages * (1 << seL4_PageBits);
+
+    return ZX_OK;
+}

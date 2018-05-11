@@ -181,6 +181,7 @@ void ZxThread::kill()
     /* Suspend execution if running */
     suspend();
     /* Mark state as dead */
+    update_state(0u, ZX_TASK_TERMINATED);
     state_ = State::DEAD;
 }
 

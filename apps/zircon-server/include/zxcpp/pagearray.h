@@ -111,6 +111,8 @@ public:
         }
     }
 
+    /* TODO swap */
+
 private:
     MidLevel **mid_ = NULL;
     size_t size_ = 0;
@@ -186,6 +188,17 @@ public:
                 page_free(bot_[i]);
             }
         }
+    }
+
+    void swap(PageArray &other) {
+        /* Swap top level */
+        BotLevel **temp_bot = bot_;
+        bot_ = other.bot_;
+        other.bot_ = temp_bot;
+        /* Swap size */
+        size_t temp_size = size_;
+        size_ = other.size_;
+        other.size_ = temp_size;
     }
 
 private:

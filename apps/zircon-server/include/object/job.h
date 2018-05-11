@@ -54,10 +54,16 @@ public:
 
     void remove_process(ZxProcess *proc) {
         proc_list_.remove(proc);
+        if (proc_list_.size() == 0) {
+            update_state(0u, ZX_JOB_NO_PROCESSES);
+        }
     }
 
     void remove_job(ZxJob *job) {
         job_list_.remove(job);
+        if (job_list_.size() == 0) {
+            update_state(0u, ZX_JOB_NO_JOBS);
+        }
     }
 
 private:

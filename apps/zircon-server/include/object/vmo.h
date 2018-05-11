@@ -53,6 +53,8 @@ public:
     void delete_mapping(VmoMapping *vmap);
 
     bool commit_page(uint32_t index, VmoMapping *vmap);
+    void decommit_page(uint32_t index);
+
     bool commit_all_pages(VmoMapping *vmap) {
         for (uint32_t i = 0; i < num_pages_; ++i) {
             if (!commit_page(i, vmap)) {
@@ -65,7 +67,6 @@ public:
     bool commit_range(uint64_t offset, size_t len) {
         uint32_t start_page = offset / (1 << seL4_PageBits);
         uint32_t end_page = (offset + len - 1) / (1 << seL4_PageBits);
-        assert(end_page < num_pages_);
         for (uint32_t i = start_page; i <= end_page; ++i) {
             if (!commit_page(i, NULL)) {
                 return false;
@@ -74,7 +75,15 @@ public:
         return true;
     }
 
-    void decommit_page(uint32_t index);
+    void decommit_range(uint64_t offset, size_t len) {
+        uint32_t start_page = offset / (1 << seL4_PageBits);
+        uint32_t end_page = (offset + len - 1) / (1 << seL4_PageBits);
+        for (uint32_t i = start_page; i <= end_page; ++i) {
+            decommit_page(i);
+        }
+    }
+
+    zx_status_t resize(size_t new_num_pages);
 
 private:
     /* Server mapping address */
@@ -83,7 +92,7 @@ private:
     uint32_t num_pages_;
     size_t size_;
 
-    /* TODO Cache policy */
+    /* TODO Physical/device/contiguous memory info */
 
     /* TODO Clone info */
 

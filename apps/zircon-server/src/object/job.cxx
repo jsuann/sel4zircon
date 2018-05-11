@@ -65,5 +65,6 @@ void ZxJob::kill()
         }
     });
 
+    update_state(0u, ZX_TASK_TERMINATED);
     state_ = State::DEAD;
 }
