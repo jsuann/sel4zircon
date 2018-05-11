@@ -153,6 +153,7 @@ void syscall_loop(void)
 #include "object/resource.cxx"
 #include "object/event.cxx"
 #include "object/endpoint.cxx"
+#include "object/tasks.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"

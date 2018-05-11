@@ -25,7 +25,6 @@ class ZxThread final : public ZxObjectWaitable, public Listable<ZxThread> {
 friend void obj_wait_cb(void *data);
 public:
     ZxThread(uint32_t thread_index) : thread_index_{thread_index} {}
-
     ~ZxThread() final {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_THREAD; }
@@ -40,10 +39,13 @@ public:
     void destroy() override;
 
     bool can_destroy() override {
-        /* Destroy when zero handles & detached from owner proc.
-           For now, we don't give any special treatment in
-           initial state - process needs to be destroyed first. */
-        return (zero_handles() && get_owner() == NULL);
+        /* Thread can't be destroyed while it is running or suspended */
+        if (state_ == State::RUNNING || state_ == State::SUSPENDED) {
+            return false;
+        }
+        /* Otherwise when initial state or dead, destroy on zero handles.
+           Destructor will detach thread from parent process. */
+        return zero_handles();
     }
 
     enum class State {
@@ -56,7 +58,12 @@ public:
     int configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr);
     int start_execution(uintptr_t entry, uintptr_t stack,
             uintptr_t arg1, uintptr_t arg2);
-    void exit();
+    void kill();
+
+    bool is_running() const {
+        return (state_ == State::RUNNING || state_ == State::SUSPENDED);
+    }
+    bool is_dead() const { return state_ == State::DEAD; }
 
     void suspend() {
         if (state_ == State::RUNNING) {

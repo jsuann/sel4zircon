@@ -8,6 +8,7 @@ extern "C" {
 }
 
 #include "sys_helpers.h"
+#include "object/tasks.h"
 
 namespace SysTasks {
 
@@ -129,6 +130,11 @@ uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
         return ZX_ERR_ACCESS_DENIED;
     }
 
+    /* Check that target proc isn't already running or dead */
+    if (target_proc->is_running() || target_proc->is_dead()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
     /* Transfer arg1 handle to target proc */
     Handle *arg_handle = proc->get_handle(arg1);
     if (arg_handle == NULL) {
@@ -144,15 +150,15 @@ uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Start thread */
     uintptr_t aligned_stack = SysTasks::get_aligned_stack(stack);
-    if (thrd->start_execution(entry, aligned_stack, arg_uval, arg2) != 0) {
+    if (target_thrd->start_execution(entry, aligned_stack, arg_uval, arg2) != 0) {
         /* Transfer the arg handle back to calling proc */
         target_proc->remove_handle(arg_handle);
         proc->add_handle(arg_handle);
         return ZX_ERR_BAD_STATE;
     }
 
-    /* Put proc in running state */
-    target_proc->start();
+    /* Notify proc of running thread */
+    target_proc->thread_started();
 
     return ZX_OK;
 }
@@ -162,19 +168,9 @@ uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_CHECK_NUM_ARGS(tag, 1);
     int retcode = seL4_GetMR(0);
 
-    zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
-
-    /* Get owning job */
-    ZxJob *job = (ZxJob *)proc->get_owner();
-
     proc->set_retcode(retcode);
-    proc->kill();
-
-    /* Destroy the proc if possible */
-    if (proc->can_destroy()) {
-        destroy_object(proc);
-    }
+    task_kill_process(proc);
 
     server_should_not_reply();
     return 0;
@@ -260,8 +256,14 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
     err = proc->get_object_with_rights(thrd_handle, ZX_RIGHT_WRITE, thrd);
     SYS_RET_IF_ERR(err);
 
-    /* Check this isn't the first thread */
-    if (!((ZxProcess *)thrd->get_owner())->is_running()) {
+    /* Make sure this thread isn't already running or dead */
+    if (thrd->is_running() || thrd->is_dead()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    /* Make sure this isn't the first thread (use zx_process_start) */
+    ZxProcess *owner_proc = (ZxProcess *)thrd->get_owner();
+    if (!owner_proc->is_running()) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -271,5 +273,45 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
         return ZX_ERR_BAD_STATE;
     }
 
+    /* Notify owner proc of running thread */
+    owner_proc->thread_started();
+
+    return ZX_OK;
+}
+
+uint64_t sys_thread_exit(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 0);
+
+    ZxThread *thrd = get_thread_from_badge(badge);
+    task_kill_thread(thrd);
+
+    server_should_not_reply();
+    return 0;
+}
+
+uint64_t sys_task_kill(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    zx_handle_t handle = seL4_GetMR(0);
+
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    Handle *h = proc->get_handle(handle);
+    if (h == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+
+    if (!h->has_rights(ZX_RIGHT_DESTROY)) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    /* If this fails, object wasn't actually a task */
+    if (!task_kill(h->get_object())) {
+        return ZX_ERR_WRONG_TYPE;
+    }
+
+    /* If a proc/thread/job used this to kill itself, we
+       can still reply, the invocation will just fail. */
     return ZX_OK;
 }

@@ -21,11 +21,22 @@ public:
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_JOB; }
 
     bool can_destroy() override {
-        /* End of life when no child jobs or procs */
-        return (zero_handles() && job_list_.empty() && proc_list_.empty());
+        /* End of life when no child jobs or procs, and we aren't killing them */
+        return (zero_handles() && job_list_.empty() &&
+                proc_list_.empty() && !is_killing());
     }
 
-    void destroy() override {}
+    void destroy() override;
+    void kill();
+
+    enum class State {
+        READY,      /* Can add child procs/jobs */
+        KILLING,    /* Job is currently killing off jobs/procs */
+        DEAD,       /* Job killed, no more jobs/procs */
+    };
+
+    bool is_killing() const { return state_ == State::KILLING; }
+    bool is_dead() const { return state_ == State::DEAD; }
 
     void add_process(ZxProcess *proc) {
         proc_list_.push_back(proc);
@@ -53,6 +64,8 @@ private:
     /* We don't deal with job importance currently, nor policies. */
 
     /* TODO Exception port */
+
+    State state_ = State::READY;
 
     LinkedList<ZxJob> job_list_;
     LinkedList<ZxProcess> proc_list_;

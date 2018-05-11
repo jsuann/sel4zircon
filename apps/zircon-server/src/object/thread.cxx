@@ -174,8 +174,10 @@ int ZxThread::start_execution(uintptr_t entry, uintptr_t stack,
 
 void ZxThread::kill()
 {
-    /* Sanity check: ensure thread was running or suspended */
-    assert(state_ == State::RUNNING || state_ == State::SUSPENDED);
+    /* If already killed, return */
+    if (state_ == State::DEAD) {
+        return;
+    }
     /* Suspend execution if running */
     suspend();
     /* Mark state as dead */
@@ -188,8 +190,14 @@ void ZxThread::destroy()
 
     vka_t *vka = get_server_vka();
 
-    /* IPC buffer destroyed when thread was removed
-       from proc. Destroy everything else. */
+    /* Sanity check: we should only be destroyed
+       when initial state or dead */
+    assert(state_ == State::INITIAL || state_ == State::DEAD);
+
+    /* Remove from the parent process. This will also clean
+       up the IPC buffer */
+    ZxProcess *parent = (ZxProcess *)get_owner();
+    parent->remove_thread(this);
 
     /* Delete cspace */
     if (cspace_.cptr != 0) {
@@ -207,6 +215,12 @@ void ZxThread::destroy()
     }
 
     /* TODO clean up any waiter */
+
+    /* If this was the last thread removed from parent
+       proc, we might have to destroy it too */
+    if (parent->can_destroy()) {
+        return destroy_object(parent);
+    }
 }
 
 void ZxThread::destroy_ipc_buffer()

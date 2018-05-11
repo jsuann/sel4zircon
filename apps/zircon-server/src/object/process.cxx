@@ -142,26 +142,17 @@ void ZxProcess::destroy()
 
     vka_t *vka = get_server_vka();
 
-    if (state == State::INITIAL) {
-        /* Safe to remove all threads, no need to make them exit */
-        remove_all_threads(false);
-        /* TODO also remove ourselves from owning job, if still attached */
-    } else {
-        /* Threads should already be removed */
-        assert(thread_list_.empty());
-    }
+    /* Threads should already be removed */
+    assert(thread_list_.empty());
+
+    /* Handles should also be destroyed */
+    assert(handle_list_.empty());
+
+    /* Deactivate the root VMAR and its subregions */
+    deactivate_maybe_destroy_vmar(root_vmar_);
 
     /* Destroy thread index allocator */
     ipc_alloc_.destroy();
-
-    /* Destroy handles */
-    while (!handle_list_.empty()) {
-        Handle *h = handle_list_.pop_front();
-        destroy_handle_maybe_object(h);
-    }
-
-    /* Destroy VMAR and its subregions */
-    deactivate_maybe_destroy_vmar(root_vmar_);
 
     /* Delete vka PT nodes */
     free_vka_nodes(vka, pt_list_);
@@ -169,6 +160,15 @@ void ZxProcess::destroy()
     /* Destroy pd */
     if (pd_.cptr != 0) {
         vka_free_object(vka, &pd_);
+    }
+
+    /* Detach from the owning job */
+    ZxJob *parent = (ZxJob *)get_owner();
+    parent->remove_process(this);
+
+    /* Parent job might have to be cleaned up */
+    if (parent->can_destroy()) {
+        return destroy_object(parent);
     }
 }
 
@@ -236,29 +236,36 @@ void ZxProcess::remove_thread(ZxThread *thrd)
     thread_list_.remove(thrd);
 }
 
-void ZxProcess::remove_all_threads(bool exit)
-{
-    while (!thread_list_.empty()) {
-        /* We don't pop front, since we remove later */
-        ZxThread *thrd = thread_list_.front();
-        if (exit) {
-            thrd->exit();
-        }
-        remove_thread(thrd);
-        if (thrd->can_destroy()) {
-            destroy_object(thrd);
-        }
-    }
-}
-
 void ZxProcess::kill()
 {
-    /* Sanity check: ensure process was in running state */
-    assert(state_ == State::RUNNING);
+    /* If already killed, return */
+    if (state_ == State::DEAD) {
+        return;
+    }
+
+    /* Put in killing state. This prevents children
+       from destroying us */
+    state_ = State::KILLING;
+
+    /* Kill all threads */
+    thread_list_.for_each([] (ZxThread *thrd) {
+        thrd->kill();
+        if (thrd->can_destroy()) {
+            /* It's safe for thrd to remove itself
+               from linked list in for_each */
+            destroy_object(thrd);
+        }
+    });
+    alive_count_ = 0;
+
+    /* Close all handles held by the process */
+    while (!handle_list_.empty()) {
+        Handle *h = handle_list_.pop_front();
+        destroy_handle_maybe_object(h);
+    }
+
     /* Set state to dead */
     state_ = State::DEAD;
-    /* Make all threads exit, destroying them if required */
-    remove_all_threads(true);
 }
 
 int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,

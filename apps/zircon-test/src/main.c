@@ -178,9 +178,11 @@ int main(int argc, char **argv) {
     time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
     printf("zx_syscall_test_0 time: %lu\n", ((time2 - time1) - overhead) / 1000000);
 
+    /* Try to kill other thread */
+    assert(!zx_task_kill(new_thrd));
+
     printf("Zircon test exiting!\n");
 
-    /* TODO move this to exit? */
     zx_process_exit(0);
 
     printf("We shouldn't get here!\n");

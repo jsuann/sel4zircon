@@ -22,6 +22,8 @@ sys_process_read_memory
 sys_process_write_memory
 sys_thread_create
 sys_thread_start
+sys_thread_exit
+sys_task_kill
 sys_debug_write
 sys_syscall_test_0
 sys_syscall_test_1

@@ -44,13 +44,12 @@ public:
     void destroy() override;
 
     bool can_destroy() override {
-        if (state_ == State::INITIAL) {
-            /* Safe to remove on zero handles */
-            return zero_handles();
+        /* Can't destroy while running or killing off threads */
+        if (state_ == State::RUNNING || state_ == State::KILLING) {
+            return false;
         }
-        /* If running/dead we need to be detached from owning
-           job & have all threads removed */
-        return (zero_handles() && thread_list_.empty() && get_owner() == NULL);
+        /* Otherwise process can be destroyed once all threads removed */
+        return (zero_handles() && thread_list_.empty());
     }
 
     void set_name(const char *name) {
@@ -73,12 +72,27 @@ public:
     enum class State {
         INITIAL,    /* Proc created, but no thread started yet */
         RUNNING,    /* First thread started */
+        KILLING,    /* Killing off threads */
         DEAD,       /* All threads dead */
     };
 
-    bool is_running() { return (state_ == State::RUNNING); }
+    bool is_running() const { return (state_ == State::RUNNING); }
+    bool is_killing() const { return (state_ == State::KILLING); }
+    bool is_dead() const { return (state_ == State::DEAD); }
 
-    void start() { state_ = State::RUNNING; }
+    void thread_started() {
+        if (state_ == State::INITIAL) {
+            state_ = State::RUNNING;
+        }
+        ++alive_count_;
+    }
+
+    bool thread_exited() {
+        --alive_count_;
+        /* Return true if process should also exit */
+        return (alive_count_ == 0);
+    }
+
     void set_retcode(int retcode) { retcode_ = retcode; }
     void kill();
 
@@ -116,7 +130,6 @@ public:
     /* Thread funcs */
     bool add_thread(ZxThread *thrd);
     void remove_thread(ZxThread *thrd);
-    void remove_all_threads(bool exit);
 
     /* Addrspace funcs */
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
@@ -157,6 +170,7 @@ private:
     ZxVmar *root_vmar_;
     /* Thread list */
     LinkedList<ZxThread> thread_list_;
+    int alive_count_ = 0;
 
     /* IPC buffer index allocator */
     BitAlloc ipc_alloc_;

@@ -159,8 +159,11 @@ public:
     void for_each(F &&func, U ... args) {
         T *item = head_;
         while (item != NULL) {
+            /* Save a ref to next before func call to
+               allow item to remove itself from list */
+            T *next = item->next_;
             func(item, args...);
-            item = item->next_;
+            item = next;
         }
     }
 
