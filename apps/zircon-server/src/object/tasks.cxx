@@ -7,7 +7,7 @@ void task_kill_thread(ZxThread *thrd)
 
     /* We kill the process instead if we have the last
        running thread */
-    if (thrd->is_running() && proc->thread_exited()) {
+    if (thrd->is_alive() && proc->thread_exited()) {
         return task_kill_process(proc);
     }
 

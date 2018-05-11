@@ -27,6 +27,8 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_task_suspend(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_task_resume(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_task_kill(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_event_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_eventpair_create(seL4_MessageInfo_t tag, uint64_t badge);

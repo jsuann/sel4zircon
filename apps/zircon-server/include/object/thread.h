@@ -60,7 +60,8 @@ public:
             uintptr_t arg1, uintptr_t arg2);
     void kill();
 
-    bool is_running() const {
+    bool is_alive() const {
+        /* Alive when running or suspended */
         return (state_ == State::RUNNING || state_ == State::SUSPENDED);
     }
     bool is_dead() const { return state_ == State::DEAD; }

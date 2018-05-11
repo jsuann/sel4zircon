@@ -256,8 +256,8 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
     err = proc->get_object_with_rights(thrd_handle, ZX_RIGHT_WRITE, thrd);
     SYS_RET_IF_ERR(err);
 
-    /* Make sure this thread isn't already running or dead */
-    if (thrd->is_running() || thrd->is_dead()) {
+    /* Make sure this thread isn't already alive or dead */
+    if (thrd->is_alive() || thrd->is_dead()) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -313,5 +313,47 @@ uint64_t sys_task_kill(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* If a proc/thread/job used this to kill itself, we
        can still reply, the invocation will just fail. */
+    return ZX_OK;
+}
+
+uint64_t sys_task_suspend(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    zx_handle_t handle = seL4_GetMR(0);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    /* Only supports threads on native Zircon */
+    ZxThread *target_thrd;
+    err = proc->get_object_with_rights(handle, ZX_RIGHT_WRITE, target_thrd);
+    SYS_RET_IF_ERR(err);
+
+    if (!target_thrd->is_alive()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    target_thrd->suspend();
+    return ZX_OK;
+}
+
+uint64_t sys_task_resume(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    zx_handle_t handle = seL4_GetMR(0);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    /* Only supports threads on native Zircon */
+    ZxThread *target_thrd;
+    err = proc->get_object_with_rights(handle, ZX_RIGHT_WRITE, target_thrd);
+    SYS_RET_IF_ERR(err);
+
+    if (!target_thrd->is_alive()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    target_thrd->resume();
     return ZX_OK;
 }
