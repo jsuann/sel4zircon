@@ -94,7 +94,7 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
     delete vmap;
 }
 
-/* TODO cache attributes? */
+/* TODO cache attributes */
 bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 {
     int err;

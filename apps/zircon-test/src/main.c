@@ -23,6 +23,10 @@
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
 
+#include "bench.h"
+
+#define DO_BENCHMARK    1
+
 /* constants */
 #define TEST_EP_ID      0xfee
 #define TEST_EP_MSG     0xbce
@@ -69,6 +73,14 @@ int main(int argc, char **argv) {
 
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));
+
+#if DO_BENCHMARK
+    calc_timer_overhead();
+    bench_test0_syscall();
+    bench_test8_syscall();
+    bench_event_create();
+    zx_process_exit(0);
+#endif
 
     zx_status_t err;
 

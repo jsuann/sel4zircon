@@ -8,7 +8,7 @@ seL4_timer_t *server_timer;
 /* Head of timer list */
 TimerNode *head = NULL;
 
-constexpr uint64_t kTimerMin = 250 * NS_IN_US;
+constexpr uint64_t kTimerMin = 100 * NS_IN_US;
 
 void update_timeout(uint64_t expire_time)
 {

@@ -24,6 +24,7 @@ public:
     }
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
+    CookieJar* get_cookie_jar() override { return &cookie_jar_; }
 
     uintptr_t get_base() const {
         return kaddr_;
@@ -101,6 +102,8 @@ private:
 
     /* process mappings of the vmo */
     LinkedList<VmoMapping> map_list_;
+
+    CookieJar cookie_jar_;
 };
 
 /* Class representing the mapping of vmo in a vmar */
