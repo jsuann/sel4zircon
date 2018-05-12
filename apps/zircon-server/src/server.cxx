@@ -154,9 +154,11 @@ void syscall_loop(void)
 #include "object/event.cxx"
 #include "object/endpoint.cxx"
 #include "object/tasks.cxx"
+#include "object/timer.cxx"
 
 #include "syscalls/sys_table.cxx"
 #include "syscalls/channel.cxx"
+#include "syscalls/clock.cxx"
 #include "syscalls/endpoint.cxx"
 #include "syscalls/event.cxx"
 #include "syscalls/fifo.cxx"
@@ -167,7 +169,7 @@ void syscall_loop(void)
 #include "syscalls/socket.cxx"
 #include "syscalls/tasks.cxx"
 #include "syscalls/tests.cxx"
-#include "syscalls/time.cxx"
+#include "syscalls/timer.cxx"
 #include "syscalls/vmo.cxx"
 
 #include "utils/clock.cxx"

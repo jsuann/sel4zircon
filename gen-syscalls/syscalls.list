@@ -53,3 +53,6 @@ sys_vmo_write
 sys_vmo_get_size
 sys_vmo_set_size
 sys_vmo_op_range
+sys_timer_create
+sys_timer_set
+sys_timer_cancel

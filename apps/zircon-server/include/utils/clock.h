@@ -15,10 +15,10 @@ typedef void (*timer_callback_func)(void *data);
 class TimerNode {
 
 /* Timer funcs are all friends */
-friend void add_timer(TimerNode *t, uint64_t expire_time, uint32_t flags);
+friend void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags);
 friend void handle_timer(seL4_Word badge);
 friend void remove_timer(TimerNode *t);
-friend bool has_timer_expired(TimerNode *t, uint64_t time, uint64_t slack);
+friend bool has_timer_expired(TimerNode *t, uint64_t time);
 
 public:
     TimerNode() = default;
@@ -34,7 +34,6 @@ public:
 private:
     TimerNode *next_ = NULL;
     uint64_t expire_time_ = 0;
-    bool slack_early_ = false;
     bool waiting_ = false;
     timer_callback_func cb_ = NULL;
     void *data_ = NULL;
@@ -43,11 +42,11 @@ private:
 void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
         seL4_CPtr server_tcb, seL4_Word *timer_badge);
 
-bool has_timer_expired(TimerNode *t, uint64_t time, uint64_t slack);
+bool has_timer_expired(TimerNode *t, uint64_t time);
 
 void handle_timer(seL4_Word badge);
 
-void add_timer(TimerNode *t, uint64_t expire_time, uint32_t flags);
+void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags);
 
 void remove_timer(TimerNode *t);
 

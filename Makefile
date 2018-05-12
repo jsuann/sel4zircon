@@ -45,6 +45,9 @@ simulate-x86_64:
         -m 2048 -nographic -kernel images/kernel-x86_64-pc99 \
         -initrd images/zircon-server-image-x86_64-pc99 -cpu Haswell
 
+mqrun:
+	mq.sh run -s skylake -c "Zircon test exiting!" -f images/kernel-x86_64-pc99 -f images/zircon-server-image-x86_64-pc99
+
 # Some example image builds (NOTE: may need to adapt addresses)
 build-binary: images/${apps}-image-${ARCH}-${PLAT}
 	${CONFIG_CROSS_COMPILER_PREFIX}objcopy -O binary \

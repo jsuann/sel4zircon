@@ -96,8 +96,7 @@ public:
     void destroy_ipc_buffer();
 
     /* Generic wait function */
-    void wait(timer_callback_func cb, void *data,
-            uint64_t expire_time, uint32_t flags);
+    void wait(timer_callback_func cb, void *data, uint64_t expire_time);
 
     /* TODO stop wait when thread is killed */
 

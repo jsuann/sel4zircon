@@ -70,7 +70,7 @@ uint64_t sys_object_wait_many(seL4_MessageInfo_t tag, uint64_t badge)
     ZxThread *thrd = get_thread_from_badge(badge);
     if (count == 0) {
         /* Nothing to wait on, so thread just sleeps until timed out */
-        thrd->wait(timeout_cb, (void *)thrd, deadline, 0);
+        thrd->wait(timeout_cb, (void *)thrd, deadline);
         server_should_not_reply();
         return 0;
     }

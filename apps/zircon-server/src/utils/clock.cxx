@@ -8,8 +8,7 @@ seL4_timer_t *server_timer;
 /* Head of timer list */
 TimerNode *head = NULL;
 
-/* Amount of slack */
-constexpr uint64_t kTimerSlack = 500 * NS_IN_US;
+constexpr uint64_t kTimerMin = 250 * NS_IN_US;
 
 void update_timeout(uint64_t expire_time)
 {
@@ -17,7 +16,7 @@ void update_timeout(uint64_t expire_time)
     ltimer_get_time(&server_timer->ltimer, &curr_time);
 
     /* Try to make sure next timeout isn't too soon */
-    uint64_t min_time = curr_time + kTimerSlack;
+    uint64_t min_time = curr_time + kTimerMin;
     uint64_t next_timeout = (expire_time > min_time) ? expire_time : min_time;
 
     /* Set the next timeout */
@@ -39,7 +38,7 @@ void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
        it to never actually fire correctly in QEMU! */
 
     /* get the timer badge with a quick timeout. */
-    assert(ltimer_set_timeout(&timer->ltimer, kTimerSlack, TIMEOUT_RELATIVE) == 0);
+    assert(ltimer_set_timeout(&timer->ltimer, kTimerMin, TIMEOUT_RELATIVE) == 0);
     seL4_Wait(ntfn, timer_badge);
     sel4platsupport_handle_timer_irq(timer, *timer_badge);
     dprintf(INFO, "Timer badge: %lu\n", *timer_badge);
@@ -51,9 +50,9 @@ void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
     server_timer = timer;
 }
 
-bool has_timer_expired(TimerNode *t, uint64_t time, uint64_t slack)
+bool has_timer_expired(TimerNode *t, uint64_t time)
 {
-    return (t != NULL && t->expire_time_ <= (time + slack));
+    return ((t != NULL) && (t->expire_time_ <= time));
 }
 
 void handle_timer(seL4_Word badge)
@@ -71,12 +70,8 @@ void handle_timer(seL4_Word badge)
     bool progress = false;
     for (;;) {
         TimerNode *t = head;
-        /* Check if null, or not expired with slack */
-        if (!(has_timer_expired(t, curr_time, kTimerSlack))) {
-            break;
-        }
-        /* If timer can go late, check without slack */
-        if (!t->slack_early_ && !(has_timer_expired(t, curr_time, 0))) {
+        /* Check if null, or not expired */
+        if (!has_timer_expired(t, curr_time)) {
             break;
         }
 
@@ -84,7 +79,6 @@ void handle_timer(seL4_Word badge)
         head = t->next_;
         t->next_ = NULL;
         t->expire_time_ = 0;
-        t->slack_early_ = false;
         t->waiting_ = false;
 
         /* do callback */
@@ -99,15 +93,34 @@ void handle_timer(seL4_Word badge)
     }
 }
 
-void add_timer(TimerNode *t, uint64_t expire_time, uint32_t flags)
+void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags)
 {
     using namespace ClockCxx;
 
     /* Set up timer args */
     t->expire_time_ = expire_time;
     t->waiting_ = true;
-    if (flags == ZX_TIMER_SLACK_EARLY || flags == ZX_TIMER_SLACK_CENTER) {
-        t->slack_early_ = true;
+
+    /* Set earliest & latest deadline based on slack */
+    uint64_t early_deadline, late_deadline;
+    early_deadline = late_deadline = expire_time;
+    if (slack > 0u) {
+        uint64_t late_slack = expire_time + slack;
+        uint64_t early_slack = expire_time - slack;
+        /* Check for overflow */
+        if (late_slack < expire_time) {
+            late_slack = UINT64_MAX - expire_time;
+        }
+        if (early_slack > expire_time) {
+            early_slack = expire_time;
+        }
+        /* Adjust deadlines depending on flags */
+        if (flags == ZX_TIMER_SLACK_EARLY || flags == ZX_TIMER_SLACK_CENTER) {
+            early_deadline -= early_slack;
+        }
+        if (flags == ZX_TIMER_SLACK_LATE || flags == ZX_TIMER_SLACK_CENTER) {
+            late_deadline += late_slack;
+        }
     }
 
     /* Insert in order in timer list */
@@ -115,7 +128,18 @@ void add_timer(TimerNode *t, uint64_t expire_time, uint32_t flags)
     TimerNode **pt = &head;
     for (;;) {
         curr = *pt;
-        if (!(has_timer_expired(curr, expire_time, 0))) {
+        if (!has_timer_expired(curr, late_deadline)) {
+            break;
+        }
+        if (!has_timer_expired(curr, expire_time)) {
+            /* Slack late: coalesce with this timer */
+            t->expire_time_ = curr->expire_time_;
+            break;
+        }
+        if (!has_timer_expired(curr, early_deadline) &&
+                !has_timer_expired(curr->next_, late_deadline)) {
+            /* Slack early: coalesce with this timer */
+            t->expire_time_ = curr->expire_time_;
             break;
         }
         pt = &curr->next_;
@@ -151,7 +175,6 @@ void remove_timer(TimerNode *t)
     /* Reset */
     t->next_ = NULL;
     t->expire_time_ = 0;
-    t->slack_early_ = false;
     t->waiting_ = false;
 }
 

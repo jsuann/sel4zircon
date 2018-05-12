@@ -10,7 +10,7 @@ extern "C" {
 #include "object/thread.h"
 #include "sys_helpers.h"
 
-namespace SysTime {
+namespace SysClock {
 int64_t utc_offset = 0;
 }
 
@@ -27,7 +27,7 @@ uint64_t sys_nanosleep(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_CHECK_NUM_ARGS(tag, 1);
     zx_time_t deadline = seL4_GetMR(0);
     ZxThread *thrd = get_thread_from_badge(badge);
-    thrd->wait(nanosleep_cb, (void *)thrd, deadline, ZX_TIMER_SLACK_CENTER);
+    thrd->wait(nanosleep_cb, (void *)thrd, deadline);
     /* Don't send a reply */
     server_should_not_reply();
     return 0;
@@ -44,7 +44,7 @@ uint64_t sys_clock_get(seL4_MessageInfo_t tag, uint64_t badge)
         time = get_system_time();
         break;
     case ZX_CLOCK_UTC:
-        time = get_system_time() + SysTime::utc_offset;
+        time = get_system_time() + SysClock::utc_offset;
         break;
     case ZX_CLOCK_THREAD:
         time = get_thread_from_badge(badge)->runtime_ns();

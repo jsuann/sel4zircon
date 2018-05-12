@@ -231,8 +231,7 @@ void ZxThread::destroy_ipc_buffer()
     vka_free_object(vka, &ipc_buffer_frame_);
 }
 
-void ZxThread::wait(timer_callback_func cb, void *data,
-        uint64_t expire_time, uint32_t flags)
+void ZxThread::wait(timer_callback_func cb, void *data, uint64_t expire_time)
 {
     vka_t *vka = get_server_vka();
     cspacepath_t path;
@@ -245,7 +244,7 @@ void ZxThread::wait(timer_callback_func cb, void *data,
 
     /* Set callback & add timer */
     timer_.set_callback(cb, data);
-    add_timer(&timer_, expire_time, flags);
+    add_timer(&timer_, expire_time, 0, 0);
 }
 
 zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
@@ -268,7 +267,7 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
     num_waiting_on_ = 0;
     waiting_on_ = (Waiter *)sw;
 
-    wait(obj_wait_cb, (void *)this, deadline, 0);
+    wait(obj_wait_cb, (void *)this, deadline);
     return ZX_OK;
 }
 
@@ -294,7 +293,7 @@ zx_status_t ZxThread::obj_wait_many(Handle **handles, uint32_t count,
 
     waiting_on_ = (Waiter *)sw;
     num_waiting_on_ = count;
-    wait(obj_wait_cb, (void *)this, deadline, 0);
+    wait(obj_wait_cb, (void *)this, deadline);
     return ZX_OK;
 }
 
