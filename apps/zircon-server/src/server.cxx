@@ -9,11 +9,9 @@
 #include "zxcpp/new.h"
 
 extern "C" {
-#include <vka/object.h>
 #include <zircon/types.h>
 #include <zircon/rights.h>
-#include <vspace/vspace.h>
-#include <sel4platsupport/timer.h>
+#include "env.h"
 #include "debug.h"
 }
 
@@ -30,6 +28,7 @@ extern "C" {
 #include "utils/elf.h"
 #include "utils/rng.h"
 #include "utils/page_alloc.h"
+#include "utils/system.h"
 
 /* Wrap globals in a namespace to prevent access outside this file */
 namespace ServerCxx {
@@ -45,8 +44,7 @@ bool should_reply;
 } /* namespace ServerCxx */
 
 extern "C" void do_cpp_test(void);
-extern "C" void init_zircon_server(vka_t *vka, vspace_t *vspace,
-        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn);
+extern "C" void init_zircon_server(env_t *env);
 extern "C" void syscall_loop(void);
 
 vspace_t *get_server_vspace()
@@ -69,20 +67,20 @@ void server_should_not_reply()
     ServerCxx::should_reply = false;
 }
 
-void init_zircon_server(vka_t *vka, vspace_t *vspace,
-        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn)
+void init_zircon_server(env_t *env)
 {
     using namespace ServerCxx;
 
     dprintf(ALWAYS, "=== Zircon Server ===\n");
 
     /* store server globals */
-    server_vka = vka;
-    server_vspace = vspace;
-    server_ep = new_ep;
+    server_vka = env->vka;
+    server_vspace = env->vspace;
+    server_ep = env->server_ep;
 
     /* Init timer */
-    init_timer(timer, ntfn, seL4_CapInitThreadTCB, &timer_badge);
+    init_timer(env->timer, env->timer_ntfn,
+            seL4_CapInitThreadTCB, &timer_badge);
 
     /* init allocators and other things */
     init_handle_table(server_vspace);
@@ -94,6 +92,8 @@ void init_zircon_server(vka_t *vka, vspace_t *vspace,
     init_root_resource();
     init_asid_pool(server_vka);
     init_page_alloc(server_vka);
+
+    init_system_info(env);
 }
 
 void syscall_loop(void)
@@ -176,6 +176,7 @@ void syscall_loop(void)
 #include "utils/elf.cxx"
 #include "utils/init_test.cxx"
 #include "utils/page_alloc.cxx"
+#include "utils/system.cxx"
 
 #include "zxcpp/pagearray.h"
 

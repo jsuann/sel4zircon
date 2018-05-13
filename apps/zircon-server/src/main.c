@@ -39,6 +39,7 @@
 #include <sel4platsupport/bootinfo.h>
 #include <platsupport/plat/timer.h>
 
+#include "env.h"
 #include "debug.h"
 
 /* TODO make defined flags config options */
@@ -86,8 +87,7 @@ seL4_timer_t timer;
 
 /* zircon server calls */
 extern void do_cpp_test(void);
-extern void init_zircon_server(vka_t *vka, vspace_t *vspace,
-        seL4_timer_t *timer, seL4_CPtr new_ep, seL4_CPtr ntfn);
+extern void init_zircon_server(env_t *env);
 extern uint64_t init_zircon_test(void);
 extern void send_zircon_test_data(seL4_CPtr ep_cap);
 extern void syscall_loop(void);
@@ -186,8 +186,29 @@ int main(void) {
     error = sel4platsupport_init_default_timer(&vka, &vspace, &simple, ntfn_object.cptr, &timer);
     assert(error == 0);
 
+    /* Calc available phys mem size from untypeds */
+    uint64_t phys_mem = 0;
+    int untyped_count = simple_get_untyped_count(&simple);
+    for (int i = 0; i < untyped_count; ++i) {
+        size_t size_bits;
+        simple_get_nth_untyped(&simple, i, &size_bits, NULL, NULL);
+        phys_mem += (1 << size_bits);
+    }
+
+    /* Set up server env */
+    env_t server_env = {
+        .vka = &vka,
+        .vspace = &vspace,
+        .timer = &timer,
+        .server_ep = ep_object.cptr,
+        .timer_ntfn = ntfn_object.cptr,
+        .tsc_freq = simple_get_arch_info(&simple),
+        .num_cores = simple_get_core_count(&simple),
+        .phys_mem = phys_mem,
+    };
+
     /* Init the zircon server */
-    init_zircon_server(&vka, &vspace, &timer, ep_object.cptr, ntfn_object.cptr);
+    init_zircon_server(&server_env);
 
     /* Init zircon test */
     init_zircon_test();
