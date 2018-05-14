@@ -20,6 +20,8 @@ extern uint64_t zx_system_get_physmem(void);
 
 extern zx_status_t zx_system_get_features(uint32_t kind, uint32_t* out);
 
+extern zx_status_t zx_cache_flush(void* addr, size_t len, uint32_t options);
+
 extern zx_status_t zx_handle_close(zx_handle_t handle);
 
 extern zx_status_t zx_handle_duplicate(zx_handle_t handle, zx_rights_t rights, zx_handle_t* out);

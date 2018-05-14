@@ -19,7 +19,6 @@ uint64_t sys_undefined(seL4_MessageInfo_t tag, uint64_t badge)
     /* Get the syscall number */
     seL4_Word syscall = seL4_MessageInfo_get_label(tag);
 
-    /* TODO Determine the calling process */
     dprintf(INFO, "Received unimplemented syscall: %lu\n", syscall);
     return ZX_ERR_NOT_SUPPORTED;
 }

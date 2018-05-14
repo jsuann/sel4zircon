@@ -10,3 +10,5 @@ extern "C" {
 }
 
 void init_system_info(env_t *env);
+uint64_t system_get_tsc_freq();
+uint32_t system_get_num_cores();

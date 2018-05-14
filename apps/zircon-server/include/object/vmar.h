@@ -21,13 +21,17 @@ class VmoMapping;
 class ZxVmar final : public ZxObject, public VmRegion {
 friend void deactivate_maybe_destroy_vmar(ZxVmar *root);
 public:
+    static constexpr uint32_t rootVmarFlags =
+            ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ |
+            ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_CAN_MAP_EXECUTE;
+
     /* Root vmar constructor */
     ZxVmar() : parent_{NULL}, base_{ZX_USER_ASPACE_BASE},
-            size_{ZX_USER_ASPACE_SIZE} {}
+            size_{ZX_USER_ASPACE_SIZE}, flags_{rootVmarFlags} {}
 
     /* Child vmar constructor */
-    ZxVmar(ZxVmar *parent, uintptr_t base, size_t size) : parent_{parent},
-            base_{base}, size_{size} {}
+    ZxVmar(ZxVmar *parent, uintptr_t base, size_t size, uint32_t flags) :
+            parent_{parent}, base_{base}, size_{size}, flags_{flags} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMAR; }
 
@@ -47,6 +51,9 @@ public:
     bool check_vm_region(uintptr_t child_base, size_t child_size);
     bool add_vm_region(VmRegion *child);
 
+    /* Allocate a base offset for non-specific regions */
+    uintptr_t allocate_vm_region_base(uintptr_t size, uint32_t flags);
+
     VmoMapping *get_vmap_from_addr(uintptr_t addr);
 
     void set_proc(ZxProcess *proc) {
@@ -55,6 +62,10 @@ public:
 
     ZxProcess *get_proc() const {
         return proc_;
+    }
+
+    uint32_t get_flags() const {
+        return flags_;
     }
 
 private:
@@ -73,6 +84,9 @@ private:
     /* start and end of addr space */
     uintptr_t base_;
     size_t size_;
+
+    /* vmar flags */
+    uint32_t flags_;
 };
 
 void deactivate_maybe_destroy_vmar(ZxVmar *root);

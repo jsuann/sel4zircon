@@ -38,7 +38,6 @@ sys_syscall_test_6
 sys_syscall_test_7
 sys_syscall_test_8
 sys_syscall_test_wrapper
-sys_deadline_after
 sys_nanosleep
 sys_clock_get
 sys_event_create
@@ -56,3 +55,5 @@ sys_vmo_op_range
 sys_timer_create
 sys_timer_set
 sys_timer_cancel
+sys_ticks_per_second
+sys_system_get_num_cpus

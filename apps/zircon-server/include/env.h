@@ -15,7 +15,7 @@ struct env {
     seL4_CPtr server_ep;
     seL4_CPtr timer_ntfn;
     uint64_t tsc_freq;
-    uint64_t num_cores;
+    uint32_t num_cores;
     uint64_t phys_mem;
 };
 

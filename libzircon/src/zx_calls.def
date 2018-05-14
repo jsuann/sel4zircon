@@ -12,21 +12,9 @@ zx_status_t zx_nanosleep(zx_time_t deadline)
     return seL4_GetMR(0);
 }
 
-uint64_t zx_ticks_get(void)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_TICKS_GET, 0);
-    return seL4_GetMR(0);
-}
-
 uint64_t zx_ticks_per_second(void)
 {
     ZX_SYSCALL_SEND(ZX_SYS_TICKS_PER_SECOND, 0);
-    return seL4_GetMR(0);
-}
-
-zx_time_t zx_deadline_after(zx_duration_t nanoseconds)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_DEADLINE_AFTER, 1, nanoseconds);
     return seL4_GetMR(0);
 }
 

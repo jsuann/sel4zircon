@@ -1,6 +1,7 @@
 #include <sel4/sel4.h>
 
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/debug.h>
 #include <sel4zircon/endpoint.h>
@@ -52,6 +53,26 @@ uint64_t zx_ticks_get(void)
     uint32_t ticks_high;
     __asm__ volatile("rdtsc" : "=a" (ticks_low), "=d" (ticks_high));
     return ((uint64_t)ticks_high << 32) | ticks_low;
+#else
+#error Unsupported architecture
+#endif
+}
+
+zx_time_t zx_deadline_after(zx_duration_t nanoseconds) {
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t deadline = nanoseconds + now;
+    /* Check for overflow */
+    if (deadline < now) {
+        return ZX_TIME_INFINITE;
+    }
+    return deadline;
+}
+
+zx_status_t zx_cache_flush(void* addr, size_t len, uint32_t flags)
+{
+#ifdef CONFIG_ARCH_X86_64
+    /* Nothing to do for x86. */
+    return ZX_OK;
 #else
 #error Unsupported architecture
 #endif

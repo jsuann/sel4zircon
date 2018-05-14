@@ -7,19 +7,22 @@ extern "C" {
 #include "debug.h"
 }
 
-#include "object/thread.h"
 #include "sys_helpers.h"
+#include "object/thread.h"
+#include "utils/system.h"
 
 namespace SysClock {
 int64_t utc_offset = 0;
 }
 
-uint64_t sys_deadline_after(seL4_MessageInfo_t tag, uint64_t badge)
+uint64_t sys_ticks_per_second(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    SYS_CHECK_NUM_ARGS(tag, 1);
-    uint64_t nanoseconds = seL4_GetMR(0);
-    uint64_t deadline = get_system_time() + nanoseconds;
-    return deadline;
+    SYS_CHECK_NUM_ARGS(tag, 0);
+#ifdef CONFIG_ARCH_X86_64
+    return system_get_tsc_freq();
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 uint64_t sys_nanosleep(seL4_MessageInfo_t tag, uint64_t badge)

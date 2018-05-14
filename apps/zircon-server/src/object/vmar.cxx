@@ -1,5 +1,24 @@
 #include "object/vmar.h"
 
+namespace VmarCxx {
+
+constexpr size_t kVmarMinGap = (1 << 16);
+
+/* Get an offset for a randomised mapping between start & end */
+uintptr_t get_vmar_offset(uintptr_t start, uintptr_t end, size_t size)
+{
+    uintptr_t offset = (rand() << 16) % (end - size - start);
+    return start + offset;
+}
+
+uintptr_t get_vmar_offset_compact(uintptr_t start, uintptr_t end, size_t size)
+{
+    uintptr_t offset = (rand() << 16) % (end - size - start);
+    return start + (offset % (16 * kVmarMinGap));
+}
+
+}
+
 void ZxVmar::destroy()
 {
     /* VMAR memory should only be freed after it is deactivated. */
@@ -51,6 +70,65 @@ bool ZxVmar::add_vm_region(VmRegion *child)
 
     return true;
 }
+
+uintptr_t ZxVmar::allocate_vm_region_base(uintptr_t size, uint32_t flags)
+{
+    using namespace VmarCxx;
+
+    /* There are num children + 1 gaps in the vmar
+       space. Use rand to pick a gap to try */
+    uint32_t num_gaps = children_.size() + 1;
+    uint32_t selected_gap = rand() % num_gaps;
+
+    /* From this gap, find the first that can fit the size of the region. */
+    VmRegion **vmr = children_.get();
+    bool gap_found = false;
+    uintptr_t gap_base, gap_end;
+    for (size_t i = 0; i < num_gaps; ++i) {
+        uint32_t gap_to_try = (i + selected_gap) % num_gaps;
+        if (num_gaps == 1) {
+            gap_base = base_;
+            gap_end = base_ + size_;
+        } else if (gap_to_try == 0) {
+            gap_base = base_;
+            gap_end = vmr[gap_to_try]->get_base();
+        } else if (gap_to_try == (num_gaps - 1)) {
+            gap_base = vmr_get_end(vmr[gap_to_try - 1]);
+            gap_end = base_ + size_;
+        } else {
+            gap_base = vmr_get_end(vmr[gap_to_try - 1]);
+            gap_end = vmr[gap_to_try]->get_base();
+        }
+        /* Should have some space between regions */
+        gap_base += kVmarMinGap;
+        gap_end -= kVmarMinGap;
+        /* See if region fits */
+        if (gap_base + size <= gap_end) {
+            selected_gap = gap_to_try;
+            gap_found = true;
+            break;
+        }
+    }
+
+    if (!gap_found) {
+        return 0;
+    }
+
+    /* We have a gap. Next we randomly select an offset in the gap */
+    if (num_gaps > 1 && (flags & ZX_VM_FLAG_COMPACT)) {
+        /* Try to make mapping close to other mappings */
+        uintptr_t offset = get_vmar_offset_compact(gap_base, gap_end, size);
+        /* If we have 0th gap, align to 0th vmr */
+        if (selected_gap == 0) {
+            offset = gap_end - size - (offset - gap_base);
+        }
+        return offset;
+    } else {
+        /* Just select anywhere in the region */
+        return get_vmar_offset(gap_base, gap_end, size);
+    }
+}
+
 
 /* Lookup a VMO mapping with a vaddr */
 VmoMapping *ZxVmar::get_vmap_from_addr(uintptr_t addr)

@@ -42,6 +42,7 @@ echo "${AUTOGEN_TEXT}" > "${LIBZIRCON_DEFS}"
 syscall=
 syscall_num=0
 
+
 # add regular zx calls from abigen
 while read -r line || [ -n "${line}" ]
 do
@@ -55,29 +56,37 @@ do
 
     echo "${syscall}" >> "${ABIGEN_FLAT}"
 
-    syscall_name=$(sed -e 's/^syscall \([a-z0-9_]*\).*$/\1/' <<< "${syscall}")
-
-    # some syscalls are not handled server-side, skip these
-    if grep -q "^zx_${syscall_name}$" "${SKIP_LIST}"; then
+    # syscalls marked "internal" are skipped
+    if grep -q 'internal' <<< "${syscall}"; then
         syscall=
         continue
+    fi
+
+    syscall_name=$(sed -e 's/^syscall \([a-z0-9_]*\).*$/\1/' <<< "${syscall}")
+
+    # some syscalls are not handled server-side, we only want user-side declaration
+    skipflag=0
+    if grep -q "^zx_${syscall_name}$" "${SKIP_LIST}"; then
+        skipflag=1
     fi
 
     # get name for syscall number definition
     syscall_def="ZX_SYS_$(tr '[:lower:]' '[:upper:]' <<< "${syscall_name}")"
 
-    # define syscall number
-    echo "#define ${syscall_def} ${syscall_num}" >> "${SYSNO_FILE}"
+    if [ ${skipflag} -eq 0 ]; then
+        # define syscall number
+        echo "#define ${syscall_def} ${syscall_num}" >> "${SYSNO_FILE}"
 
-    # check if syscall has server side implementation
-    if grep -q "^sys_${syscall_name}$" "${DEFINED_LIST}"; then
-        # declare kernel-side handler
-        echo "uint64_t sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
-        # add to syscall table
-        echo "    sys_${syscall_name}," >> "${TABLE_FILE}"
-    else
-        # add as undefined to syscall table
-        echo "    sys_undefined," >> "${TABLE_FILE}"
+        # check if syscall has server side implementation
+        if grep -q "^sys_${syscall_name}$" "${DEFINED_LIST}"; then
+            # declare kernel-side handler
+            echo "uint64_t sys_${syscall_name}(seL4_MessageInfo_t tag, uint64_t badge);" >> "${DEFS_FILE}"
+            # add to syscall table
+            echo "    sys_${syscall_name}," >> "${TABLE_FILE}"
+        else
+            # add as undefined to syscall table
+            echo "    sys_undefined," >> "${TABLE_FILE}"
+        fi
     fi
 
     # --- generate user side lib calls ---
@@ -160,19 +169,23 @@ do
     echo >> "${LIBZIRCON_HEADER}"
     echo "extern ${syscall_decl};" >> "${LIBZIRCON_HEADER}"
 
-    # gen lib def file
-    echo "
+    if [ ${skipflag} -eq 0 ]; then
+        # gen lib def file
+        echo "
 ${syscall_decl}
 {
     ZX_SYSCALL_SEND(${syscall_def}, ${arg_count}${arg_name_list});" >> "${LIBZIRCON_DEFS}"
 
-    if [ "${syscall_ret}" != "void" ]; then
-        echo "    return seL4_GetMR(0);" >> "${LIBZIRCON_DEFS}"
+        if [ "${syscall_ret}" != "void" ]; then
+            echo "    return seL4_GetMR(0);" >> "${LIBZIRCON_DEFS}"
+        fi
+        echo "}" >> "${LIBZIRCON_DEFS}"
     fi
-    echo "}" >> "${LIBZIRCON_DEFS}"
 
     syscall=
-    syscall_num=$((syscall_num + 1))
+    if [ ${skipflag} -eq 0 ]; then
+        syscall_num=$((syscall_num + 1))
+    fi
 done < "${ZIRCON_PATH}/${SYSCALL_ABIGEN}"
 
 # add extra sel4zircon syscalls

@@ -51,11 +51,13 @@ void calc_timer_overhead(void)
         for (uint64_t j = 0; j < NUM_WARMUP; ++j) {
             __asm__ volatile("");
         }
-        time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        //time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        time1 = zx_ticks_get();
         for (uint64_t j = 0; j < NUM_ITERATIONS; ++j) {
             __asm__ volatile("");
         }
-        time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        //time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        time2 = zx_ticks_get();
         timer_overhead += (time2 - time1);
     }
 

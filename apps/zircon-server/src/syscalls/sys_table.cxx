@@ -4,11 +4,9 @@
 zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_clock_get,
     sys_nanosleep,
+    sys_ticks_per_second,
     sys_undefined,
-    sys_undefined,
-    sys_deadline_after,
-    sys_undefined,
-    sys_undefined,
+    sys_system_get_num_cpus,
     sys_undefined,
     sys_undefined,
     sys_undefined,
