@@ -3,3 +3,4 @@
 zx_channel_call_noretry
 zx_channel_call_finish
 zx_cache_flush
+zx_ticks_get
