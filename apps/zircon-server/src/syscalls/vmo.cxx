@@ -179,7 +179,12 @@ uint64_t sys_vmo_op_range(seL4_MessageInfo_t tag, uint64_t badge)
     uint32_t op = seL4_GetMR(1);
     uint64_t offset = seL4_GetMR(2);
     uint64_t size = seL4_GetMR(3);
-    /* buffer & buffer_size args unused */
+    /* buffer & buffer_size (args 4 and 5) unused */
+
+    /* Check for overflow */
+    if (offset + size < offset) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
 
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
@@ -191,7 +196,7 @@ uint64_t sys_vmo_op_range(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     /* Check offset & size */
-    if ((offset + size) >= vmo->get_size()) {
+    if ((offset + size) > vmo->get_size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -209,6 +214,7 @@ uint64_t sys_vmo_op_range(seL4_MessageInfo_t tag, uint64_t badge)
     case ZX_VMO_OP_CACHE_INVALIDATE:
     case ZX_VMO_OP_CACHE_CLEAN:
     case ZX_VMO_OP_CACHE_CLEAN_INVALIDATE:
+        /* Do nothing on x86 */
         return ZX_OK;
     default:
         return ZX_ERR_INVALID_ARGS;

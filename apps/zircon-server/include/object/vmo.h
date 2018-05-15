@@ -70,8 +70,9 @@ public:
 
     bool commit_range(uint64_t offset, size_t len) {
         uint32_t start_page = offset / vmoPageSize;
-        uint32_t end_page = (offset + len - 1) / vmoPageSize;
-        for (uint32_t i = start_page; i <= end_page; ++i) {
+        /* We round up len to next page */
+        uint32_t end_page = (offset + len + vmoPageSize - 1) / vmoPageSize;
+        for (uint32_t i = start_page; i < end_page; ++i) {
             if (!commit_page(i, NULL)) {
                 return false;
             }
@@ -81,8 +82,9 @@ public:
 
     void decommit_range(uint64_t offset, size_t len) {
         uint32_t start_page = offset / vmoPageSize;
-        uint32_t end_page = (offset + len - 1) / vmoPageSize;
-        for (uint32_t i = start_page; i <= end_page; ++i) {
+        /* We round up len to next page */
+        uint32_t end_page = (offset + len + vmoPageSize - 1) / vmoPageSize;
+        for (uint32_t i = start_page; i < end_page; ++i) {
             decommit_page(i);
         }
     }
@@ -123,6 +125,13 @@ public:
     VmRegion *get_parent() const override { return parent_; }
     bool is_vmar() const override { return false; }
     bool is_vmo_mapping() const override { return true; }
+
+    bool commit_page_at_addr(uintptr_t addr) {
+        /* Work out the index of the page relative to vmo */
+        uint32_t index = start_page_ + ((addr - base_addr_) / ZxVmo::vmoPageSize);
+        /* Commit the page */
+        return ((ZxVmo *)get_owner())->commit_page(index, this);
+    }
 
 private:
     /* base address of vmo mapping in vmar */

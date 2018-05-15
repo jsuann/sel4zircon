@@ -25,7 +25,7 @@
 
 #include "bench.h"
 
-#define DO_BENCHMARK    1
+#define DO_BENCHMARK    0
 
 /* constants */
 #define TEST_EP_ID      0xfee
@@ -57,22 +57,33 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2)
 
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
-    seL4_Word msg;
-
-    /* Get starting handles
-       TODO: replace with channel */
-    tag = seL4_Recv(ZX_THREAD_FAULT_SLOT, &msg);
-    zx_handle_t vmar_handle = seL4_GetMR(0);
-    zx_handle_t proc_handle = seL4_GetMR(1);
-    zx_handle_t thrd_handle = seL4_GetMR(2);
-    zx_handle_t rsrc_handle = seL4_GetMR(3);
 
     printf(">=== Zircon Test ===\n");
-    printf("Received handles: %u %u %u %u\n", vmar_handle, proc_handle,
-            thrd_handle, rsrc_handle);
 
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));
+
+    /* Channel handle is located at argv[0] */
+    zx_handle_t channel = *((zx_handle_t *)argv[0]);
+    printf("Channel handle: %u addr %p\n", channel, argv[0]);
+
+    /* Read init handles from channel */
+    char buf[1] = {0};
+    zx_handle_t init_handles[4] = {0};
+    uint32_t actual_bytes, actual_handles;
+    assert(!zx_channel_read(channel, 0, (void*)&buf[0], &init_handles[0],
+                            10, 4, &actual_bytes, &actual_handles));
+
+    zx_handle_t vmar_handle = init_handles[0];
+    zx_handle_t proc_handle = init_handles[1];
+    zx_handle_t thrd_handle = init_handles[2];
+    zx_handle_t rsrc_handle = init_handles[3];
+
+    printf("Received handles: %u %u %u %u\n", vmar_handle, proc_handle,
+            thrd_handle, rsrc_handle);
+
+    /* Close the channel */
+    zx_handle_close(channel);
 
 #if DO_BENCHMARK
     calc_timer_overhead();

@@ -30,7 +30,6 @@ void __arch_putchar(int c) {
 #ifdef CONFIG_DEBUG_BUILD
     seL4_DebugPutChar(c);
 #else
-    //zx_debug_write((void *)&c, 1);
     zx_debug_putchar(c);
 #endif
 }

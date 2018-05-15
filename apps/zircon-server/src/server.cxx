@@ -26,6 +26,7 @@ extern "C" {
 
 #include "utils/clock.h"
 #include "utils/elf.h"
+#include "utils/fault.h"
 #include "utils/rng.h"
 #include "utils/page_alloc.h"
 #include "utils/system.h"
@@ -122,8 +123,8 @@ void syscall_loop(void)
             }
         } else if (badge & ZxFaultBadge) {
             seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
-            dprintf(INFO, "Received fault, type %lu\n", fault_type);
-            /* TODO proper fault handling */
+            dprintf(SPEW, "Received fault, type %lu\n", fault_type);
+            handle_fault(tag, badge);
         } else if (badge == timer_badge) {
             /* Handle timer interrupt */
             handle_timer(badge);
@@ -176,17 +177,21 @@ void syscall_loop(void)
 
 #include "utils/clock.cxx"
 #include "utils/elf.cxx"
+#include "utils/fault.cxx"
 #include "utils/init_test.cxx"
 #include "utils/page_alloc.cxx"
 #include "utils/system.cxx"
 
 #include "zxcpp/pagearray.h"
 
+#define ZX_DO_CPP_TEST 0
+
 /* Extra test function */
 void do_cpp_test(void)
 {
     using namespace ServerCxx;
 
+#if ZX_DO_CPP_TEST
     /* Test mbuf */
     MBuf buf;
 
@@ -230,4 +235,5 @@ void do_cpp_test(void)
         frame.cptr = 0;
     };
     test_pa.clear(clean_func);
+#endif
 }

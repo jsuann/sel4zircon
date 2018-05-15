@@ -15,5 +15,5 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
         int &num_vmos, ZxVmo **&vmos);
 
 /* start running elf program */
-bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
-        uintptr_t stack_base, const char *image_name, uintptr_t entry);
+bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo, uintptr_t stack_base,
+        const char *image_name, uintptr_t entry, zx_handle_t channel_handle);

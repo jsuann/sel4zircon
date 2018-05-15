@@ -4,6 +4,7 @@
 #include "object/process.h"
 #include "object/vmar.h"
 #include "object/resource.h"
+#include "object/channel.h"
 #include "utils/elf.h"
 
 namespace InitTestCxx {
@@ -25,6 +26,7 @@ void init_zircon_test(void)
     ZxThread *test_thread;
     ZxVmo **elf_vmos;
     ZxVmo *stack_vmo;
+    ZxChannel *ch0, *ch1;
 
     /* Get root objects */
     ZxResource *root_rsrc = get_root_resource();
@@ -62,34 +64,36 @@ void init_zircon_test(void)
     VmoMapping *stack_map = stack_vmo->create_mapping(TestStackBaseAddr, 0,
             stack_vmo->get_size(), test_vmar, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, 0);
     assert(stack_map != NULL);
-    assert(stack_vmo->commit_all_pages(stack_map));
+    assert(stack_vmo->commit_all_pages(NULL));
 
-    /* Start test process */
-    assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
-            "zircon-test", entry));
-    test_proc->thread_started();
+    /* Create channel for sending handles. We send process ch1 */
+    assert(!create_channel_pair(ch0, ch1));
 
     /* Get handles to test objects */
-    zx_handle_t vmar_uval = test_proc->create_handle_get_uval(test_vmar);
-    zx_handle_t proc_uval = test_proc->create_handle_get_uval(test_proc);
-    zx_handle_t thrd_uval = test_proc->create_handle_get_uval(test_thread);
-    zx_handle_t rsrc_uval = test_proc->create_handle_get_uval(root_rsrc);
+    Handle *handle_table[4];
+    handle_table[0] = create_handle_default_rights(test_vmar); // TODO not just default
+    handle_table[1] = create_handle_default_rights(test_proc);
+    handle_table[2] = create_handle_default_rights(test_thread);
+    handle_table[3] = create_handle_default_rights(root_rsrc);
 
-    assert(vmar_uval != ZX_HANDLE_INVALID);
-    assert(proc_uval != ZX_HANDLE_INVALID);
-    assert(thrd_uval != ZX_HANDLE_INVALID);
-    assert(rsrc_uval != ZX_HANDLE_INVALID);
+    for (int i = 0; i < 4; ++i) {
+        assert(handle_table[i] != NULL);
+    }
+
+    zx_handle_t channel_handle = test_proc->create_handle_get_uval(ch1);
+    assert(channel_handle != ZX_HANDLE_INVALID);
+    dprintf(INFO, "channel handle: %u\n", channel_handle);
 
     /* We don't send vmo handles atm. Vmar has refs to them */
 
-    test_proc->print_handles();
+    /* Write to ch1 */
+    assert(!ch1->write_msg(NULL, 0, &handle_table[0], 4));
 
-    /* Send handles to zircon test */
-    dprintf(SPEW, "Sending test data to zircon test!\n");
-    seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 4);
-    seL4_SetMR(0, vmar_uval);
-    seL4_SetMR(1, proc_uval);
-    seL4_SetMR(2, thrd_uval);
-    seL4_SetMR(3, rsrc_uval);
-    seL4_Send(get_server_ep(), tag);
+    /* Start test process */
+    assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
+            "zircon-test", entry, channel_handle));
+    test_proc->thread_started();
+
+    /* Destroy ch0 */
+    destroy_object(ch0);
 }

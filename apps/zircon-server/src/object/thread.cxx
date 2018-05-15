@@ -107,7 +107,7 @@ bool ZxThread::init()
 
     /* Mint fault ep cap */
     set_dest_slot(&dest, cspace_.cptr, ZX_THREAD_FAULT_SLOT);
-    error = vka_cnode_mint(&dest, &src, seL4_AllRights, // TODO make no read
+    error = vka_cnode_mint(&dest, &src, seL4_NoRead,
             seL4_CapData_Badge_new(ZxFaultBadge | thread_index_));
     if (error) {
         return false;

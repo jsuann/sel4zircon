@@ -47,7 +47,7 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
 
     /* Create the vmo */
     size_t num_pages = vmo_size / kPageSize;
-    vmo = allocate_object<ZxVmo>(num_pages); // TODO error
+    vmo = allocate_object<ZxVmo>(num_pages);
     vmo->init();
 
     /* Convert elf rights to zircon vmo flags */
@@ -160,8 +160,8 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
 }
 
 /* Spawns zircon process with vsyscall. Requires elf & stack vmos ready. */
-bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
-        uintptr_t stack_base, const char *image_name, uintptr_t entry)
+bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo, uintptr_t stack_base,
+        const char *image_name, uintptr_t entry, zx_handle_t channel_handle)
 {
     using namespace ElfCxx;
 
@@ -195,11 +195,13 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
     auxv[4].a_type = AT_SYSINFO;
     auxv[4].a_un.a_val = vsyscall;
 
-    /* We do not support envp or argv > 0, these can be sent with
-       send/recv or a channel instead */
+    /* Write the channel handle to the stack */
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, channel_handle);
+    uintptr_t handle_argv = stack_ptr;
 
     /* Ensure alignment of stack ptr (double word alignment) */
-    size_t to_push = (5 * sizeof(seL4_Word)) + (sizeof(auxv[0]) * auxc);
+    size_t to_push = (6 * sizeof(seL4_Word)) + (sizeof(auxv[0]) * auxc);
     uintptr_t rounded_stack_ptr = (stack_ptr - to_push) & kStackAlignMask;
     stack_ptr = rounded_stack_ptr + to_push;
 
@@ -211,9 +213,10 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo,
     /* Write empty env */
     write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
 
-    /* Write empty args (null argv, argc) */
+    /* Write args (null argv, handle_argv, argc) */
     write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
-    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 0);
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, handle_argv);
+    write_constant_to_stack(stack_vmo, stack_base, &stack_ptr, 1);
 
     assert(stack_ptr % kStackAlign == 0);
     dprintf(INFO, "New proc, entry %lx, stack %lx\n", entry, stack_ptr);
