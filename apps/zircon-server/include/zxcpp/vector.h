@@ -7,6 +7,7 @@
 #include <assert.h>
 
 constexpr size_t vectorBaseSize = 4;
+constexpr size_t vectorMaxSize = 512;
 
 template <typename T> bool cmp(T a, T b);
 
@@ -15,6 +16,9 @@ class Vector {
 private:
     bool resize() {
         size_t new_size = (size_ == 0) ? vectorBaseSize : (size_ * 2);
+        if (new_size > vectorMaxSize) {
+            return false;
+        }
         T *mem = (T *)malloc(new_size * sizeof(T));
         if (mem == NULL) {
             return false;

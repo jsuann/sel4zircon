@@ -60,7 +60,7 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
     }
 
     /* Create a vmap in supplied vmar */
-    vmap = vmo->create_mapping(vmo_start, vmar, vmo_flags);
+    vmap = vmo->create_mapping(vmo_start, 0, vmo_size, vmar, vmo_flags, 0);
 
     /* Back vmo with pages */
     vmo->commit_all_pages(vmap);

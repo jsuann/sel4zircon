@@ -39,8 +39,19 @@ void ZxVmo::destroy()
     }
 }
 
-VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags)
+VmoMapping *ZxVmo::create_mapping(uintptr_t base_addr, uint64_t offset,
+        size_t len, ZxVmar *vmar, uint32_t flags, zx_rights_t map_rights)
 {
+    /* Check overflow */
+    if (offset + len < offset) {
+        return NULL;
+    }
+
+    /* Check offset & len for validity */
+    if (offset + len > size_) {
+        return NULL;
+    }
+
     /* Alloc mem for vmap */
     void *vmap_mem = malloc(sizeof(VmoMapping));
     if (vmap_mem == NULL) {
@@ -53,10 +64,17 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
     bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
     rights = seL4_CapRights_new(0, can_read, can_write);
 
-    /* Create mapping */
-    VmoMapping *vmap = new (vmap_mem) VmoMapping(start_addr, rights, vmar);
+    /* Convert offset & len to start page & num pages */
+    uint32_t vmap_start_page = offset / vmoPageSize;
+    uint32_t vmap_num_pages = len / vmoPageSize;
 
-    /* Init page array for caps */
+    /* Create mapping */
+    VmoMapping *vmap = new (vmap_mem) VmoMapping(base_addr, vmap_start_page,
+            vmap_num_pages, rights, vmar, map_rights);
+
+    /* Init page array for caps. We still use the total num pages
+       of the vmo so we don't have to calculate a relative index
+       when committing/decommitting pages from mappings. */
     if (!vmap->caps_.init(num_pages_)) {
         delete vmap;
         return NULL;
@@ -68,6 +86,19 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t f
     if (!vmar->add_vm_region(vmap)) {
         delete_mapping(vmap);
         return NULL;
+    }
+
+    /* If range flag set, try to map pages committed to vmo */
+    if (flags & ZX_VM_FLAG_MAP_RANGE) {
+        uint32_t vmap_end_page = vmap_start_page + vmap_num_pages;
+        for (uint32_t i = vmap_start_page; i < vmap_end_page; ++i) {
+            if (frames_.has(i) && frames_[i].cptr != 0) {
+                if (!commit_page(i, vmap)) {
+                    delete_mapping(vmap);
+                    return NULL;
+                }
+            }
+        }
     }
 
     return vmap;
@@ -130,6 +161,13 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     if (vmap != NULL) {
         assert(map_list_.contains(vmap));
         assert(frames_[index].cptr != 0);
+
+        /* Check this index lies in mapping */
+        uint32_t vmap_end_page = vmap->start_page_ + vmap->num_pages_;
+        if (index < vmap->start_page_ || index >= vmap_end_page) {
+            return false;
+        }
+
         /* check for backing */
         if (!vmap->caps_.alloc(index)) {
             return false;
@@ -153,7 +191,7 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 
             /* Map into proc addrspace */
             ZxProcess *proc = vmap->parent_->get_proc();
-            uintptr_t vaddr = vmap->start_addr_ + (index * (1 << seL4_PageBits));
+            uintptr_t vaddr = vmap->base_addr_ + ((index - vmap->start_page_) * vmoPageSize);
             //dprintf(SPEW, "Mapping page at %lx for proc %s\n", vaddr, proc->get_name());
             err = proc->map_page_in_vspace(dest.capPtr, (void *)vaddr, vmap->rights_, 1);
             if (err) {

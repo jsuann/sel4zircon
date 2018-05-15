@@ -59,8 +59,8 @@ void init_zircon_test(void)
     /* Create stack VMO */
     stack_vmo = allocate_object<ZxVmo>(TestStackNumPages);
     assert(stack_vmo->init());
-    VmoMapping *stack_map = stack_vmo->create_mapping(TestStackBaseAddr, test_vmar,
-            ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+    VmoMapping *stack_map = stack_vmo->create_mapping(TestStackBaseAddr, 0,
+            stack_vmo->get_size(), test_vmar, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, 0);
     assert(stack_map != NULL);
     assert(stack_vmo->commit_all_pages(stack_map));
 

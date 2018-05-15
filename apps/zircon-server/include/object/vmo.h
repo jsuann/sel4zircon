@@ -19,8 +19,10 @@ class VmoMapping;
 
 class ZxVmo final : public ZxObjectWaitable {
 public:
+    static constexpr size_t vmoPageSize = (1 << seL4_PageBits);
+
     ZxVmo(uint32_t num_pages) : num_pages_{num_pages}, map_list_{this} {
-        size_ = num_pages * (1 << seL4_PageBits);
+        size_ = num_pages * vmoPageSize;
     }
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
@@ -50,7 +52,8 @@ public:
         memcpy((void *)(kaddr_ + offset), src, len);
     }
 
-    VmoMapping *create_mapping(uintptr_t start_addr, ZxVmar *vmar, uint32_t flags);
+    VmoMapping *create_mapping(uintptr_t base_addr, uint64_t offset,
+            size_t len, ZxVmar *vmar, uint32_t flags, zx_rights_t map_rights);
     void delete_mapping(VmoMapping *vmap);
 
     bool commit_page(uint32_t index, VmoMapping *vmap);
@@ -66,8 +69,8 @@ public:
     }
 
     bool commit_range(uint64_t offset, size_t len) {
-        uint32_t start_page = offset / (1 << seL4_PageBits);
-        uint32_t end_page = (offset + len - 1) / (1 << seL4_PageBits);
+        uint32_t start_page = offset / vmoPageSize;
+        uint32_t end_page = (offset + len - 1) / vmoPageSize;
         for (uint32_t i = start_page; i <= end_page; ++i) {
             if (!commit_page(i, NULL)) {
                 return false;
@@ -77,8 +80,8 @@ public:
     }
 
     void decommit_range(uint64_t offset, size_t len) {
-        uint32_t start_page = offset / (1 << seL4_PageBits);
-        uint32_t end_page = (offset + len - 1) / (1 << seL4_PageBits);
+        uint32_t start_page = offset / vmoPageSize;
+        uint32_t end_page = (offset + len - 1) / vmoPageSize;
         for (uint32_t i = start_page; i <= end_page; ++i) {
             decommit_page(i);
         }
@@ -110,22 +113,29 @@ private:
 class VmoMapping final : public Listable<VmoMapping>, public VmRegion {
     friend class ZxVmo;
 public:
-    VmoMapping(uintptr_t start_addr, seL4_CapRights_t rights, ZxVmar *parent) :
-        start_addr_{start_addr}, rights_{rights}, parent_{parent} {}
+    VmoMapping(uintptr_t base_addr, uint32_t start_page, uint32_t num_pages,
+            seL4_CapRights_t rights, ZxVmar *parent, zx_rights_t map_rights) :
+        base_addr_{base_addr}, start_page_{start_page}, num_pages_{num_pages},
+        rights_{rights}, parent_{parent}, map_rights_{map_rights} {}
 
-    uintptr_t get_base() const override { return start_addr_; }
-    size_t get_size() const override { return ((ZxVmo*)get_owner())->get_size(); }
+    uintptr_t get_base() const override { return base_addr_; }
+    size_t get_size() const override { return num_pages_ * ZxVmo::vmoPageSize; }
     VmRegion *get_parent() const override { return parent_; }
     bool is_vmar() const override { return false; }
     bool is_vmo_mapping() const override { return true; }
 
 private:
-    /* start address of vmo in process */
-    uintptr_t start_addr_;
+    /* base address of vmo mapping in vmar */
+    uintptr_t base_addr_;
+    /* Start and num pages of mapping, relative to vmo */
+    uint32_t start_page_;
+    uint32_t num_pages_;
     /* caps to page frames */
     PageArray<seL4_CPtr> caps_;
     /* access rights to frames */
     seL4_CapRights_t rights_;
     /* ptr back to owning vmar */
     ZxVmar *parent_;
+    /* Allowed rights for protection changes */
+    zx_rights_t map_rights_;
 };

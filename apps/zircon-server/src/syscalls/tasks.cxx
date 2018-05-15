@@ -127,9 +127,10 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
         return ZX_ERR_NO_MEMORY;
     }
 
-    /* Create the handles */
+    /* Create the handles. Default vmar rights are
+       augmented with map permission rights */
     Handle *ph, *vh;
-    vh = create_handle_default_rights(root_vmar);
+    vh = root_vmar->create_handle(root_vmar->get_rights());
     ph = create_handle_default_rights(new_proc);
     if (vh == NULL || ph == NULL) {
         if (vh != NULL) {
