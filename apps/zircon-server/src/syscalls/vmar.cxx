@@ -15,16 +15,23 @@ namespace SysVmar {
 /* Mask to check for alignment */
 constexpr size_t align_mask = (1 << seL4_PageBits) - 1;
 
-/* Allowed flags for vmar allocate */
+/* Permitted flags for vmar allocate */
 constexpr uint32_t AllocateFlags =
         ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ |
         ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_CAN_MAP_EXECUTE |
         ZX_VM_FLAG_COMPACT | ZX_VM_FLAG_SPECIFIC;
 
+/* Permitted flags for vmar map */
 constexpr uint32_t VmoMapFlags =
         ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_SPECIFIC_OVERWRITE |
         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
         ZX_VM_FLAG_PERM_EXECUTE | ZX_VM_FLAG_MAP_RANGE;
+
+/* Permitted flags for vmar protect */
+constexpr uint32_t ProtectFlags =
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+        ZX_VM_FLAG_PERM_EXECUTE;
+
 }
 
 uint64_t sys_vmar_allocate(seL4_MessageInfo_t tag, uint64_t badge)
@@ -155,7 +162,7 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
         return ZX_ERR_INVALID_ARGS;
     }
 
-    /* Round up len to page boundary */
+    /* Check len, and round up to page boundary */
     if (len == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -222,4 +229,105 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
     /* Mapping successful! */
     *mapped_addr = vmar_offset;
     return ZX_OK;
+}
+
+uint64_t sys_vmar_destroy(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    zx_handle_t vmar_handle = seL4_GetMR(0);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    ZxVmar *vmar;
+    /* You don't need any special rights to destroy apparently */
+    err = proc->get_object(vmar_handle, vmar);
+    SYS_RET_IF_ERR(err);
+
+    /* Check that vmar wasn't already destroyed */
+    if (vmar->is_deactivated()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    deactivate_maybe_destroy_vmar(vmar);
+    return ZX_OK;
+}
+
+uint64_t sys_vmar_unmap(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 3);
+    zx_handle_t vmar_handle = seL4_GetMR(0);
+    uintptr_t addr = seL4_GetMR(1);
+    size_t len = seL4_GetMR(2);
+
+    /* Check addr is page aligned, len isn't 0, overflow */
+    if (addr & SysVmar::align_mask || len == 0 || (addr + len) < addr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    /* Round up len */
+    len = (len + SysVmar::align_mask) & ~SysVmar::align_mask;
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    ZxVmar *vmar;
+    /* You don't need any special rights to unmap apparently */
+    err = proc->get_object(vmar_handle, vmar);
+    SYS_RET_IF_ERR(err);
+
+    /* Check that vmar wasn't already destroyed */
+    if (vmar->is_deactivated()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return vmar->unmap_regions(addr, len);
+}
+
+uint64_t sys_vmar_protect(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 4);
+    zx_handle_t vmar_handle = seL4_GetMR(0);
+    uintptr_t addr = seL4_GetMR(1);
+    size_t len = seL4_GetMR(2);
+    uint32_t prot_flags = seL4_GetMR(3);
+
+    /* Check for valid prot flags */
+    if (prot_flags & ~SysVmar::ProtectFlags) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    /* Check addr is page aligned, len isn't 0, overflow */
+    if (addr & SysVmar::align_mask || len == 0 || (addr + len) < addr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    /* Round up len */
+    len = (len + SysVmar::align_mask) & ~SysVmar::align_mask;
+
+    /* Get required vmar flags */
+    zx_rights_t vmar_rights = 0u;
+    if (prot_flags & ZX_VM_FLAG_CAN_MAP_READ) {
+        vmar_rights |= ZX_RIGHT_READ;
+    }
+    if (prot_flags & ZX_VM_FLAG_CAN_MAP_WRITE) {
+        vmar_rights |= ZX_RIGHT_WRITE;
+    }
+    if (prot_flags & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
+        vmar_rights |= ZX_RIGHT_EXECUTE;
+    }
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    ZxVmar *vmar;
+    err = proc->get_object_with_rights(vmar_handle, vmar_rights, vmar);
+    SYS_RET_IF_ERR(err);
+
+    /* Check that vmar wasn't already destroyed */
+    if (vmar->is_deactivated()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return vmar->update_prot(addr, len, prot_flags);
 }

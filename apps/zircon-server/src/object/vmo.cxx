@@ -58,7 +58,7 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t base_addr, uint64_t offset,
         return NULL;
     }
 
-    /* get frame access rights from mapping flags (should be valid by this point!) */
+    /* get frame access rights from mapping flags */
     seL4_CapRights_t rights;
     bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
     bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
@@ -284,4 +284,28 @@ zx_status_t ZxVmo::resize(size_t new_num_pages)
     size_ = new_num_pages * (1 << seL4_PageBits);
 
     return ZX_OK;
+}
+
+void VmoMapping::remap_pages(uint32_t flags)
+{
+    /* Get the new rights */
+    seL4_CapRights_t new_rights;
+    bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
+    bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
+    new_rights = seL4_CapRights_new(0, can_read, can_write);
+
+    /* Get the process */
+    ZxProcess *proc = parent_->get_proc();
+    assert(proc != NULL);
+
+    /* Remap pages */
+    uint32_t end_page = start_page_ + num_pages_;
+    for (uint32_t i = start_page_; i < end_page; ++i) {
+        if (caps_.has(i) && caps_[i] != 0) {
+            proc->remap_page_in_vspace(caps_[i], new_rights, 1);
+        }
+    }
+
+    /* Update rights for future mappings */
+    rights_ = new_rights;
 }

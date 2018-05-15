@@ -246,11 +246,6 @@ uint64_t sys_channel_read_etc(seL4_MessageInfo_t tag, uint64_t badge)
     return ZX_OK;
 }
 
-uint64_t sys_channel_call(seL4_MessageInfo_t tag, uint64_t badge)
-{
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 namespace SysChannel {
 
 /* Extract handles from proc so they can be written to a channel. */

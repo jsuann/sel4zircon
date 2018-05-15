@@ -318,6 +318,16 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
     return -1;
 }
 
+void ZxProcess::remap_page_in_vspace(seL4_CPtr frame_cap,
+        seL4_CapRights_t rights, int cacheable)
+{
+    seL4_ARCH_VMAttributes attr;
+    attr = (cacheable) ? seL4_ARCH_Default_VMAttributes : seL4_ARCH_Uncached_VMAttributes;
+
+    /* Ignore any errors */
+    seL4_ARCH_Page_Remap(frame_cap, pd_.cptr, rights, attr);
+}
+
 /* Get server vaddr from user vaddr. Perform length check in process */
 zx_status_t ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr,
         size_t len, void *&kvaddr)

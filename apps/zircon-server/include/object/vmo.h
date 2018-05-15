@@ -133,6 +133,22 @@ public:
         return ((ZxVmo *)get_owner())->commit_page(index, this);
     }
 
+    bool check_prot_flags(uint32_t flags) {
+        if ((flags & ZX_VM_FLAG_PERM_READ) &&
+                !(map_rights_ & ZX_RIGHT_READ)) {
+            return false;
+        } else if ((flags & ZX_VM_FLAG_PERM_WRITE) &&
+                !(map_rights_ & ZX_RIGHT_WRITE)) {
+            return false;
+        } else if ((flags & ZX_VM_FLAG_PERM_EXECUTE) &&
+                !(map_rights_ & ZX_RIGHT_EXECUTE)) {
+            return false;
+        }
+        return true;
+    }
+
+    void remap_pages(uint32_t flags);
+
 private:
     /* base address of vmo mapping in vmar */
     uintptr_t base_addr_;

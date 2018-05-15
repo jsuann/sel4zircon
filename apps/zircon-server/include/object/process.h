@@ -134,6 +134,9 @@ public:
     /* Addrspace funcs */
     int map_page_in_vspace(seL4_CPtr frame_cap, void *vaddr,
             seL4_CapRights_t rights, int cacheable);
+    void remap_page_in_vspace(seL4_CPtr frame_cap,
+            seL4_CapRights_t rights, int cacheable);
+
     zx_status_t uvaddr_to_kvaddr(uintptr_t uvaddr, size_t len, void *&kvaddr);
 
     /* Wrapper for above when getting specific types */

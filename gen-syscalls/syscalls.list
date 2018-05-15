@@ -6,7 +6,6 @@ sys_channel_create
 sys_channel_read
 sys_channel_read_etc
 sys_channel_write
-sys_channel_call
 sys_fifo_create
 sys_fifo_write
 sys_fifo_read
@@ -52,6 +51,11 @@ sys_vmo_write
 sys_vmo_get_size
 sys_vmo_set_size
 sys_vmo_op_range
+sys_vmar_allocate
+sys_vmar_map
+sys_vmar_unmap
+sys_vmar_destroy
+sys_vmar_protect
 sys_timer_create
 sys_timer_set
 sys_timer_cancel

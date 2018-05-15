@@ -59,27 +59,95 @@ bool ZxVmar::check_vm_region(uintptr_t child_base, size_t child_size)
     return true;
 }
 
-/* Add a child vm region */
+/* Add a child vm region. Assumes it has been checked prior */
 bool ZxVmar::add_vm_region(VmRegion *child)
 {
     assert(child->get_parent() == this);
+    return children_.insert(child);
+}
 
-    if (!children_.insert(child)) {
-        return false;
-    }
-
-    /* sanity check */
-/*
+zx_status_t ZxVmar::unmap_regions(uintptr_t addr, size_t len)
+{
+    /* Before attempting any unmappings, we need to verify
+       that [addr, addr + len) doesn't partially cover a region */
     VmRegion **vmr = children_.get();
-    uintptr_t prev_base = 0;
     for (size_t i = 0; i < children_.size(); ++i) {
         uintptr_t vmr_base = vmr[i]->get_base();
-        assert(vmr_base > prev_base);
-        prev_base = vmr_base;
+        uintptr_t vmr_end = vmr_base + vmr[i]->get_size();
+        if (addr > vmr_base && addr < vmr_end) {
+            return ZX_ERR_INVALID_ARGS;
+        } else if ((addr + len) > vmr_base && (addr + len) < vmr_end) {
+            return ZX_ERR_INVALID_ARGS;
+        }
     }
-*/
 
-    return true;
+    /* Args ok, proceed with unmapping. */
+    size_t unmap_count = 0;
+    for (size_t i = 0; i < children_.size(); ++i) {
+        uintptr_t vmr_base = vmr[i]->get_base();
+        uintptr_t vmr_end = vmr_base + vmr[i]->get_size();
+        if (vmr_base >= addr && vmr_end <= (addr + len)) {
+            if (vmr[i]->is_vmar()) {
+                /* Destroy the child vmar */
+                deactivate_maybe_destroy_vmar((ZxVmar *)vmr[i]);
+            } else {
+                /* Get VMO and remove mapping */
+                VmoMapping *vmap = (VmoMapping *)vmr[i];
+                ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
+                vmo->delete_mapping(vmap);
+                /* If that mapping was last ref to vmo, destroy it */
+                if (vmo->can_destroy()) {
+                    destroy_object(vmo);
+                }
+            }
+            unmap_count++;
+        }
+    }
+
+    /* Notify caller if we didn't find anything to unmap */
+    return (unmap_count > 0) ? ZX_OK : ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t ZxVmar::update_prot(uintptr_t addr, size_t len, uint32_t flags)
+{
+    /* [addr, addr+len) must only cover whole vmo mappings (no spaces) */
+    VmRegion **vmr = children_.get();
+    uintptr_t curr_base = addr;
+    size_t first_region = 0;
+    size_t last_region = 0;
+    for (size_t i = 0; i < children_.size(); ++i) {
+        uintptr_t vmr_base = vmr[i]->get_base();
+        uintptr_t vmr_end = vmr_base + vmr[i]->get_size();
+        if (vmr_end < curr_base) {
+            ++first_region;
+            continue;
+        } else if (vmr_base != curr_base) {
+            return ZX_ERR_NOT_FOUND;
+        } else if (vmr[i]->is_vmar()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        /* We have vmo mapping. Check it has the required rights.
+           If vmap ends at addr + len, we can finish check */
+        VmoMapping *vmap = (VmoMapping *)vmr[i];
+        curr_base = vmr_end;
+        if (!vmap->check_prot_flags(flags)) {
+            return ZX_ERR_ACCESS_DENIED;
+        } else if (curr_base == addr + len) {
+            last_region = i;
+            break;
+        }
+    }
+
+    if (curr_base != (addr + len)) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    /* Update protections from first_region to last region */
+    for (size_t i = first_region; i <= last_region; ++i) {
+        VmoMapping *vmap = (VmoMapping *)vmr[i];
+        vmap->remap_pages(flags);
+    }
+    return ZX_OK;
 }
 
 uintptr_t ZxVmar::allocate_vm_region_base(uintptr_t size, uint32_t flags)
