@@ -25,7 +25,7 @@
 
 #include "bench.h"
 
-#define DO_BENCHMARK    0
+#define DO_BENCHMARK    1
 
 /* constants */
 #define TEST_EP_ID      0xfee

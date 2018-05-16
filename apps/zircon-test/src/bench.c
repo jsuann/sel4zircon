@@ -45,6 +45,7 @@ uint64_t timer_overhead;
 
 void calc_timer_overhead(void)
 {
+    /*
     timer_overhead = 0;
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         uint64_t time1, time2;
@@ -60,9 +61,24 @@ void calc_timer_overhead(void)
         time2 = zx_ticks_get();
         timer_overhead += (time2 - time1);
     }
-
     timer_overhead /= NUM_RUNS;
     printf("Timer overhead: %lu\n", timer_overhead);
+    */
+    uint64_t time1, time2;
+    time1 = zx_ticks_get();
+    zx_syscall_test_0();
+    time2 = zx_ticks_get();
+    printf("Got ticks: %lu\n", (time2 - time1));
+
+    time1 = zx_ticks_get();
+    zx_syscall_test_1(1);
+    time2 = zx_ticks_get();
+    printf("Got ticks: %lu\n", (time2 - time1));
+
+    time1 = zx_ticks_get();
+    zx_syscall_test_8(1,2,3,4,5,6,7,8);
+    time2 = zx_ticks_get();
+    printf("Got ticks: %lu\n", (time2 - time1));
 }
 
 void bench_test0_syscall(void)
