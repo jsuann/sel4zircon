@@ -126,6 +126,11 @@ public:
     bool is_vmar() const override { return false; }
     bool is_vmo_mapping() const override { return true; }
 
+    /* Convert addr to offset in vmo */
+    uint64_t addr_to_offset(uintptr_t addr) {
+        return ((start_page_ * ZxVmo::vmoPageSize) + (addr - base_addr_));
+    }
+
     bool commit_page_at_addr(uintptr_t addr) {
         /* Work out the index of the page relative to vmo */
         uint32_t index = start_page_ + ((addr - base_addr_) / ZxVmo::vmoPageSize);

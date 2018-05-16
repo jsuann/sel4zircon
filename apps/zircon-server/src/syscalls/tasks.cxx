@@ -23,6 +23,9 @@ uintptr_t get_aligned_stack(uintptr_t stack)
     return aligned_stack;
 }
 
+constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
+constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
+
 }
 
 /* Job syscalls */
@@ -224,14 +227,74 @@ uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
     return 0;
 }
 
+static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge, bool is_write)
+{
+    SYS_CHECK_NUM_ARGS(tag, 5);
+    zx_handle_t proc_handle = seL4_GetMR(0);
+    uintptr_t vaddr = seL4_GetMR(1);
+    uintptr_t user_buf = seL4_GetMR(2);
+    size_t len = seL4_GetMR(3);
+    uintptr_t user_actual = seL4_GetMR(4);
+
+    if (len == 0 || len > SysTasks::kMaxDebugReadBlock) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    void *buf;
+    size_t *actual;
+    err = proc->uvaddr_to_kvaddr(user_buf, len, buf);
+    SYS_RET_IF_ERR(err);
+    err = proc->get_kvaddr(user_actual, actual);
+    SYS_RET_IF_ERR(err);
+
+    /* Get the process we want to r/w from. */
+    ZxProcess *target_proc;
+    zx_rights_t req_rights = ZX_RIGHT_WRITE;
+    if (!is_write) {
+        req_rights |= ZX_RIGHT_READ;
+    }
+
+    err = proc->get_object_with_rights(proc_handle, req_rights, target_proc);
+    SYS_RET_IF_ERR(err);
+
+    /* Get the vmo mapping in proc */
+    VmoMapping *vmap = target_proc->get_root_vmar()->get_vmap_from_addr(vaddr);
+    if (vmap == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    /* Get offset in vmo and actual len */
+    uint64_t offset = vmap->addr_to_offset(vaddr);
+    size_t max_len = vmap->get_size() - (vaddr - vmap->get_base());
+    len = (len > max_len) ? max_len : len;
+
+    /* Ensure backing pages are committed */
+    ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
+    if (!vmo->commit_range(offset, len)) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if (is_write) {
+        vmo->write(offset, len, buf);
+    } else {
+        vmo->read(offset, len, buf);
+    }
+
+    *actual = len;
+    return ZX_OK;
+}
+
 uint64_t sys_process_read_memory(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    return sys_process_rw_memory(tag, badge, false);
 }
 
 uint64_t sys_process_write_memory(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    return ZX_ERR_NOT_SUPPORTED;
+    return sys_process_rw_memory(tag, badge, true);
 }
 
 /* Thread syscalls */

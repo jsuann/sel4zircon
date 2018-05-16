@@ -340,15 +340,22 @@ zx_status_t ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    /* Check addr + len doesn't overflow */
+    if (uvaddr + len < uvaddr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     /* Ensure that addr + len won't exceed vmo end */
     if (uvaddr + len > vmap->get_base() + vmap->get_size()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    /* Ensure addr is backed by a page */
+    /* Get the offset in the vmo */
     ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
-    uint64_t offset = uvaddr - vmap->get_base();
-    if (!vmo->commit_page(offset / (1 << seL4_PageBits), vmap)) {
+    uint64_t offset = vmap->addr_to_offset(uvaddr);
+
+    /* Ensure [addr, addr+len) is backed by pages */
+    if (!vmo->commit_range(offset, len)) {
         return ZX_ERR_NO_MEMORY;
     }
 
