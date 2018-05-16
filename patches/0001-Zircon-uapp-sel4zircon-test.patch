@@ -1,0 +1,126 @@
+From d2e5c5edd983211194b6ec60279329a91447c5a6 Mon Sep 17 00:00:00 2001
+From: Jack Suann <jacksuann@hotmail.com>
+Date: Thu, 17 May 2018 01:08:54 +1000
+Subject: [PATCH] Zircon uapp: sel4zircon-test
+
+Will be used for benchmarking
+---
+ make/engine.mk                       |  2 +-
+ system/uapp/sel4zircon-test/main.c   | 61 ++++++++++++++++++++++++++++
+ system/uapp/sel4zircon-test/rules.mk | 23 +++++++++++
+ 3 files changed, 85 insertions(+), 1 deletion(-)
+ create mode 100644 system/uapp/sel4zircon-test/main.c
+ create mode 100644 system/uapp/sel4zircon-test/rules.mk
+
+diff --git a/make/engine.mk b/make/engine.mk
+index 89a704cf7..4a8097a36 100644
+--- a/make/engine.mk
++++ b/make/engine.mk
+@@ -17,7 +17,7 @@ include make/macros.mk
+ # various command line and environment arguments
+ # default them to something so when they're referenced in the make instance they're not undefined
+ BUILDROOT ?= .
+-DEBUG ?= 2
++DEBUG ?= 0
+ DEBUG_HARD ?= false
+ ENABLE_BUILD_LISTFILES ?= false
+ ENABLE_BUILD_SYSROOT ?= false
+diff --git a/system/uapp/sel4zircon-test/main.c b/system/uapp/sel4zircon-test/main.c
+new file mode 100644
+index 000000000..a88841abd
+--- /dev/null
++++ b/system/uapp/sel4zircon-test/main.c
+@@ -0,0 +1,61 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++
++#include <fdio/io.h>
++#include <fdio/util.h>
++
++#include <zircon/syscalls.h>
++#include <zircon/syscalls/log.h>
++
++#define NUM_WARMUP  10u
++
++int main(int argc, const char** argv) {
++
++    // setup stdout
++    zx_handle_t h;
++    assert(zx_log_create(0, &h) == 0);
++    fdio_t* logger;
++    assert((logger = fdio_logger_create(h)) != NULL);
++    close(1);
++    fdio_bind_to_fd(logger, 1, 0);
++
++    const char *str = "Hello world!\n";
++    zx_debug_write(str, strlen(str));
++
++    printf("Hello world!\n");
++
++    uint64_t start, end;
++
++    for (size_t i = 0; i < NUM_WARMUP; ++i) {
++        start = zx_ticks_get();
++        end = zx_ticks_get();
++    }
++    printf("Got ticks: %lu\n", (end - start));
++
++    for (size_t i = 0; i < NUM_WARMUP; ++i) {
++        start = zx_ticks_get();
++        zx_syscall_test_0();
++        end = zx_ticks_get();
++    }
++    printf("Got ticks: %lu\n", (end - start));
++
++    for (size_t i = 0; i < NUM_WARMUP; ++i) {
++        start = zx_ticks_get();
++        zx_syscall_test_1(1);
++        end = zx_ticks_get();
++    }
++    printf("Got ticks: %lu\n", (end - start));
++
++    for (size_t i = 0; i < NUM_WARMUP; ++i) {
++        start = zx_ticks_get();
++        zx_syscall_test_8(1,2,3,4,5,6,7,8);
++        end = zx_ticks_get();
++    }
++    printf("Got ticks: %lu\n", (end - start));
++
++    while (1);
++
++    return 0;
++}
+diff --git a/system/uapp/sel4zircon-test/rules.mk b/system/uapp/sel4zircon-test/rules.mk
+new file mode 100644
+index 000000000..8bb7c8147
+--- /dev/null
++++ b/system/uapp/sel4zircon-test/rules.mk
+@@ -0,0 +1,23 @@
++# Copyright 2017 The Fuchsia Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++LOCAL_DIR := $(GET_LOCAL_DIR)
++
++MODULE := $(LOCAL_DIR)
++
++MODULE_TYPE := userapp
++MODULE_GROUP := core
++
++MODULE_NAME := sel4zircon-test
++
++# app main
++MODULE_SRCS := \
++    $(LOCAL_DIR)/main.c \
++
++MODULE_LIBS := \
++    system/ulib/zircon \
++    system/ulib/fdio \
++    system/ulib/c
++
++include make/module.mk
+-- 
+2.17.0
+

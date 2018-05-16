@@ -1,0 +1,26 @@
+From 0d4a39359c9839db059bf9f703e1a7a4e1c3eed3 Mon Sep 17 00:00:00 2001
+From: Jack Suann <jacksuann@hotmail.com>
+Date: Thu, 17 May 2018 01:06:49 +1000
+Subject: [PATCH] Patch: make fault addr word_t
+
+Fixed in 8.0.0 kernel
+---
+ src/arch/x86/kernel/vspace.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/arch/x86/kernel/vspace.c b/src/arch/x86/kernel/vspace.c
+index 289d875b..1c1b5a31 100644
+--- a/src/arch/x86/kernel/vspace.c
++++ b/src/arch/x86/kernel/vspace.c
+@@ -565,7 +565,7 @@ findVSpaceForASID_ret_t findVSpaceForASID(asid_t asid)
+ 
+ exception_t handleVMFault(tcb_t* thread, vm_fault_type_t vm_faultType)
+ {
+-    uint32_t addr;
++    word_t addr;
+     uint32_t fault;
+ 
+     addr = getFaultAddr();
+-- 
+2.17.0
+
