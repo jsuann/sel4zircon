@@ -20,6 +20,7 @@
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
+#include <zircon/stack.h>
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
 
@@ -154,7 +155,8 @@ int main(int argc, char **argv) {
     const char *name = "thrd2";
     assert(!zx_thread_create(proc_handle, name, strlen(name), 0, &new_thrd));
 
-    uintptr_t stack = ((uintptr_t)&thrd_stack[0]) + 8000;
+    /* Align the stack */
+    uintptr_t stack = compute_initial_stack_pointer((uintptr_t)&thrd_stack[0], 8000);
     assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack, 9, 6));
 
     /* Create test endpoint */

@@ -65,19 +65,32 @@ void calc_timer_overhead(void)
     printf("Timer overhead: %lu\n", timer_overhead);
     */
     uint64_t time1, time2;
-    time1 = zx_ticks_get();
-    zx_syscall_test_0();
-    time2 = zx_ticks_get();
+
+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
+        time1 = zx_ticks_get();
+        time2 = zx_ticks_get();
+    }
     printf("Got ticks: %lu\n", (time2 - time1));
 
-    time1 = zx_ticks_get();
-    zx_syscall_test_1(1);
-    time2 = zx_ticks_get();
+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
+        time1 = zx_ticks_get();
+        zx_syscall_test_0();
+        time2 = zx_ticks_get();
+    }
     printf("Got ticks: %lu\n", (time2 - time1));
 
-    time1 = zx_ticks_get();
-    zx_syscall_test_8(1,2,3,4,5,6,7,8);
-    time2 = zx_ticks_get();
+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
+        time1 = zx_ticks_get();
+        zx_syscall_test_1(1);
+        time2 = zx_ticks_get();
+    }
+    printf("Got ticks: %lu\n", (time2 - time1));
+
+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
+        time1 = zx_ticks_get();
+        zx_syscall_test_8(1,2,3,4,5,6,7,8);
+        time2 = zx_ticks_get();
+    }
     printf("Got ticks: %lu\n", (time2 - time1));
 }
 

@@ -11,21 +11,8 @@ extern "C" {
 #include "object/tasks.h"
 
 namespace SysTasks {
-
-constexpr uint64_t kStackAlign = 16;
-constexpr uint64_t kStackAlignMask = ~(kStackAlign - 1);
-
-uintptr_t get_aligned_stack(uintptr_t stack)
-{
-    /* Prepare stack: align, and pretend a return address is pushed */
-    uintptr_t aligned_stack = stack & kStackAlignMask;
-    aligned_stack -= sizeof(uintptr_t);
-    return aligned_stack;
-}
-
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
-
 }
 
 /* Job syscalls */
@@ -200,8 +187,7 @@ uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
     arg_uval = target_proc->get_handle_user_val(arg_handle);
 
     /* Start thread */
-    uintptr_t aligned_stack = SysTasks::get_aligned_stack(stack);
-    if (target_thrd->start_execution(entry, aligned_stack, arg_uval, arg2) != 0) {
+    if (target_thrd->start_execution(entry, stack, arg_uval, arg2) != 0) {
         /* Transfer the arg handle back to calling proc */
         target_proc->remove_handle(arg_handle);
         proc->add_handle(arg_handle);
@@ -379,8 +365,7 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     /* Start thread */
-    uintptr_t aligned_stack = SysTasks::get_aligned_stack(stack);
-    if (thrd->start_execution(entry, aligned_stack, arg1, arg2) != 0) {
+    if (thrd->start_execution(entry, stack, arg1, arg2) != 0) {
         return ZX_ERR_BAD_STATE;
     }
 
