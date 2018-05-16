@@ -21,6 +21,7 @@
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 #include <zircon/stack.h>
+#include <zircon/status.h>
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
 
@@ -34,16 +35,19 @@
 #define TEST_EP_SLOT    ZX_THREAD_FIRST_FREE
 #define TEST_EP_RIGHTS  ZX_ENDPOINT_ALL_RIGHTS
 
-/* TODO replace with actual vmo */
-uint8_t thrd_stack[8000];
-
 zx_handle_t event_handle;
 zx_handle_t ep_handle;
+zx_handle_t socket0, socket1;
 
 __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
 {
     printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
+
+    char buf[50] = {0};
+    zx_status_t err = zx_socket_read(socket1, 0, buf, 50, NULL);
+    assert(!err);
+    printf("socket message from main thread: %s\n", buf);
 
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_2));
@@ -59,7 +63,7 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2)
 int main(int argc, char **argv) {
     seL4_MessageInfo_t tag;
 
-    printf(">=== Zircon Test ===\n");
+    printf("=== Zircon Test ===\n");
 
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));
@@ -86,16 +90,7 @@ int main(int argc, char **argv) {
     /* Close the channel */
     zx_handle_close(channel);
 
-#if DO_BENCHMARK
-    calc_timer_overhead();
-    bench_test0_syscall();
-    bench_test8_syscall();
-    bench_event_create();
-    zx_process_exit(0);
-#endif
-
     zx_status_t err;
-
     assert(zx_syscall_test_0() == 0);
     assert(zx_syscall_test_1(1) == 1);
     assert(zx_syscall_test_2(1,2) == 3);
@@ -116,17 +111,14 @@ int main(int argc, char **argv) {
     assert(zx_handle_close(ZX_HANDLE_INVALID) == ZX_OK);
     assert(zx_handle_close(1231231313) == ZX_ERR_BAD_HANDLE);
 
+    /* Try handle replace */
     zx_handle_t thrd_handle2 = 0;
     err = zx_handle_replace(thrd_handle, ZX_RIGHT_SAME_RIGHTS, &thrd_handle2);
     printf("zx_handle_replace returned %d, new handle %u\n", err, thrd_handle2);
     /* Re-replace to restore thrd_handle */
     assert(!zx_handle_replace(thrd_handle2, ZX_RIGHT_SAME_RIGHTS, &thrd_handle));
 
-    int stk = 0;
-    void *ptr = malloc(4);
-    printf("&stk: %p, ptr: %p\n", &stk, ptr);
-
-    printf("FIFO TEST\n");
+    printf("Test creation of a fifo\n");
     zx_handle_t fifo1, fifo2;
     err = zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2);
     printf("fifo create: ret %d, fifo1 %u, fifo2 %u\n", err, fifo1, fifo2);
@@ -150,14 +142,32 @@ int main(int argc, char **argv) {
     /* Create event */
     assert(!zx_event_create(0, &event_handle));
 
+    /* Create a socket */
+    assert(!zx_socket_create(ZX_SOCKET_STREAM, &socket0, &socket1));
+    const char *sock_msg = "Hello thread!";
+    assert(!zx_socket_write(socket0, 0, sock_msg, strlen(sock_msg), NULL));
+
     /* Create a test thread */
     zx_handle_t new_thrd;
     const char *name = "thrd2";
     assert(!zx_thread_create(proc_handle, name, strlen(name), 0, &new_thrd));
 
-    /* Align the stack */
-    uintptr_t stack = compute_initial_stack_pointer((uintptr_t)&thrd_stack[0], 8000);
-    assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack, 9, 6));
+    /* Create a stack vmo for the thread */
+    zx_handle_t stack_vmo;
+    assert(!zx_vmo_create(8000, 0, &stack_vmo));
+    uint64_t stack_size;
+    assert(!zx_vmo_get_size(stack_vmo, &stack_size));
+    printf("Size of stack vmo: %lu\n", stack_size);
+
+    /* Map the stack vmo in our vmar */
+    uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    uint64_t mapped_addr;
+    assert(!zx_vmar_map(vmar_handle, 0, stack_vmo, 0, stack_size, map_flags, &mapped_addr));
+    printf("Vmar mapped at %lx\n", mapped_addr);
+
+    /* Align the stack & start thread */
+    uintptr_t stack_addr = compute_initial_stack_pointer(mapped_addr, stack_size);
+    assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack_addr, 9, 6));
 
     /* Create test endpoint */
     assert(!zx_endpoint_create(rsrc_handle, TEST_EP_ID, 0, &ep_handle));
@@ -189,25 +199,10 @@ int main(int argc, char **argv) {
     assert(!zx_endpoint_delete_cap(ep_handle, new_thrd, TEST_EP_SLOT));
     printf("Deleted endpoint caps.\n");
 
-    uint64_t time1, time2;
-    time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    printf("Get time overhead: %lu\n", time2 - time1);
-    uint64_t overhead = time2 - time1;
-
-    time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    for (size_t i = 0; i < 1000000; ++i) {
-        zx_syscall_test_0();
-        //zx_syscall_test_8(1,2,3,4,5,6,7,8);
-    }
-    time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    printf("zx_syscall_test_0 time: %lu\n", ((time2 - time1) - overhead) / 1000000);
-
     /* Try to kill other thread */
     assert(!zx_task_kill(new_thrd));
 
-    printf("Zircon test exiting!\n");
-
+    printf("Zircon test exiting! This will kill the root job.\n");
     zx_process_exit(0);
 
     printf("We shouldn't get here!\n");

@@ -133,6 +133,7 @@ do
             arg_type=${arg_type% }
 
             # special case: if arg name is "name", we need to make const
+            # or if syscall is a "set" or "write", and "IN" buffer
             if [ "${arg_name}" = "name" ]; then
                 arg_type="const ${arg_type}"
             fi
@@ -142,6 +143,9 @@ do
             if [[ "${arg_type}" =~ \[ ]]; then
                 arg_type="$(cut -f 1 -d '[' <<< "${arg_type}")*"
                 arg_type=${arg_type/any/void}
+                if [[ "${syscall_name}" =~ (write|set) ]]; then
+                    arg_type="const ${arg_type}"
+                fi
             elif [[ "${arg_type}" =~ optional|features|handle_acquire ]]; then
                 arg_type="${arg_type% *}*"
             elif [ "${syscall_name}" = "pci_get_nth_device" ] && \

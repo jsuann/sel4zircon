@@ -11,4 +11,4 @@
 #
 
 components-$(CONFIG_APP_ZIRCON_TEST)        += zircon-test
-zircon-test: common libsel4 libmuslc libsel4muslcsys libutils libzircon
+zircon-test: common libsel4 libmuslc libsel4muslcsys libutils libzircon libzxutils

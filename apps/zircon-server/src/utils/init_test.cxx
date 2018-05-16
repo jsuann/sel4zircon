@@ -9,7 +9,7 @@
 
 namespace InitTestCxx {
 
-constexpr uintptr_t TestStackBaseAddr = 0x30000000;
+constexpr uintptr_t TestStackBaseAddr = 0x30000000000;
 constexpr size_t TestStackNumPages = 15;
 
 } /* namespace InitTestCxx */
@@ -71,7 +71,8 @@ void init_zircon_test(void)
 
     /* Get handles to test objects */
     Handle *handle_table[4];
-    handle_table[0] = create_handle_default_rights(test_vmar); // TODO not just default
+    assert(test_vmar->get_rights() & (ZX_RIGHT_READ | ZX_RIGHT_WRITE));
+    handle_table[0] = test_vmar->create_handle(test_vmar->get_rights());
     handle_table[1] = create_handle_default_rights(test_proc);
     handle_table[2] = create_handle_default_rights(test_thread);
     handle_table[3] = create_handle_default_rights(root_rsrc);

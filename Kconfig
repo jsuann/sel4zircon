@@ -45,6 +45,7 @@ menu "seL4 Libraries"
     source "libs/libutils/Kconfig"
     source "libs/libplatsupport/Kconfig"
     source "libs/libzircon/Kconfig"
+    source "libs/libzxutils/Kconfig"
 endmenu
 
 menu "Tools"

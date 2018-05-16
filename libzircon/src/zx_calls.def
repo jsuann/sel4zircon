@@ -102,7 +102,7 @@ zx_status_t zx_object_get_property(zx_handle_t handle, uint32_t property, void* 
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property, void* value, size_t size)
+zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property, const void* value, size_t size)
 {
     ZX_SYSCALL_SEND(ZX_SYS_OBJECT_SET_PROPERTY, 4, handle, property, value, size);
     return seL4_GetMR(0);
@@ -150,7 +150,7 @@ zx_status_t zx_channel_read_etc(zx_handle_t handle, uint32_t options, void* byte
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t num_handles)
+zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, const void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles)
 {
     ZX_SYSCALL_SEND(ZX_SYS_CHANNEL_WRITE, 6, handle, options, bytes, num_bytes, handles, num_handles);
     return seL4_GetMR(0);
@@ -168,7 +168,7 @@ zx_status_t zx_socket_create(uint32_t options, zx_handle_t* out0, zx_handle_t* o
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_socket_write(zx_handle_t handle, uint32_t options, void* buffer, size_t size, size_t* actual)
+zx_status_t zx_socket_write(zx_handle_t handle, uint32_t options, const void* buffer, size_t size, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_SOCKET_WRITE, 5, handle, options, buffer, size, actual);
     return seL4_GetMR(0);
@@ -215,7 +215,7 @@ zx_status_t zx_thread_read_state(zx_handle_t handle, uint32_t kind, void* buffer
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_thread_write_state(zx_handle_t handle, uint32_t kind, void* buffer, size_t buffer_len)
+zx_status_t zx_thread_write_state(zx_handle_t handle, uint32_t kind, const void* buffer, size_t buffer_len)
 {
     ZX_SYSCALL_SEND(ZX_SYS_THREAD_WRITE_STATE, 4, handle, kind, buffer, buffer_len);
     return seL4_GetMR(0);
@@ -250,7 +250,7 @@ zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buff
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual)
+zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, const void* buffer, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_PROCESS_WRITE_MEMORY, 5, proc, vaddr, buffer, len, actual);
     return seL4_GetMR(0);
@@ -262,7 +262,7 @@ zx_status_t zx_job_create(zx_handle_t parent_job, uint32_t options, zx_handle_t*
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_job_set_policy(zx_handle_t job, uint32_t options, uint32_t topic, void* policy, uint32_t count)
+zx_status_t zx_job_set_policy(zx_handle_t job, uint32_t options, uint32_t topic, const void* policy, uint32_t count)
 {
     ZX_SYSCALL_SEND(ZX_SYS_JOB_SET_POLICY, 5, job, options, topic, policy, count);
     return seL4_GetMR(0);
@@ -376,7 +376,7 @@ zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t 
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual)
+zx_status_t zx_vmo_write(zx_handle_t handle, const void* data, uint64_t offset, size_t len, size_t* actual)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VMO_WRITE, 5, handle, data, offset, len, actual);
     return seL4_GetMR(0);
@@ -466,7 +466,7 @@ zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t* n
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t* num_written)
+zx_status_t zx_fifo_write(zx_handle_t handle, const void* data, size_t len, uint32_t* num_written)
 {
     ZX_SYSCALL_SEND(ZX_SYS_FIFO_WRITE, 4, handle, data, len, num_written);
     return seL4_GetMR(0);
@@ -489,7 +489,7 @@ zx_status_t zx_log_create(uint32_t options, zx_handle_t* out)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_log_write(zx_handle_t handle, uint32_t len, void* buffer, uint32_t options)
+zx_status_t zx_log_write(zx_handle_t handle, uint32_t len, const void* buffer, uint32_t options)
 {
     ZX_SYSCALL_SEND(ZX_SYS_LOG_WRITE, 4, handle, len, buffer, options);
     return seL4_GetMR(0);
@@ -507,7 +507,7 @@ zx_status_t zx_debuglog_create(zx_handle_t resource, uint32_t options, zx_handle
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_debuglog_write(zx_handle_t handle, uint32_t options, void* buffer, size_t len)
+zx_status_t zx_debuglog_write(zx_handle_t handle, uint32_t options, const void* buffer, size_t len)
 {
     ZX_SYSCALL_SEND(ZX_SYS_DEBUGLOG_WRITE, 4, handle, options, buffer, len);
     return seL4_GetMR(0);
@@ -549,7 +549,7 @@ zx_status_t zx_debug_read(zx_handle_t handle, void* buffer, uint32_t length)
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_debug_write(void* buffer, uint32_t length)
+zx_status_t zx_debug_write(const void* buffer, uint32_t length)
 {
     ZX_SYSCALL_SEND(ZX_SYS_DEBUG_WRITE, 2, buffer, length);
     return seL4_GetMR(0);
@@ -639,7 +639,7 @@ zx_status_t zx_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_set_framebuffer(zx_handle_t handle, void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride)
+zx_status_t zx_set_framebuffer(zx_handle_t handle, const void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride)
 {
     ZX_SYSCALL_SEND(ZX_SYS_SET_FRAMEBUFFER, 7, handle, vaddr, len, format, width, height, stride);
     return seL4_GetMR(0);
@@ -771,7 +771,7 @@ zx_status_t zx_vcpu_read_state(zx_handle_t vcpu, uint32_t kind, void* buffer, ui
     return seL4_GetMR(0);
 }
 
-zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind, void* buffer, uint32_t len)
+zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind, const void* buffer, uint32_t len)
 {
     ZX_SYSCALL_SEND(ZX_SYS_VCPU_WRITE_STATE, 4, vcpu, kind, buffer, len);
     return seL4_GetMR(0);

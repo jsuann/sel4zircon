@@ -40,7 +40,7 @@ extern zx_status_t zx_object_signal_peer(zx_handle_t handle, uint32_t clear_mask
 
 extern zx_status_t zx_object_get_property(zx_handle_t handle, uint32_t property, void* value, size_t size);
 
-extern zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property, void* value, size_t size);
+extern zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property, const void* value, size_t size);
 
 extern zx_status_t zx_object_set_cookie(zx_handle_t handle, zx_handle_t scope, uint64_t cookie);
 
@@ -56,13 +56,13 @@ extern zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options, void* b
 
 extern zx_status_t zx_channel_read_etc(zx_handle_t handle, uint32_t options, void* bytes, zx_handle_info_t* handles, uint32_t num_bytes, uint32_t num_handles, uint32_t* actual_bytes, uint32_t* actual_handles);
 
-extern zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t num_handles);
+extern zx_status_t zx_channel_write(zx_handle_t handle, uint32_t options, const void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles);
 
 extern zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_time_t deadline, zx_channel_call_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, zx_status_t* read_status);
 
 extern zx_status_t zx_socket_create(uint32_t options, zx_handle_t* out0, zx_handle_t* out1);
 
-extern zx_status_t zx_socket_write(zx_handle_t handle, uint32_t options, void* buffer, size_t size, size_t* actual);
+extern zx_status_t zx_socket_write(zx_handle_t handle, uint32_t options, const void* buffer, size_t size, size_t* actual);
 
 extern zx_status_t zx_socket_read(zx_handle_t handle, uint32_t options, void* buffer, size_t size, size_t* actual);
 
@@ -78,7 +78,7 @@ extern zx_status_t zx_thread_start(zx_handle_t handle, uintptr_t thread_entry, u
 
 extern zx_status_t zx_thread_read_state(zx_handle_t handle, uint32_t kind, void* buffer, size_t len);
 
-extern zx_status_t zx_thread_write_state(zx_handle_t handle, uint32_t kind, void* buffer, size_t buffer_len);
+extern zx_status_t zx_thread_write_state(zx_handle_t handle, uint32_t kind, const void* buffer, size_t buffer_len);
 
 extern zx_status_t zx_thread_set_priority(int32_t prio);
 
@@ -90,11 +90,11 @@ extern zx_status_t zx_process_start(zx_handle_t process_handle, zx_handle_t thre
 
 extern zx_status_t zx_process_read_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual);
 
-extern zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, void* buffer, size_t len, size_t* actual);
+extern zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr, const void* buffer, size_t len, size_t* actual);
 
 extern zx_status_t zx_job_create(zx_handle_t parent_job, uint32_t options, zx_handle_t* out);
 
-extern zx_status_t zx_job_set_policy(zx_handle_t job, uint32_t options, uint32_t topic, void* policy, uint32_t count);
+extern zx_status_t zx_job_set_policy(zx_handle_t job, uint32_t options, uint32_t topic, const void* policy, uint32_t count);
 
 extern zx_status_t zx_task_bind_exception_port(zx_handle_t object, zx_handle_t eport, uint64_t key, uint32_t options);
 
@@ -132,7 +132,7 @@ extern zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* o
 
 extern zx_status_t zx_vmo_read(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual);
 
-extern zx_status_t zx_vmo_write(zx_handle_t handle, void* data, uint64_t offset, size_t len, size_t* actual);
+extern zx_status_t zx_vmo_write(zx_handle_t handle, const void* data, uint64_t offset, size_t len, size_t* actual);
 
 extern zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
@@ -162,7 +162,7 @@ extern zx_status_t zx_fifo_create(uint32_t elem_count, uint32_t elem_size, uint3
 
 extern zx_status_t zx_fifo_read(zx_handle_t handle, void* data, size_t len, uint32_t* num_written);
 
-extern zx_status_t zx_fifo_write(zx_handle_t handle, void* data, size_t len, uint32_t* num_written);
+extern zx_status_t zx_fifo_write(zx_handle_t handle, const void* data, size_t len, uint32_t* num_written);
 
 extern zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle, uintptr_t addr, size_t len, zx_handle_t handle);
 
@@ -170,13 +170,13 @@ extern void zx_futex_wake_handle_close_thread_exit(zx_futex_t* value_ptr, uint32
 
 extern zx_status_t zx_log_create(uint32_t options, zx_handle_t* out);
 
-extern zx_status_t zx_log_write(zx_handle_t handle, uint32_t len, void* buffer, uint32_t options);
+extern zx_status_t zx_log_write(zx_handle_t handle, uint32_t len, const void* buffer, uint32_t options);
 
 extern zx_status_t zx_log_read(zx_handle_t handle, uint32_t len, void* buffer, uint32_t options);
 
 extern zx_status_t zx_debuglog_create(zx_handle_t resource, uint32_t options, zx_handle_t* out);
 
-extern zx_status_t zx_debuglog_write(zx_handle_t handle, uint32_t options, void* buffer, size_t len);
+extern zx_status_t zx_debuglog_write(zx_handle_t handle, uint32_t options, const void* buffer, size_t len);
 
 extern zx_status_t zx_debuglog_read(zx_handle_t handle, uint32_t options, void* buffer, size_t len);
 
@@ -190,7 +190,7 @@ extern zx_status_t zx_mtrace_control(zx_handle_t handle, uint32_t kind, uint32_t
 
 extern zx_status_t zx_debug_read(zx_handle_t handle, void* buffer, uint32_t length);
 
-extern zx_status_t zx_debug_write(void* buffer, uint32_t length);
+extern zx_status_t zx_debug_write(const void* buffer, uint32_t length);
 
 extern zx_status_t zx_debug_send_command(zx_handle_t resource_handle, void* buffer, uint32_t length);
 
@@ -220,7 +220,7 @@ extern zx_status_t zx_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr);
 
 extern zx_status_t zx_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride);
 
-extern zx_status_t zx_set_framebuffer(zx_handle_t handle, void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
+extern zx_status_t zx_set_framebuffer(zx_handle_t handle, const void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
 
 extern zx_status_t zx_set_framebuffer_vmo(zx_handle_t handle, zx_handle_t vmo, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride);
 
@@ -264,7 +264,7 @@ extern zx_status_t zx_vcpu_interrupt(zx_handle_t vcpu, uint32_t vector);
 
 extern zx_status_t zx_vcpu_read_state(zx_handle_t vcpu, uint32_t kind, void* buffer, uint32_t len);
 
-extern zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind, void* buffer, uint32_t len);
+extern zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind, const void* buffer, uint32_t len);
 
 extern zx_status_t zx_system_mexec(zx_handle_t kernel, zx_handle_t bootimage);
 

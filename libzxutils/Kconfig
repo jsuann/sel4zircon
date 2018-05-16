@@ -1,0 +1,10 @@
+menuconfig LIB_ZXUTILS
+    bool "libzxutils"
+    depends on HAVE_LIB_ZIRCON && HAVE_LIBC
+    select HAVE_LIB_ZXUTILS
+    default y
+    help
+        Various zircon userspace libraries.
+
+config HAVE_LIB_ZXUTILS
+    bool

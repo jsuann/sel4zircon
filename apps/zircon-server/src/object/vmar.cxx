@@ -2,18 +2,21 @@
 
 namespace VmarCxx {
 
-constexpr size_t kVmarMinGap = (1 << 16);
+constexpr size_t kVmarMinGap = (1 << seL4_PageBits);
+constexpr uintptr_t kAlignMask = ~((1 << seL4_PageBits) - 1);
 
 /* Get an offset for a randomised mapping between start & end */
 uintptr_t get_vmar_offset(uintptr_t start, uintptr_t end, size_t size)
 {
-    uintptr_t offset = (rand() << 16) % (end - size - start);
+    uintptr_t rand_addr = rand() & kAlignMask;
+    dprintf(SPEW, "Rand addr at %lx, start %lx end %lx\n", rand_addr, start, end);
+    uintptr_t offset = rand_addr % (end - size - start);
     return start + offset;
 }
 
 uintptr_t get_vmar_offset_compact(uintptr_t start, uintptr_t end, size_t size)
 {
-    uintptr_t offset = (rand() << 16) % (end - size - start);
+    uintptr_t offset = (rand() & kAlignMask) % (end - size - start);
     return start + (offset % (16 * kVmarMinGap));
 }
 

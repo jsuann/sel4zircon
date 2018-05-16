@@ -85,7 +85,7 @@ public:
             rights |= ZX_RIGHT_READ;
         }
         if (flags_ & ZX_VM_FLAG_CAN_MAP_WRITE) {
-            rights |= ZX_RIGHT_READ;
+            rights |= ZX_RIGHT_WRITE;
         }
         if (flags_ & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
             rights |= ZX_RIGHT_EXECUTE;

@@ -180,10 +180,10 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
     if (map_flags & ZX_VM_FLAG_PERM_READ) {
         req_rights |= ZX_RIGHT_READ;
     }
-    if (map_flags & ZX_VM_FLAG_PERM_READ) {
+    if (map_flags & ZX_VM_FLAG_PERM_WRITE) {
         req_rights |= ZX_RIGHT_WRITE;
     }
-    if (map_flags & ZX_VM_FLAG_PERM_READ) {
+    if (map_flags & ZX_VM_FLAG_PERM_EXECUTE) {
         req_rights |= ZX_RIGHT_EXECUTE;
     }
 

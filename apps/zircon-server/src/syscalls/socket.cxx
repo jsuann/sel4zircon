@@ -96,16 +96,14 @@ uint64_t sys_socket_write(seL4_MessageInfo_t tag, uint64_t badge)
     size_t nwritten;
     if (options == ZX_SOCKET_CONTROL) {
         err = socket->get_peer()->write_control(buffer, size);
-        SYS_RET_IF_ERR(err);
         nwritten = size;
     } else if (options == 0) {
         err = socket->get_peer()->write(buffer, size, &nwritten);
-        SYS_RET_IF_ERR(err);
     } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (actual != NULL) {
+    if (err == ZX_OK && actual != NULL) {
         *actual = nwritten;
     }
 
@@ -142,12 +140,11 @@ uint64_t sys_socket_read(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     size_t nread;
-    switch (options) {
-    case 0:
+    if (options == 0) {
         err = socket->read(buffer, size, &nread);
-    case ZX_SOCKET_CONTROL:
+    } else if (options == ZX_SOCKET_CONTROL) {
         err = socket->read_control(buffer, size, &nread);
-    default:
+    } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
