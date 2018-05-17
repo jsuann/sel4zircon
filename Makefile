@@ -51,7 +51,11 @@ run-zircon:
         -initrd projects/zircon-src/build-x86-release/bootdata.bin -cpu Haswell -append userboot=bin/sel4zircon-test
 
 mqrun:
-	mq.sh run -s skylake -c "Zircon test exiting!" -f images/kernel-x86_64-pc99 -f images/zircon-server-image-x86_64-pc99
+	mq.sh run -s skylake -n -c "Zircon test exiting!" -f images/kernel-x86_64-pc99 -f images/zircon-server-image-x86_64-pc99
+
+mq-zircon:
+	mq.sh run -s skylake -n -c "Zircon test exiting!" -f projects/zircon-src/build-x86-release/zircon.bin \
+        -f projects/zircon-src/build-x86-release/bootdata.bin
 
 # Some example image builds (NOTE: may need to adapt addresses)
 build-binary: images/${apps}-image-${ARCH}-${PLAT}

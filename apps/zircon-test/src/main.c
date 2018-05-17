@@ -22,8 +22,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/stack.h>
 #include <zircon/status.h>
+#ifdef CONFIG_HAVE_SEL4ZIRCON
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
+#endif
 
 #include "bench.h"
 
@@ -65,19 +67,20 @@ int main(int argc, char **argv) {
 
     printf("=== Zircon Test ===\n");
 
+#ifdef CONFIG_HAVE_SEL4ZIRCON
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));
+#endif
 
     /* Channel handle is located at argv[0] */
     zx_handle_t channel = *((zx_handle_t *)argv[0]);
     printf("Channel handle: %u addr %p\n", channel, argv[0]);
 
     /* Read init handles from channel */
-    char buf[1] = {0};
     zx_handle_t init_handles[4] = {0};
-    uint32_t actual_bytes, actual_handles;
-    assert(!zx_channel_read(channel, 0, (void*)&buf[0], &init_handles[0],
-                            10, 4, &actual_bytes, &actual_handles));
+    uint32_t actual_handles;
+    assert(!zx_channel_read(channel, 0, NULL,
+                &init_handles[0], 0, 4, NULL, &actual_handles));
 
     zx_handle_t vmar_handle = init_handles[0];
     zx_handle_t proc_handle = init_handles[1];
@@ -89,6 +92,8 @@ int main(int argc, char **argv) {
 
     /* Close the channel */
     zx_handle_close(channel);
+
+    calc_timer_overhead();
 
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);

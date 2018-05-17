@@ -86,11 +86,19 @@ uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge)
 
     void* bytes;
     zx_handle_t* handles;
-    err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
-    SYS_RET_IF_ERR(err);
-    err = proc->uvaddr_to_kvaddr(user_handles,
-            sizeof(zx_handle_t) * num_handles, (void *&)handles);
-    SYS_RET_IF_ERR(err);
+    if (num_bytes > 0) {
+        err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
+        SYS_RET_IF_ERR(err);
+    } else if (user_bytes != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (num_handles > 0) {
+        err = proc->uvaddr_to_kvaddr(user_handles,
+                sizeof(zx_handle_t) * num_handles, (void *&)handles);
+        SYS_RET_IF_ERR(err);
+    } else if (user_handles != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     /* Get channel */
     ZxChannel *channel;
@@ -148,15 +156,23 @@ uint64_t channel_read_common(seL4_MessageInfo_t tag, uint64_t badge,
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    /* Get the ptr translations */
+    /* Get the ptr translations. If num to read is zero, ensure ptrs are NULL */
     void* bytes;
-    err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
-    SYS_RET_IF_ERR(err);
-    err = proc->uvaddr_to_kvaddr(user_handles,
-            sizeof(T) * num_handles, (void *&)handle_info);
-    SYS_RET_IF_ERR(err);
+    if (num_bytes > 0) {
+        err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
+        SYS_RET_IF_ERR(err);
+    } else if (user_bytes != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (num_handles > 0) {
+        err = proc->uvaddr_to_kvaddr(user_handles,
+                sizeof(T) * num_handles, (void *&)handle_info);
+        SYS_RET_IF_ERR(err);
+    } else if (user_handles != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    /* Actual bytes/handles ptrs can be null */
+    /* Actual bytes/handles ptrs can also be null */
     uint32_t *actual_bytes, *actual_handles;
     actual_bytes = actual_handles = NULL;
     if (user_actual_bytes != 0) {

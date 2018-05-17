@@ -2,9 +2,13 @@ menuconfig LIB_ZIRCON
     bool "libzircon"
     depends on HAVE_LIB_SEL4 && HAVE_LIB_UTILS && HAVE_LIBC
     select HAVE_LIB_ZIRCON
+    select HAVE_SEL4ZIRCON
     default y
     help
         Support for using zircon syscalls.
 
 config HAVE_LIB_ZIRCON
+    bool
+
+config HAVE_SEL4ZIRCON
     bool

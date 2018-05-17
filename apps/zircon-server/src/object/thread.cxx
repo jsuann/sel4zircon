@@ -373,5 +373,8 @@ void obj_wait_cb(void *data)
 {
     ZxThread *thrd = (ZxThread *)data;
     StateWaiter *sw = (StateWaiter *)thrd->waiting_on_;
+    /* Remove the state waiter from the waited on object */
+    ((ZxObjectWaitable *)sw->get_owner())->remove_waiter(sw);
+    /* Resume the thread */
     thrd->obj_wait_resume(sw, ZX_ERR_TIMED_OUT);
 }
