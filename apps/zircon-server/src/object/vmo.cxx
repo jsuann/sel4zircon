@@ -120,6 +120,9 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
     };
     vmap->caps_.clear(free_func);
 
+    /* Remove from vmar */
+    vmap->parent_->remove_vm_region(vmap);
+
     /* Remove from vmap list, delete vmap */
     map_list_.remove(vmap);
     delete vmap;

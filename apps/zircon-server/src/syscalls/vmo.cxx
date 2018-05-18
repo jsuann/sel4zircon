@@ -124,7 +124,7 @@ uint64_t sys_vmo_read(seL4_MessageInfo_t tag, uint64_t badge)
 
 uint64_t sys_vmo_write(seL4_MessageInfo_t tag, uint64_t badge)
 {
-    return sys_vmo_read_write(tag, badge, false);
+    return sys_vmo_read_write(tag, badge, true);
 }
 
 uint64_t sys_vmo_get_size(seL4_MessageInfo_t tag, uint64_t badge)

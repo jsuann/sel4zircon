@@ -1,15 +1,3 @@
-/*
- * Copyright 2017, Data61
- * Commonwealth Scientific and Industrial Research Organisation (CSIRO)
- * ABN 41 687 119 230.
- *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(DATA61_BSD)
- */
-
 #include <autoconf.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +16,7 @@
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
 #include <sel4zircon/debug.h>
+#include <sel4zircon/elf.h>
 #endif
 
 #include <mini-process/mini-process.h>
@@ -50,17 +39,11 @@ zx_handle_t ep_handle;
 zx_handle_t socket0, socket1;
 zx_handle_t ch0, ch1;
 
-void test_elf_vmo(void)
+void run_hello_world(void)
 {
-    zx_handle_t vmo;
-    assert(!zx_vmo_create(0x200000, 0, &vmo));
-    const char *filename = "zircon-test";
-    uint64_t size;
-    assert(!zx_get_elf_vmo(zx_resource_root(), vmo, filename,
-                strlen(filename) + 1, &size));
-    printf("Elf file found, size %lu\n", size);
+    zx_handle_t process, channel;
+    assert(!run_zircon_app("hello-world", &process, &channel, 0));
 }
-
 
 __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
@@ -113,7 +96,7 @@ int main(int argc, char **argv) {
     printf("Received handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
             thrd_handle, rsrc_handle, job_handle);
 
-    test_elf_vmo();
+    run_hello_world();
     //calc_timer_overhead();
 
     zx_status_t err;

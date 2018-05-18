@@ -69,6 +69,12 @@ bool ZxVmar::add_vm_region(VmRegion *child)
     return children_.insert(child);
 }
 
+void ZxVmar::remove_vm_region(VmRegion *child)
+{
+    assert(child->get_parent() == this);
+    children_.remove(child);
+}
+
 zx_status_t ZxVmar::unmap_regions(uintptr_t addr, size_t len)
 {
     /* Before attempting any unmappings, we need to verify
