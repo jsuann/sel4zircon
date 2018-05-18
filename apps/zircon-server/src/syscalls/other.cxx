@@ -60,3 +60,50 @@ uint64_t sys_debug_putchar(seL4_MessageInfo_t tag, uint64_t badge)
     putchar(c);
     return 0;
 }
+
+uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 5);
+    zx_handle_t hrsrc = seL4_GetMR(0);
+    zx_handle_t vmo_handle = seL4_GetMR(1);
+    uintptr_t name_buf = seL4_GetMR(2);
+    uint32_t name_len = seL4_GetMR(3);
+    uintptr_t user_size = seL4_GetMR(4);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    err = validate_resource(proc, hrsrc, ZX_RSRC_KIND_ROOT);
+    SYS_RET_IF_ERR(err);
+
+    char *filename;
+    uint64_t *size;
+    err = proc->uvaddr_to_kvaddr(name_buf, name_len, (void *&)filename);
+    SYS_RET_IF_ERR(err);
+    err = proc->get_kvaddr(user_size, size);
+    SYS_RET_IF_ERR(err);
+
+    ZxVmo *vmo;
+    err = proc->get_object_with_rights(vmo_handle, ZX_RIGHT_WRITE, vmo);
+    SYS_RET_IF_ERR(err);
+
+    if (!strcmp(filename, "zircon-server")) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    uint64_t elf_size;
+    char *elf_file = get_elf_file(filename, &elf_size);
+    if (elf_file == NULL) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    *size = elf_size;
+
+    if (vmo->get_size() < elf_size) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    vmo->commit_range(0, elf_size);
+    vmo->write(0, elf_size, elf_file);
+    return ZX_OK;
+}

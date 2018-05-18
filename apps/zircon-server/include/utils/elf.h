@@ -10,6 +10,8 @@
 #include "../object/process.h"
 #include "../object/thread.h"
 
+char *get_elf_file(const char *image_name, unsigned long *elf_size);
+
 /* load elf segments into a test process */
 uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
         int &num_vmos, ZxVmo **&vmos);

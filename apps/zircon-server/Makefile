@@ -44,10 +44,10 @@ LIBS = c sel4 sel4muslcsys \
        utils sel4simple-default sel4debug zircon
 
 # extra cflag for sel4test
-CFLAGS += -Werror -g
-ifdef CONFIG_X86_64
-CFLAGS += -mno-sse
-endif
+CFLAGS += -Werror #-g
+#ifdef CONFIG_X86_64
+#CFLAGS += -mno-sse
+#endif
 
 include $(SEL4_COMMON)/common.mk
 

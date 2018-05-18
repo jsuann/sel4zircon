@@ -7,6 +7,8 @@
 #include "object/channel.h"
 #include "utils/elf.h"
 
+#include <zircon/process.h>
+
 namespace InitTestCxx {
 
 constexpr uintptr_t TestStackBaseAddr = 0x30000000000;
@@ -70,14 +72,16 @@ void init_zircon_test(void)
     assert(!create_channel_pair(ch0, ch1));
 
     /* Get handles to test objects */
-    Handle *handle_table[4];
-    assert(test_vmar->get_rights() & (ZX_RIGHT_READ | ZX_RIGHT_WRITE));
-    handle_table[0] = test_vmar->create_handle(test_vmar->get_rights());
-    handle_table[1] = create_handle_default_rights(test_proc);
-    handle_table[2] = create_handle_default_rights(test_thread);
-    handle_table[3] = create_handle_default_rights(root_rsrc);
+    Handle *handle_table[SZX_NUM_HANDLES];
+    handle_table[SZX_VMAR_ROOT] = test_vmar->create_handle(test_vmar->get_rights());
+    handle_table[SZX_PROC_SELF] = create_handle_default_rights(test_proc);
+    handle_table[SZX_THREAD_SELF] = create_handle_default_rights(test_thread);
+    handle_table[SZX_RESOURCE_ROOT] = create_handle_default_rights(root_rsrc);
+    handle_table[SZX_JOB_DEFAULT] = create_handle_default_rights(get_root_job());
 
-    for (int i = 0; i < 4; ++i) {
+    /* We don't need to send vmo handles, as vmar has refs to them */
+
+    for (int i = 0; i < SZX_NUM_HANDLES; ++i) {
         assert(handle_table[i] != NULL);
     }
 
@@ -85,10 +89,8 @@ void init_zircon_test(void)
     assert(channel_handle != ZX_HANDLE_INVALID);
     dprintf(INFO, "channel handle: %u\n", channel_handle);
 
-    /* We don't send vmo handles atm. Vmar has refs to them */
-
     /* Write to ch1 */
-    assert(!ch1->write_msg(NULL, 0, &handle_table[0], 4));
+    assert(!ch1->write_msg(NULL, 0, &handle_table[0], SZX_NUM_HANDLES));
 
     /* Start test process */
     assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
@@ -97,4 +99,7 @@ void init_zircon_test(void)
 
     /* Destroy ch0 */
     destroy_object(ch0);
+
+    /* Free elf vmo ptr array */
+    free(elf_vmos);
 }

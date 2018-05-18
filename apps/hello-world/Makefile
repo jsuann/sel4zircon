@@ -13,20 +13,17 @@
 # Targets
 TARGETS := $(notdir $(SOURCE_DIR)).bin
 
-# Make sure this symbol stays around as we don't reference this, but
-# whoever loads us will
-LDFLAGS += -u __vsyscall_ptr
-
 # Move start of elf sections to after USER_ASPACE_BASE
-LDFLAGS += -Wl,--section-start=.init=1000120
+LDFLAGS += -Wl,--section-start=.text=1000120
+
+CONFIG_HAVE_CRT :=
 
 # Source files required to build the target
 CFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.c))
-CXXFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.cxx))
-
+ASMFILES := $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/crt0.S))
 HDRFILES := $(wildcard $(SOURCE_DIR)/src/*.h)
 
 # Libraries
-LIBS := c sel4 sel4muslcsys utils zircon zxutils
+LIBS := c sel4 zircon zxutils
 
 include $(SEL4_COMMON)/common.mk

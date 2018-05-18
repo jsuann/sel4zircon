@@ -22,10 +22,15 @@
 #include <zircon/syscalls.h>
 #include <zircon/stack.h>
 #include <zircon/status.h>
+#include <zircon/process.h>
+
 #ifdef CONFIG_HAVE_SEL4ZIRCON
 #include <sel4zircon/cspace.h>
 #include <sel4zircon/endpoint.h>
+#include <sel4zircon/debug.h>
 #endif
+
+#include <mini-process/mini-process.h>
 
 #include "bench.h"
 
@@ -37,16 +42,32 @@
 #define TEST_EP_SLOT    ZX_THREAD_FIRST_FREE
 #define TEST_EP_RIGHTS  ZX_ENDPOINT_ALL_RIGHTS
 
+#define NUM_CHANNEL_RUNS    10
+#define CHANNEL_BUF_SIZE    10000
+
 zx_handle_t event_handle;
 zx_handle_t ep_handle;
 zx_handle_t socket0, socket1;
+zx_handle_t ch0, ch1;
+
+void test_elf_vmo(void)
+{
+    zx_handle_t vmo;
+    assert(!zx_vmo_create(0x200000, 0, &vmo));
+    const char *filename = "zircon-test";
+    uint64_t size;
+    assert(!zx_get_elf_vmo(zx_resource_root(), vmo, filename,
+                strlen(filename) + 1, &size));
+    printf("Elf file found, size %lu\n", size);
+}
+
 
 __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
 {
     printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
 
-    char buf[50] = {0};
+    char buf[CHANNEL_BUF_SIZE] = {0};
     zx_status_t err = zx_socket_read(socket1, 0, buf, 50, NULL);
     assert(!err);
     printf("socket message from main thread: %s\n", buf);
@@ -59,6 +80,15 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2)
     seL4_Recv(TEST_EP_SLOT, &badge);
     printf("Thread got msg %lx, badge %lu\n", seL4_GetMR(0), badge);
 
+    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_3, ZX_TIME_INFINITE, NULL));
+
+    for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
+        assert(!zx_object_wait_one(ch1, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+        printf("Thread received channel message %d\n", i);
+        assert(!zx_channel_read(ch1, 0, buf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
+        assert(!zx_channel_write(ch1, 0, buf, CHANNEL_BUF_SIZE, NULL, 0));
+    }
+
     while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(600)));
 }
 
@@ -70,30 +100,21 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_HAVE_SEL4ZIRCON
     char *hello_msg = "Hello zircon server!";
     zx_debug_write((void *)hello_msg, strlen(hello_msg));
+
+    zx_init_startup_handles(argv);
 #endif
 
-    /* Channel handle is located at argv[0] */
-    zx_handle_t channel = *((zx_handle_t *)argv[0]);
-    printf("Channel handle: %u addr %p\n", channel, argv[0]);
+    zx_handle_t thrd_handle = zx_thread_self();
+    zx_handle_t proc_handle = zx_process_self();
+    zx_handle_t vmar_handle = zx_vmar_root_self();
+    zx_handle_t rsrc_handle = zx_resource_root();
+    zx_handle_t job_handle = zx_job_default();
 
-    /* Read init handles from channel */
-    zx_handle_t init_handles[4] = {0};
-    uint32_t actual_handles;
-    assert(!zx_channel_read(channel, 0, NULL,
-                &init_handles[0], 0, 4, NULL, &actual_handles));
+    printf("Received handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
+            thrd_handle, rsrc_handle, job_handle);
 
-    zx_handle_t vmar_handle = init_handles[0];
-    zx_handle_t proc_handle = init_handles[1];
-    zx_handle_t thrd_handle = init_handles[2];
-    zx_handle_t rsrc_handle = init_handles[3];
-
-    printf("Received handles: %u %u %u %u\n", vmar_handle, proc_handle,
-            thrd_handle, rsrc_handle);
-
-    /* Close the channel */
-    zx_handle_close(channel);
-
-    calc_timer_overhead();
+    test_elf_vmo();
+    //calc_timer_overhead();
 
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);
@@ -113,8 +134,9 @@ int main(int argc, char **argv) {
     err = seL4_GetMR(0);
     assert(err == ZX_ERR_BAD_SYSCALL);
 
+    /* Handle close tests */
     assert(zx_handle_close(ZX_HANDLE_INVALID) == ZX_OK);
-    assert(zx_handle_close(1231231313) == ZX_ERR_BAD_HANDLE);
+    assert(zx_handle_close(1) == ZX_ERR_BAD_HANDLE);
 
     /* Try handle replace */
     zx_handle_t thrd_handle2 = 0;
@@ -159,7 +181,7 @@ int main(int argc, char **argv) {
 
     /* Create a stack vmo for the thread */
     zx_handle_t stack_vmo;
-    assert(!zx_vmo_create(8000, 0, &stack_vmo));
+    assert(!zx_vmo_create(CHANNEL_BUF_SIZE * 2, 0, &stack_vmo));
     uint64_t stack_size;
     assert(!zx_vmo_get_size(stack_vmo, &stack_size));
     printf("Size of stack vmo: %lu\n", stack_size);
@@ -183,9 +205,7 @@ int main(int argc, char **argv) {
     assert(!zx_endpoint_mint_cap(ep_handle, new_thrd, TEST_EP_SLOT, 2, TEST_EP_RIGHTS));
 
     /* Do a wait to sync with other thread */
-    zx_signals_t observed;
-    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2,
-            zx_deadline_after(ZX_SEC(10)), &observed));
+    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2, ZX_TIME_INFINITE, NULL));
     printf("Main thread woke from wait one.\n");
 
     /* Send a message to the other thread */
@@ -204,8 +224,37 @@ int main(int argc, char **argv) {
     assert(!zx_endpoint_delete_cap(ep_handle, new_thrd, TEST_EP_SLOT));
     printf("Deleted endpoint caps.\n");
 
+    /* Create channel pair */
+    assert(!zx_channel_create(0, &ch0, &ch1));
+    char writebuf[CHANNEL_BUF_SIZE];
+    char readbuf[CHANNEL_BUF_SIZE];
+    srand(6123129);
+
+    /* Ping pong messages with other thread using channel */
+    assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_3));
+    for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
+        printf("Channel test %d\n", i);
+        for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
+            int *val = (int *)&writebuf[j];
+            *val = rand();
+        }
+        assert(!zx_channel_write(ch0, 0, writebuf, CHANNEL_BUF_SIZE, NULL, 0));
+        assert(!zx_object_wait_one(ch0, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+        assert(!zx_channel_read(ch0, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
+        assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+    }
+
     /* Try to kill other thread */
     assert(!zx_task_kill(new_thrd));
+
+    /* Create a dummy process */
+    zx_handle_t dummy_proc, dummy_thrd, dummy_vmar;
+    assert(!zx_process_create(job_handle, "minipr", 6, 0,  &dummy_proc, &dummy_vmar));
+    assert(!zx_thread_create(dummy_proc, "minith", 6, 0, &dummy_thrd));
+    assert(!start_mini_process_etc(dummy_proc, dummy_thrd, dummy_vmar, event_handle, NULL));
+    printf("Waiting for dummy process to fault...\n");
+    assert(!zx_object_wait_one(dummy_proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL));
 
     printf("Zircon test exiting! This will kill the root job.\n");
     zx_process_exit(0);

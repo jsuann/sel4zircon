@@ -14,6 +14,8 @@
 //#endif
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
+        int *i = NULL;
+        *i = 0;
         // In this mode we don't have a VDSO so we don't care what the handle is
         // and therefore we busy-loop. Unless external steps are taken this will
         // saturate one core.

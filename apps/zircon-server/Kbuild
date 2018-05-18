@@ -22,7 +22,7 @@ zircon-server-y = common libsel4 libmuslc \
             libutils libsel4simple-default libsel4debug libzircon
 
 # add the companion app as a component so that we can elf load it
-zircon-server-components-y += zircon-test
+zircon-server-components-y += zircon-test hello-world
 zircon-server-components = $(addprefix $(STAGE_BASE)/bin/, $(zircon-server-components-y))
 
 zircon-server: export COMPONENTS=${zircon-server-components}

@@ -150,4 +150,5 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_endpoint_create,
     sys_endpoint_mint_cap,
     sys_endpoint_delete_cap,
+    sys_get_elf_vmo,
 };

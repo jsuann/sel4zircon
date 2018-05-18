@@ -66,5 +66,6 @@ uint64_t sys_debug_putchar(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_endpoint_delete_cap(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge);
 
-#define NUM_SYSCALLS 147
+#define NUM_SYSCALLS 148

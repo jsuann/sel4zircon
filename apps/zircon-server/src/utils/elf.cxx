@@ -93,6 +93,12 @@ void write_constant_to_stack(ZxVmo *stack_vmo, uintptr_t stack_base,
 
 } /* namespace ElfCxx */
 
+/* Just get the elf file from the cpio archive */
+char *get_elf_file(const char *image_name, unsigned long *elf_size)
+{
+    using namespace ElfCxx;
+    return (char *)cpio_get_file(_cpio_archive, image_name, elf_size);
+}
 
 /* creates required VMOs and loads elf segments into them */
 uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,

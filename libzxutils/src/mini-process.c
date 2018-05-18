@@ -57,8 +57,8 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         return status;
     // Try to set the name, but ignore any errors since it's purely for
     // debugging and diagnostics.
-    static const char vmo_name[] = "mini-process:stack";
-    zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
+    //static const char vmo_name[] = "mini-process:stack";
+    //zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
     // We assume that the code to execute is less than kSizeLimit bytes.
     const uint32_t kSizeLimit = 1000;
@@ -103,7 +103,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         // startup handle).
         static zx_handle_t vdso_vmo = ZX_HANDLE_INVALID;
         if (vdso_vmo == ZX_HANDLE_INVALID) {
-            vdso_vmo = zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+            vdso_vmo = ZX_HANDLE_INVALID;//zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
             if (vdso_vmo == ZX_HANDLE_INVALID) {
                 status = ZX_ERR_INTERNAL;
                 goto exit;

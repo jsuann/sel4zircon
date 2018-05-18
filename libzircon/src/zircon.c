@@ -104,3 +104,10 @@ zx_status_t zx_endpoint_delete_cap(zx_handle_t endpoint,
     ZX_SYSCALL_SEND(ZX_SYS_ENDPOINT_DELETE_CAP, 3, endpoint, thread, slot);
     return seL4_GetMR(0);
 }
+
+zx_status_t zx_get_elf_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle,
+        const char *filename, uint32_t name_len, uint64_t *size)
+{
+    ZX_SYSCALL_SEND(ZX_SYS_GET_ELF_VMO, 5, hrsrc, vmo_handle, filename, name_len, size);
+    return seL4_GetMR(0);
+}
