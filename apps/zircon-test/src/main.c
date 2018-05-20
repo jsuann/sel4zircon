@@ -43,6 +43,24 @@ void run_hello_world(void)
 {
     zx_handle_t process, channel;
     assert(!run_zircon_app("hello-world", &process, &channel, 0));
+
+    char writebuf[CHANNEL_BUF_SIZE];
+    char readbuf[CHANNEL_BUF_SIZE];
+
+    for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
+        printf("Channel test %d\n", i);
+        for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
+            int *val = (int *)&writebuf[j];
+            *val = rand();
+        }
+        assert(!zx_channel_write(channel, 0, writebuf, CHANNEL_BUF_SIZE, NULL, 0));
+        assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+        assert(!zx_channel_read(channel, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
+        assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+    }
+
+    zx_task_kill(process);
 }
 
 __attribute__((noreturn))
@@ -87,6 +105,8 @@ int main(int argc, char **argv) {
     zx_init_startup_handles(argv);
 #endif
 
+    run_benchmarks();
+
     zx_handle_t thrd_handle = zx_thread_self();
     zx_handle_t proc_handle = zx_process_self();
     zx_handle_t vmar_handle = zx_vmar_root_self();
@@ -96,7 +116,7 @@ int main(int argc, char **argv) {
     printf("Received handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
             thrd_handle, rsrc_handle, job_handle);
 
-    run_benchmarks();
+    run_hello_world();
 
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);
@@ -206,13 +226,13 @@ int main(int argc, char **argv) {
     assert(!zx_endpoint_delete_cap(ep_handle, new_thrd, TEST_EP_SLOT));
     printf("Deleted endpoint caps.\n");
 
-    /* Create channel pair */
+    /* Ping pong messages with other thread using channel */
+    /*
     assert(!zx_channel_create(0, &ch0, &ch1));
     char writebuf[CHANNEL_BUF_SIZE];
     char readbuf[CHANNEL_BUF_SIZE];
     srand(6123129);
 
-    /* Ping pong messages with other thread using channel */
     assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_3));
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
         printf("Channel test %d\n", i);
@@ -226,6 +246,7 @@ int main(int argc, char **argv) {
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
         zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
+    */
 
     /* Try to kill other thread */
     assert(!zx_task_kill(new_thrd));

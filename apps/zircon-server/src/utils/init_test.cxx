@@ -61,6 +61,7 @@ void init_zircon_test(void)
     }
 
     /* Create stack VMO */
+    dprintf(INFO, "Create stack vmo\n");
     stack_vmo = allocate_object<ZxVmo>(TestStackNumPages);
     assert(stack_vmo->init());
     VmoMapping *stack_map = stack_vmo->create_mapping(TestStackBaseAddr, 0,

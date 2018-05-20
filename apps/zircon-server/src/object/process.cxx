@@ -164,11 +164,12 @@ void ZxProcess::destroy()
 
     /* Detach from the owning job */
     ZxJob *parent = (ZxJob *)get_owner();
-    parent->remove_process(this);
-
-    /* Parent job might have to be cleaned up */
-    if (parent->can_destroy()) {
-        return destroy_object(parent);
+    if (parent != NULL) {
+        parent->remove_process(this);
+        /* Parent job might have to be cleaned up */
+        if (parent->can_destroy()) {
+            return destroy_object(parent);
+        }
     }
 }
 

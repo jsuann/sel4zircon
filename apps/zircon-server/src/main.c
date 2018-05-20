@@ -59,7 +59,7 @@ UNUSED static sel4utils_alloc_data_t data;
 #define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 6000)
 #define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
 
-#define ZX_SERVER_STACK_START           0x30000000ul
+#define ZX_SERVER_STACK_START           0x40000000ul
 #define ZX_SERVER_STACK_NUM_PAGES       14
 
 /* Use a bigger static heap for the server vs. other processes.
@@ -139,7 +139,7 @@ int main(void) {
 
 #if ZX_USE_TWO_LEVEL_CSPACE
     /* create new 2 level cspace & allocator */
-    allocman = bootstrap_new_2level_simple(&simple, 10, 10, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
+    allocman = bootstrap_new_2level_simple(&simple, 14, 14, ALLOCATOR_STATIC_POOL_SIZE, allocator_mem_pool);
     assert(allocman);
 
     /* create a vka */

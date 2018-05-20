@@ -3,7 +3,7 @@
 
 namespace PageAllocCxx {
 
-constexpr size_t kNumPageBuf = 8192;
+constexpr size_t kNumPageBuf = 4096;
 constexpr size_t kPageSize = 1 << seL4_PageBits;
 
 /* Allocate pages with adjacent guard pages */

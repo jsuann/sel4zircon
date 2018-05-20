@@ -96,6 +96,12 @@ bool ZxThread::init()
     /* If we fail at any point, destroy is capable of
        cleaning up a partially intialised thread */
 
+    /* Create TCB */
+    error = vka_alloc_tcb(vka, &tcb_);
+    if (error) {
+        return false;
+    }
+
     /* Create cspace */
     error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
     if (error) {
@@ -121,14 +127,8 @@ bool ZxThread::init()
         return false;
     }
 
-    /* Create TCB */
-    error = vka_alloc_tcb(vka, &tcb_);
-    if (error) {
-        return false;
-    }
-
     /* Allocate reply cap slot */
-    error = vka_cspace_alloc(vka, &reply_cap_ );
+    error = vka_cspace_alloc(vka, &reply_cap_);
     if (error) {
         reply_cap_ = 0;
         return false;
@@ -198,11 +198,14 @@ void ZxThread::destroy()
     /* Remove from the parent process. This will also clean
        up the IPC buffer */
     ZxProcess *parent = (ZxProcess *)get_owner();
-    parent->remove_thread(this);
+    if (parent != NULL) {
+        parent->remove_thread(this);
+    }
 
     /* Delete cspace */
     if (cspace_.cptr != 0) {
-        vka_free_object(vka, &cspace_);
+        /* Freeing messes up allocman? */
+        //vka_free_object(vka, &cspace_);
     }
 
     /* Delete tcb */
@@ -219,7 +222,7 @@ void ZxThread::destroy()
 
     /* If this was the last thread removed from parent
        proc, we might have to destroy it too */
-    if (parent->can_destroy()) {
+    if (parent != NULL && parent->can_destroy()) {
         return destroy_object(parent);
     }
 }

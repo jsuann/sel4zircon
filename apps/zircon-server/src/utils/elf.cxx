@@ -44,6 +44,7 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
     uintptr_t vmo_start = (vaddr & kPageMask);
     size_t vmo_size = ((vaddr + segment_size + kPageSize - 1) & kPageMask) - vmo_start;
     assert(vmo_size < ZX_VMO_SERVER_MAP_SIZE);
+    dprintf(INFO, "Creating elf vmo, size %lu num pages %lu\n", vmo_size, vmo_size/kPageSize);
 
     /* Create the vmo */
     size_t num_pages = vmo_size / kPageSize;
