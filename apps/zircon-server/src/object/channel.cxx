@@ -53,22 +53,15 @@ void ZxChannel::destroy()
 zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
         Handle **handles, uint32_t num_handles)
 {
-    /* num handles should already be checked */
-    if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
     /* TODO check for waiters. If a msg has a matching txid, write
        directly to the waiter. */
 
     /* Allocate a new message packet */
-    Message *msg = allocate_object<Message>(num_bytes, num_handles);
+    Message *msg = allocate_object<Message>(num_handles, num_bytes);
     if (msg == NULL) {
+        dprintf(CRITICAL, "No memory for msg packet!\n");
         return ZX_ERR_NO_MEMORY;
     }
-
-    msg->num_bytes_ = num_bytes;
-    msg->num_handles_ = num_handles;
 
     /* Write to data buf */
     int err = data_buf_.write((uint8_t *)bytes, num_bytes, true);

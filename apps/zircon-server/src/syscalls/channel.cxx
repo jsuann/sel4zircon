@@ -112,8 +112,10 @@ uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Take out handles from proc so they can be added to the channel */
     Handle *h[ZX_CHANNEL_MAX_MSG_HANDLES];
-    err = take_handles_from_proc(proc, channel, num_handles, handles, &h[0]);
-    SYS_RET_IF_ERR(err);
+    if (num_handles > 0) {
+        err = take_handles_from_proc(proc, channel, num_handles, handles, &h[0]);
+        SYS_RET_IF_ERR(err);
+    }
 
     /* Write to the peer of the channel */
     err = channel->get_peer()->write_msg(bytes, num_bytes, &h[0], num_handles);

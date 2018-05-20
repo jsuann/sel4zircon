@@ -52,7 +52,7 @@ private:
     static_assert(sizeof(PageBuf) == PageBuf::kPageSize, "");
 
     /* Max size of an mbuf, i.e. max num pages allocated! */
-    static constexpr size_t kSizeMax = 128 * PageBuf::kPayloadSize;
+    static constexpr size_t kSizeMax = 2048 * PageBuf::kPayloadSize;
 
     void append(PageBuf *pb) {
         if (head_ == NULL) {

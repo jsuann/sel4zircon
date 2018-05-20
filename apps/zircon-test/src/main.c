@@ -96,8 +96,7 @@ int main(int argc, char **argv) {
     printf("Received handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
             thrd_handle, rsrc_handle, job_handle);
 
-    run_hello_world();
-    //calc_timer_overhead();
+    run_benchmarks();
 
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);

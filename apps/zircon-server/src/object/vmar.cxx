@@ -222,7 +222,6 @@ uintptr_t ZxVmar::allocate_vm_region_base(uintptr_t size, uint32_t flags)
     }
 }
 
-
 /* Lookup a VMO mapping with a vaddr */
 VmoMapping *ZxVmar::get_vmap_from_addr(uintptr_t addr)
 {

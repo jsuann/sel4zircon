@@ -220,7 +220,8 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
     if (status != ZX_OK)
         goto exit;
 
-    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
+    //status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
+    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, NULL);
     // On success the transferred_handle gets consumed.
 exit:
     if (status != ZX_OK) {

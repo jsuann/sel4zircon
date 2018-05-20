@@ -52,7 +52,7 @@ public:
             return false;
         }
         index = next_free_;
-        assert(free_list_[index].is_free);
+        //assert(free_list_[index].is_free);
         free_list_[index].is_free = 0;
         next_free_ = free_list_[index].next;
         ++num_alloc_;
@@ -64,14 +64,14 @@ public:
     }
 
     T *get(uint32_t index) {
-        assert(index < stackAllocMaxNumElems);
-        assert(!free_list_[index].is_free);
+        //assert(index < stackAllocMaxNumElems);
+        //assert(!free_list_[index].is_free);
         return pool_ + index;
     }
 
     void free(uint32_t index) {
-        assert(index < stackAllocMaxNumElems);
-        assert(!free_list_[index].is_free);
+        //assert(index < stackAllocMaxNumElems);
+        //assert(!free_list_[index].is_free);
         free_list_[index].next = next_free_;
         free_list_[index].is_free = 1;
         next_free_ = index;

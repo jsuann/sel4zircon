@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <elf/elf.h>
 
 #include <sel4/sel4.h>
 #include <zircon/syscalls.h>

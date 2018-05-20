@@ -6,111 +6,160 @@
 
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
-//#include <sel4zircon/cspace.h>
-//#include <sel4zircon/endpoint.h>
 
-#define NUM_WARMUP          10u
-#define NUM_RUNS            100u
-#define NUM_ITERATIONS      1000u
+#include <mini-process/mini-process.h>
 
-#define RUN_BENCHMARK(...) \
-    uint64_t mean = 0; \
-    double stddev = 0; \
-    uint64_t result[NUM_RUNS]; \
-    for (size_t i = 0; i < NUM_RUNS; ++i) { \
-        uint64_t time1, time2; \
-        for (size_t j = 0; j < NUM_WARMUP; ++j) { \
-            __VA_ARGS__; \
-        } \
-        time1 = zx_clock_get(ZX_CLOCK_MONOTONIC); \
-        for (size_t j = 0; j < NUM_ITERATIONS; ++j) { \
-            __VA_ARGS__; \
-        } \
-        time2 = zx_clock_get(ZX_CLOCK_MONOTONIC); \
-        result[i] = (time2 - time1 - timer_overhead) / NUM_ITERATIONS; \
-        mean += result[i]; \
-    } \
-    do { \
-        mean /= NUM_RUNS; \
-        for (size_t i = 0; i < NUM_RUNS; ++i) { \
-            int64_t x = (result[i] - mean); \
-            stddev += x * x; \
-        } \
-        stddev /= NUM_RUNS; \
-        stddev = sqrt(stddev); \
-    } while (0)
+#define NUM_WARMUP  10u
+#define NUM_RUNS    10000u
+#define NUM_ITER    100u
 
+#define MAX_BUF_SIZE    (64 * 1024)
 
-uint64_t timer_overhead;
+/* Array for storing bench results */
+double result[NUM_RUNS];
+double mean, stddev;
 
-void calc_timer_overhead(void)
+void calc_results(const char *test)
 {
-    /*
-    timer_overhead = 0;
+    mean = stddev = 0;
     for (size_t i = 0; i < NUM_RUNS; ++i) {
-        uint64_t time1, time2;
-        for (uint64_t j = 0; j < NUM_WARMUP; ++j) {
+        mean += result[i];
+    }
+    mean /= NUM_RUNS;
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        double x = (result[i] - mean);
+        stddev += x * x;
+    }
+    stddev /= NUM_RUNS;
+    stddev = sqrt(stddev);
+    printf("=== %s results ===\n", test);
+    printf("mean: %f\n", mean);
+    printf("stddev: %f\n", stddev);
+    printf("stddev/mean: %f \n", (stddev / mean));
+}
+
+void rand_write_buf(char *buf, size_t numbytes)
+{
+    for (size_t j = 0; j < numbytes; j += sizeof(int)) {
+        int *val = (int *)&buf[j];
+        *val = rand();
+    }
+}
+
+void run_benchmarks(void)
+{
+    uint64_t start, end, overhead;
+    srand(6123129);
+
+    /* Tick overhead */
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        for (size_t j = 0; j < NUM_WARMUP; ++j) {
             __asm__ volatile("");
         }
-        //time1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-        time1 = zx_ticks_get();
-        for (uint64_t j = 0; j < NUM_ITERATIONS; ++j) {
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
             __asm__ volatile("");
         }
-        //time2 = zx_clock_get(ZX_CLOCK_MONOTONIC);
-        time2 = zx_ticks_get();
-        timer_overhead += (time2 - time1);
+        end = zx_ticks_get();
+        result[i] = (end - start);
     }
-    timer_overhead /= NUM_RUNS;
-    printf("Timer overhead: %lu\n", timer_overhead);
-    */
-    uint64_t time1, time2;
+    calc_results("empty loop overhead");
 
-    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-        time1 = zx_ticks_get();
-        time2 = zx_ticks_get();
+    /* Save the mean overhead */
+    overhead = mean;
+
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        for (size_t j = 0; j < NUM_WARMUP; ++j) {
+            zx_syscall_test_0();
+        }
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            zx_syscall_test_0();
+        }
+        end = zx_ticks_get();
+        result[i] = (end - start - overhead) / NUM_ITER;
     }
-    printf("Got ticks: %lu\n", (time2 - time1));
+    calc_results("zx_syscall_test_0");
 
-    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-        time1 = zx_ticks_get();
-        zx_syscall_test_0();
-        time2 = zx_ticks_get();
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        for (size_t j = 0; j < NUM_WARMUP; ++j) {
+            zx_syscall_test_8(1,2,3,4,5,6,7,8);
+        }
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            zx_syscall_test_8(1,2,3,4,5,6,7,8);
+        }
+        end = zx_ticks_get();
+        result[i] = (end - start - overhead) / NUM_ITER;
     }
-    printf("Got ticks: %lu\n", (time2 - time1));
+    calc_results("zx_syscall_test_8");
 
-    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-        time1 = zx_ticks_get();
-        zx_syscall_test_1(1);
-        time2 = zx_ticks_get();
+    char *writebuf = malloc(MAX_BUF_SIZE);
+    char *readbuf = malloc(MAX_BUF_SIZE);
+    assert(writebuf != NULL && readbuf != NULL);
+
+    zx_handle_t ch0, ch1;
+    assert(!zx_channel_create(0, &ch0, &ch1));
+
+    zx_handle_t sock0, sock1;
+    assert(!zx_socket_create(ZX_SOCKET_STREAM, &sock0, &sock1));
+
+    size_t numbytes = 64;
+    char str_buf[100];
+
+    while (numbytes <= MAX_BUF_SIZE) {
+        for (size_t i = 0; i < NUM_RUNS; ++i) {
+            rand_write_buf(writebuf, numbytes);
+            /* Do untimed test run with sanity checks */
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_channel_write(ch0, 0, writebuf, numbytes, NULL, 0));
+            }
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_channel_read(ch1, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
+                assert(!memcmp(writebuf, readbuf, numbytes));
+            }
+            /* Now time it */
+            start = zx_ticks_get();
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_channel_write(ch0, 0, writebuf, numbytes, NULL, 0);
+            }
+            end = zx_ticks_get();
+            result[i] = (end - start - overhead) / NUM_ITER;
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_channel_read(ch1, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
+            }
+            assert(!memcmp(writebuf, readbuf, numbytes));
+        }
+        sprintf(str_buf, "channel write %lu", numbytes);
+        calc_results(str_buf);
+
+        for (size_t i = 0; i < NUM_RUNS; ++i) {
+            rand_write_buf(writebuf, numbytes);
+            /* Do untimed test run with sanity checks */
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_socket_write(sock0, 0, writebuf, numbytes, NULL));
+            }
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_socket_read(sock1, 0, readbuf, numbytes, NULL));
+                assert(!memcmp(writebuf, readbuf, numbytes));
+            }
+            /* Now time it */
+            start = zx_ticks_get();
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_socket_write(sock0, 0, writebuf, numbytes, NULL);
+            }
+            end = zx_ticks_get();
+            result[i] = (end - start - overhead) / NUM_ITER;
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_socket_read(sock1, 0, readbuf, numbytes, NULL);
+            }
+            assert(!memcmp(writebuf, readbuf, numbytes));
+        }
+        sprintf(str_buf, "socket write %lu", numbytes);
+        calc_results(str_buf);
+
+        numbytes *= 4;
     }
-    printf("Got ticks: %lu\n", (time2 - time1));
 
-    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-        time1 = zx_ticks_get();
-        zx_syscall_test_8(1,2,3,4,5,6,7,8);
-        time2 = zx_ticks_get();
-    }
-    printf("Got ticks: %lu\n", (time2 - time1));
-}
-
-void bench_test0_syscall(void)
-{
-    RUN_BENCHMARK(zx_syscall_test_0());
-    printf("test 0 syscall: mean %lu stddev %f\n", mean, stddev);
-}
-
-void bench_test8_syscall(void)
-{
-    RUN_BENCHMARK(zx_syscall_test_8(1,2,3,4,5,6,7,8));
-    printf("test 8 syscall: mean %lu stddev %f\n", mean, stddev);
-}
-
-void bench_event_create(void)
-{
-    zx_handle_t handle;
-    RUN_BENCHMARK(zx_event_create(0, &handle));
-    printf("event create: mean %lu stddev %f\n", mean, stddev);
-    /* Check oom */
-    assert(!zx_event_create(0, &handle));
+    while (1);
 }

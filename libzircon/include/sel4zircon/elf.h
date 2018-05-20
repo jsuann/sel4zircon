@@ -1,6 +1,7 @@
 #pragma once
 
 #include <autoconf.h>
+#include <elf/elf.h>
 #include <zircon/types.h>
 
 zx_status_t run_zircon_app(const char *filename, zx_handle_t *process,

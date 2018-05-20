@@ -3,7 +3,7 @@
 
 namespace PageAllocCxx {
 
-constexpr size_t kNumPageBuf = 4096;
+constexpr size_t kNumPageBuf = 8192;
 constexpr size_t kPageSize = 1 << seL4_PageBits;
 
 /* Allocate pages with adjacent guard pages */
@@ -59,6 +59,7 @@ void *page_alloc()
 
     uint32_t index;
     if(!page_buf_table.alloc(index)) {
+        dprintf(CRITICAL, "Ran out of page bufs!\n");
         return NULL;
     }
     return (void *)page_buf_table.get(index);

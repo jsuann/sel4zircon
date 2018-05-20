@@ -25,6 +25,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
 
     /* Check we have enough page bufs available */
     if (get_num_page_avail() < num_buf) {
+        dprintf(CRITICAL, "Out of pages!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -44,8 +45,6 @@ zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
     for (uint32_t i = 0; i < num_buf; ++i) {
         /* Alloc the page */
         PageBuf *pb = new (page_alloc()) PageBuf();
-
-        dprintf(SPEW, "Allocd pagebuf at %p\n", pb);
 
         /* Write to pb */
         size_t nbytes = (len > PageBuf::kPayloadSize) ? PageBuf::kPayloadSize : len;

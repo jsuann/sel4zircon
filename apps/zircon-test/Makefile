@@ -27,6 +27,6 @@ CXXFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.cxx))
 HDRFILES := $(wildcard $(SOURCE_DIR)/src/*.h)
 
 # Libraries
-LIBS := c sel4 sel4muslcsys utils zircon zxutils
+LIBS := c sel4 sel4muslcsys elf utils zircon zxutils
 
 include $(SEL4_COMMON)/common.mk
