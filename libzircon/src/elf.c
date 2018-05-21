@@ -115,7 +115,6 @@ zx_status_t run_zircon_app(const char *filename, zx_handle_t *process,
             map_flags |= (flags & PF_X) ? ZX_VM_FLAG_PERM_EXECUTE : 0;
             /* Map into vmar */
             vaddr &= PAGE_MASK;
-            printf("%lx %lx %lx\n", offset, vaddr, segment_size);
             err = zx_vmar_map(vmar, vaddr, segment_vmo, 0, segment_size, map_flags, &vaddr);
             if (err) {
                 printf("segment vmo map failed. %d\n", err);

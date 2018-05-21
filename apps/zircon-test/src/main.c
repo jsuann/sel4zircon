@@ -48,7 +48,7 @@ void run_hello_world(void)
     char readbuf[CHANNEL_BUF_SIZE];
 
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
-        printf("Channel test %d\n", i);
+        printf("Channel test with process %d\n", i);
         for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
             int *val = (int *)&writebuf[j];
             *val = rand();
@@ -57,7 +57,7 @@ void run_hello_world(void)
         assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
         assert(!zx_channel_read(channel, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+        //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
 
     zx_task_kill(process);
@@ -196,6 +196,7 @@ int main(int argc, char **argv) {
 
     /* Align the stack & start thread */
     uintptr_t stack_addr = compute_initial_stack_pointer(mapped_addr, stack_size);
+    printf("Starting thread...\n");
     assert(!zx_thread_start(new_thrd, (uintptr_t)thread_entry, stack_addr, 9, 6));
 
     /* Create test endpoint */
@@ -227,7 +228,6 @@ int main(int argc, char **argv) {
     printf("Deleted endpoint caps.\n");
 
     /* Ping pong messages with other thread using channel */
-    /*
     assert(!zx_channel_create(0, &ch0, &ch1));
     char writebuf[CHANNEL_BUF_SIZE];
     char readbuf[CHANNEL_BUF_SIZE];
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
 
     assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_3));
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
-        printf("Channel test %d\n", i);
+        printf("Channel test with thread %d\n", i);
         for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
             int *val = (int *)&writebuf[j];
             *val = rand();
@@ -244,9 +244,8 @@ int main(int argc, char **argv) {
         assert(!zx_object_wait_one(ch0, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
         assert(!zx_channel_read(ch0, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+        //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
-    */
 
     /* Try to kill other thread */
     assert(!zx_task_kill(new_thrd));

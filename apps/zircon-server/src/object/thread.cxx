@@ -15,6 +15,7 @@ constexpr size_t kThreadCspaceBits = 3;
 constexpr size_t kThreadCspaceSlots = 1 << kThreadCspaceBits;
 
 StackAlloc<ZxThread> thread_table;
+vka_object_t thread_cspaces[kMaxThreadCount] = {0};
 
 void set_dest_slot(cspacepath_t *dest, seL4_CPtr root, seL4_CPtr slot)
 {
@@ -103,10 +104,22 @@ bool ZxThread::init()
     }
 
     /* Create cspace */
+    if (thread_cspaces[thread_index_].cptr == 0) {
+        error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
+        if (error) {
+            return false;
+        }
+        thread_cspaces[thread_index_] = cspace_;
+    } else {
+        cspace_ = thread_cspaces[thread_index_];
+    }
+    /*
     error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
     if (error) {
         return false;
     }
+    */
+
 
     /* Get path to server ep */
     vka_cspace_make_path(vka, get_server_ep(), &src);
@@ -204,6 +217,8 @@ void ZxThread::destroy()
 
     /* Delete cspace */
     if (cspace_.cptr != 0) {
+        seL4_CNode_Delete(cspace_.cptr, ZX_THREAD_FAULT_SLOT, kThreadCspaceBits);
+        seL4_CNode_Delete(cspace_.cptr, ZX_THREAD_SYSCALL_SLOT, kThreadCspaceBits);
         /* Freeing messes up allocman? */
         //vka_free_object(vka, &cspace_);
     }

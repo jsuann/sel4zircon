@@ -69,7 +69,7 @@ void free_object(T *obj)
 void destroy_object(ZxObject *obj)
 {
     /* XXX sanity check */
-    assert(obj->can_destroy());
+    //assert(obj->can_destroy());
 
     /* Perform any internal destruction in object.
        We could use destructor instead, but this is easier

@@ -8,11 +8,11 @@
 #include <zircon/syscalls.h>
 #include <zircon/process.h>
 
-#include <mini-process/mini-process.h>
+//#include <mini-process/mini-process.h>
 
 #define NUM_WARMUP  10u
-#define NUM_RUNS    10u
-#define NUM_ITER    100u
+#define NUM_RUNS    10000u
+#define NUM_ITER    10u
 
 #define MAX_BUF_SIZE    65536u
 
@@ -22,13 +22,20 @@
 double result1[NUM_RUNS];
 double result2[NUM_RUNS];
 
-double mean, stddev, overhead;
+double mean, stddev, min, max, overhead;
 
 void calc_results(const char *test, double *result)
 {
     mean = stddev = 0;
+    min = max = result[0];
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         mean += result[i];
+        if (result[i] < min) {
+            min = result[i];
+        }
+        if (result[i] > max) {
+            max = result[i];
+        }
     }
     mean /= NUM_RUNS;
     for (size_t i = 0; i < NUM_RUNS; ++i) {
@@ -40,7 +47,10 @@ void calc_results(const char *test, double *result)
     printf("=== %s results ===\n", test);
     printf("mean: %f\n", mean);
     printf("stddev: %f\n", stddev);
-    printf("stddev/mean: %f \n", (stddev / mean));
+    printf("stddev/mean: %f\n", (stddev / mean));
+    printf("min: %f\n", min);
+    printf("max: %f\n", max);
+    fflush(stdout);
 }
 
 void rand_write_buf(char *buf, size_t numbytes)
@@ -125,20 +135,22 @@ void run_benchmarks(void)
 
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         for (size_t j = 0; j < NUM_ITER; ++j) {
-            assert(!zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[i]));
-            assert(!zx_handle_close(dup[i]));
+            assert(!zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[j]));
+        }
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            assert(!zx_handle_close(dup[j]));
         }
 
         start = zx_ticks_get();
         for (size_t j = 0; j < NUM_ITER; ++j) {
-            zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[i]);
+            zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[j]);
         }
         end = zx_ticks_get();
         result1[i] = (end - start - overhead) / NUM_ITER;
 
         start = zx_ticks_get();
         for (size_t j = 0; j < NUM_ITER; ++j) {
-           zx_handle_close(dup[i]);
+           zx_handle_close(dup[j]);
         }
         end = zx_ticks_get();
         result2[i] = (end - start - overhead) / NUM_ITER;
@@ -262,19 +274,21 @@ void run_benchmarks(void)
     assert(thrd != NULL);
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         for (size_t j = 0; j < NUM_ITER; ++j) {
-            assert(!zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[i]));
-            assert(!zx_handle_close(thrd[i]));
+            assert(!zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[j]));
+        }
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            assert(!zx_handle_close(thrd[j]));
         }
 
         start = zx_ticks_get();
         for (size_t j = 0; j < NUM_ITER; ++j) {
-            zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[i]);
+            zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[j]);
         }
         end = zx_ticks_get();
         result1[i] = (end - start - overhead) / NUM_ITER;
 
         for (size_t j = 0; j < NUM_ITER; ++j) {
-           zx_handle_close(thrd[i]);
+           zx_handle_close(thrd[j]);
         }
     }
     calc_results("zx_thread_create", result1);

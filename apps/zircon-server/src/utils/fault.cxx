@@ -9,7 +9,7 @@ void handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
     /* If we have a VM fault, try to map a page */
     if (seL4_isVMFault_tag(tag)) {
         uintptr_t vaddr = seL4_Fault_VMFault_get_Addr(seL4_getFault(tag));
-        dprintf(INFO, "Fault at vaddr 0x%lx\n", vaddr);
+        dprintf(SPEW, "Fault at vaddr 0x%lx\n", vaddr);
         /* Get the root vmar */
         ZxVmar *root_vmar = get_proc_from_badge(badge)->get_root_vmar();
         /* Find the vmo mapping for the faulting addr */

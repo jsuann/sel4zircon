@@ -39,8 +39,6 @@ static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint
     zx_rights_t rights = seL4_GetMR(1);
     uintptr_t user_out = seL4_GetMR(2);
 
-    dprintf(SPEW, "Handle dup/replace, %u %u %lx\n", handle_val, rights, user_out);
-
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
@@ -77,7 +75,7 @@ static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint
         proc->remove_handle(src);
         obj->destroy_handle(src);
         /* Since we just duped handle, we shouldn't be destroying the last! */
-        assert(!obj->zero_handles());
+        //assert(!obj->zero_handles());
     }
 
     return ZX_OK;
