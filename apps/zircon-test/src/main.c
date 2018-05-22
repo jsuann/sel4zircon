@@ -113,10 +113,8 @@ int main(int argc, char **argv) {
     zx_handle_t rsrc_handle = zx_resource_root();
     zx_handle_t job_handle = zx_job_default();
 
-    printf("Received handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
+    printf("Received init handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
             thrd_handle, rsrc_handle, job_handle);
-
-    run_hello_world();
 
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);
@@ -177,11 +175,13 @@ int main(int argc, char **argv) {
     assert(!zx_socket_write(socket0, 0, sock_msg, strlen(sock_msg), NULL));
 
     /* Create a test thread */
+    printf("Creating a test thread\n");
     zx_handle_t new_thrd;
     const char *name = "thrd2";
     assert(!zx_thread_create(proc_handle, name, strlen(name), 0, &new_thrd));
 
     /* Create a stack vmo for the thread */
+    printf("Creating a stack vmo\n");
     zx_handle_t stack_vmo;
     assert(!zx_vmo_create(CHANNEL_BUF_SIZE * 2, 0, &stack_vmo));
     uint64_t stack_size;
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
     uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     uint64_t mapped_addr;
     assert(!zx_vmar_map(vmar_handle, 0, stack_vmo, 0, stack_size, map_flags, &mapped_addr));
-    printf("Vmar mapped at %lx\n", mapped_addr);
+    printf("Stack mapped in vmar at %lx\n", mapped_addr);
 
     /* Align the stack & start thread */
     uintptr_t stack_addr = compute_initial_stack_pointer(mapped_addr, stack_size);
@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
     /* Mint a cap to each thread's cspace */
     assert(!zx_endpoint_mint_cap(ep_handle, thrd_handle, TEST_EP_SLOT, 1, TEST_EP_RIGHTS));
     assert(!zx_endpoint_mint_cap(ep_handle, new_thrd, TEST_EP_SLOT, 2, TEST_EP_RIGHTS));
+    printf("Minted endpoint caps.\n");
 
     /* Do a wait to sync with other thread */
     assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2, ZX_TIME_INFINITE, NULL));
@@ -217,6 +218,7 @@ int main(int argc, char **argv) {
     seL4_SetMR(0, TEST_EP_MSG);
     seL4_Send(TEST_EP_SLOT, tag);
 
+    printf("Main thread sleeping for 2 seconds.\n");
     zx_time_t deadline;
     deadline = zx_deadline_after(ZX_SEC(2));
     zx_nanosleep(deadline);
@@ -251,12 +253,17 @@ int main(int argc, char **argv) {
     assert(!zx_task_kill(new_thrd));
 
     /* Create a dummy process */
+    printf("Creating dummy process...\n");
     zx_handle_t dummy_proc, dummy_thrd, dummy_vmar;
     assert(!zx_process_create(job_handle, "minipr", 6, 0,  &dummy_proc, &dummy_vmar));
     assert(!zx_thread_create(dummy_proc, "minith", 6, 0, &dummy_thrd));
     assert(!start_mini_process_etc(dummy_proc, dummy_thrd, dummy_vmar, event_handle, NULL));
     printf("Waiting for dummy process to fault...\n");
     assert(!zx_object_wait_one(dummy_proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL));
+
+    /* Run actual process */
+    printf("Running hello world / ping process\n");
+    run_hello_world();
 
     printf("Zircon test exiting! This will kill the root job.\n");
     zx_process_exit(0);

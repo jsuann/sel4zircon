@@ -107,3 +107,39 @@ uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge)
     vmo->write(0, elf_size, elf_file);
     return ZX_OK;
 }
+
+uint64_t sys_start_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 0);
+    //seL4_BenchmarkResetThreadUtilisation(seL4_CapInitThreadTCB);
+    //seL4_BenchmarkResetLog();
+    server_reset_bench();
+    return 0;
+}
+
+uint64_t sys_end_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 1);
+    uintptr_t user_buf = seL4_GetMR(0);
+
+    zx_status_t err;
+    ZxProcess *proc = get_proc_from_badge(badge);
+
+    uint64_t *buf;
+    constexpr size_t buf_size = sizeof(uint64_t);
+    err = proc->uvaddr_to_kvaddr(user_buf, buf_size, (void *&)buf);
+    SYS_RET_IF_ERR(err);
+
+    //seL4_BenchmarkFinalizeLog();
+    //seL4_BenchmarkGetThreadUtilisation(seL4_CapInitThreadTCB);
+    //memcpy(buf, &(seL4_GetIPCBuffer()->msg[0]), buf_size);
+    *buf = server_get_bench();
+    return 0;
+}
+
+uint64_t sys_get_ipc_buffer_addr(seL4_MessageInfo_t tag, uint64_t badge)
+{
+    SYS_CHECK_NUM_ARGS(tag, 0);
+    ZxThread *thrd = get_thread_from_badge(badge);
+    return ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd->get_ipc_index() * 2);
+}

@@ -31,6 +31,8 @@ extern "C" {
 #include "utils/page_alloc.h"
 #include "utils/system.h"
 
+#define ZX_SERVER_BENCH     0
+
 /* Wrap globals in a namespace to prevent access outside this file */
 namespace ServerCxx {
 
@@ -41,6 +43,7 @@ seL4_CPtr server_ep;
 seL4_Word timer_badge;
 
 bool should_reply;
+uint64_t server_bench_time;
 
 } /* namespace ServerCxx */
 
@@ -66,6 +69,16 @@ seL4_CPtr get_server_ep()
 void server_should_not_reply()
 {
     ServerCxx::should_reply = false;
+}
+
+void server_reset_bench()
+{
+    ServerCxx::server_bench_time = 0;
+}
+
+uint64_t server_get_bench()
+{
+    return ServerCxx::server_bench_time;
 }
 
 void init_zircon_server(env_t *env)
@@ -109,6 +122,9 @@ void syscall_loop(void)
     for (;;) {
         should_reply = true;
         tag = seL4_Recv(server_ep, &badge);
+#if ZX_SERVER_BENCH
+        uint64_t bench_start = server_get_ticks();
+#endif
         if (badge & ZxSyscallBadge) {
             seL4_Word syscall = seL4_MessageInfo_get_label(tag);
             if (unlikely(syscall >= NUM_SYSCALLS)) {
@@ -116,6 +132,9 @@ void syscall_loop(void)
                 sys_reply(ZX_ERR_BAD_SYSCALL);
             } else {
                 ret = DO_SYSCALL(syscall, tag, badge);
+#if ZX_SERVER_BENCH
+        server_bench_time += (server_get_ticks() - bench_start);
+#endif
                 /* nearly all syscalls reply immediately */
                 if (likely(should_reply)) {
                     sys_reply(ret);

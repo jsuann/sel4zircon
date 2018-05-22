@@ -353,20 +353,25 @@ int ZxThread::mint_cap(cspacepath_t *src, seL4_CPtr slot,
         seL4_Word badge, seL4_CapRights_t rights)
 {
     using namespace ThreadCxx;
-
     assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);
-
     cspacepath_t dest;
     set_dest_slot(&dest, cspace_.cptr, slot);
     return vka_cnode_mint(&dest, src, rights, seL4_CapData_Badge_new(badge));
 }
 
+int ZxThread::copy_cap(cspacepath_t *src, seL4_CPtr slot, seL4_CapRights_t rights)
+{
+    using namespace ThreadCxx;
+    assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);
+    cspacepath_t dest;
+    set_dest_slot(&dest, cspace_.cptr, slot);
+    return vka_cnode_copy(&dest, src, rights);
+}
+
 int ZxThread::delete_cap(seL4_CPtr slot)
 {
     using namespace ThreadCxx;
-
     assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);
-
     cspacepath_t src;
     set_dest_slot(&src, cspace_.cptr, slot);
     return vka_cnode_delete(&src);

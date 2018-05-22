@@ -67,5 +67,8 @@ uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_endpoint_delete_cap(seL4_MessageInfo_t tag, uint64_t badge);
 uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_get_ipc_buffer_addr(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_start_server_bench(seL4_MessageInfo_t tag, uint64_t badge);
+uint64_t sys_end_server_bench(seL4_MessageInfo_t tag, uint64_t badge);
 
-#define NUM_SYSCALLS 148
+#define NUM_SYSCALLS 151

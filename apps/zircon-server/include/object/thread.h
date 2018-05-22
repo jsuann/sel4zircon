@@ -125,6 +125,7 @@ public:
     /* Mint/delete for endpoint caps */
     int mint_cap(cspacepath_t *src, seL4_CPtr slot,
             seL4_Word badge, seL4_CapRights_t rights);
+    int copy_cap(cspacepath_t *src, seL4_CPtr slot, seL4_CapRights_t rights);
     int delete_cap(seL4_CPtr slot);
 
 private:

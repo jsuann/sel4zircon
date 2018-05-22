@@ -5,3 +5,6 @@ zx_endpoint_create
 zx_endpoint_mint_cap
 zx_endpoint_delete_cap
 zx_get_elf_vmo
+zx_get_ipc_buffer_addr
+zx_start_server_bench
+zx_end_server_bench

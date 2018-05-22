@@ -8,11 +8,16 @@
 #include <zircon/syscalls.h>
 #include <zircon/process.h>
 
+#include <sel4/sel4.h>
+#include <sel4/benchmark_utilisation_types.h>
+#include <sel4zircon/debug.h>
+#include <sel4zircon/cspace.h>
+
 //#include <mini-process/mini-process.h>
 
 #define NUM_WARMUP  10u
 #define NUM_RUNS    10000u
-#define NUM_ITER    10u
+#define NUM_ITER    100u
 
 #define MAX_BUF_SIZE    65536u
 
@@ -23,6 +28,7 @@ double result1[NUM_RUNS];
 double result2[NUM_RUNS];
 
 double mean, stddev, min, max, overhead;
+double server_bench_overhead;
 
 void calc_results(const char *test, double *result)
 {
@@ -64,7 +70,23 @@ void rand_write_buf(char *buf, size_t numbytes)
 void run_benchmarks(void)
 {
     uint64_t start, end;
+    uint64_t util_buf;
     srand(6123129);
+
+    zx_start_server_bench();
+    zx_end_server_bench(&util_buf);
+    printf("server bench time: %lu\n", util_buf);
+
+    /* Server util overhead */
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        start = zx_ticks_get();
+        zx_start_server_bench();
+        zx_end_server_bench(&util_buf);
+        end = zx_ticks_get();
+        result1[i] = (end - start);
+    }
+    calc_results("server bench overhead", result1);
+    server_bench_overhead = mean;
 
     /* Calc loop overhead */
     for (size_t i = 0; i < NUM_RUNS; ++i) {
@@ -86,6 +108,7 @@ void run_benchmarks(void)
     /*
      *  Test syscall bench
      */
+
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         for (size_t j = 0; j < NUM_WARMUP; ++j) {
             zx_syscall_test_0();
