@@ -42,7 +42,7 @@ uint64_t sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge)
     err = proc->uvaddr_to_kvaddr(user_ptr, len, buf);
     SYS_RET_IF_ERR(err);
 
-    dprintf(ALWAYS, "(%s): ", proc->get_name());
+    //dprintf(ALWAYS, "(%s): ", proc->get_name());
 
     for (uint32_t i = 0; i < len; ++i) {
         putchar(((char *)buf)[i]);
@@ -113,7 +113,6 @@ uint64_t sys_start_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_CHECK_NUM_ARGS(tag, 0);
     //seL4_BenchmarkResetThreadUtilisation(seL4_CapInitThreadTCB);
     //seL4_BenchmarkResetLog();
-    server_reset_bench();
     return 0;
 }
 
@@ -133,7 +132,7 @@ uint64_t sys_end_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
     //seL4_BenchmarkFinalizeLog();
     //seL4_BenchmarkGetThreadUtilisation(seL4_CapInitThreadTCB);
     //memcpy(buf, &(seL4_GetIPCBuffer()->msg[0]), buf_size);
-    *buf = server_get_bench();
+    *buf = 0;
     return 0;
 }
 

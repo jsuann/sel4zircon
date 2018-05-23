@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
     zx_init_startup_handles(argv);
 #endif
 
-    run_benchmarks();
+    //run_benchmarks();
 
     zx_handle_t thrd_handle = zx_thread_self();
     zx_handle_t proc_handle = zx_process_self();

@@ -1,7 +1,7 @@
 #include "utils/fault.h"
 #include "object/tasks.h"
 
-void handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
+bool handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
 {
     /* Get the faulting thread */
     ZxThread *thrd = get_thread_from_badge(badge);
@@ -17,9 +17,7 @@ void handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
         if (vmap != NULL) {
             if (vmap->commit_page_at_addr(vaddr)) {
                 /* Page mapped in, we can restart thread & return */
-                tag = seL4_MessageInfo_new(0, 0, 0, 0);
-                seL4_Reply(tag);
-                return;
+                return true;
             }
         }
     }
@@ -29,4 +27,5 @@ void handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
        port. For now, we just kill the thread. */
     dprintf(INFO, "Killing faulting thread at %p\n", thrd);
     task_kill_thread(thrd);
+    return false;
 }

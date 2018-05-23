@@ -8,4 +8,5 @@ extern "C" {
 #include "debug.h"
 }
 
-void handle_fault(seL4_MessageInfo_t tag, uint64_t badge);
+/* Returns true if faulting thread can be restarted */
+bool handle_fault(seL4_MessageInfo_t tag, uint64_t badge);

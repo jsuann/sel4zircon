@@ -17,14 +17,3 @@ seL4_CPtr get_server_ep();
 vspace_t *get_server_vspace();
 vka_t *get_server_vka();
 void server_should_not_reply();
-
-void server_reset_bench();
-uint64_t server_get_bench();
-
-static inline uint64_t server_get_ticks()
-{
-    uint32_t ticks_low;
-    uint32_t ticks_high;
-    __asm__ volatile("rdtsc" : "=a" (ticks_low), "=d" (ticks_high));
-    return ((uint64_t)ticks_high << 32) | ticks_low;
-}

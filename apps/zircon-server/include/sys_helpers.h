@@ -8,11 +8,11 @@ extern "C" {
 }
 
 /* generic reply function */
-static inline void sys_reply(uint64_t res)
+static inline seL4_MessageInfo_t get_reply(uint64_t res)
 {
     seL4_MessageInfo_t tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, res);
-    seL4_Reply(tag);
+    return tag;
 }
 
 /* Check that syscall has correct num args */

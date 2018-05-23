@@ -31,8 +31,6 @@ extern "C" {
 #include "utils/page_alloc.h"
 #include "utils/system.h"
 
-#define ZX_SERVER_BENCH     0
-
 /* Wrap globals in a namespace to prevent access outside this file */
 namespace ServerCxx {
 
@@ -43,7 +41,6 @@ seL4_CPtr server_ep;
 seL4_Word timer_badge;
 
 bool should_reply;
-uint64_t server_bench_time;
 
 } /* namespace ServerCxx */
 
@@ -69,16 +66,6 @@ seL4_CPtr get_server_ep()
 void server_should_not_reply()
 {
     ServerCxx::should_reply = false;
-}
-
-void server_reset_bench()
-{
-    ServerCxx::server_bench_time = 0;
-}
-
-uint64_t server_get_bench()
-{
-    return ServerCxx::server_bench_time;
 }
 
 void init_zircon_server(env_t *env)
@@ -117,38 +104,46 @@ void syscall_loop(void)
     uint64_t badge, ret;
     seL4_MessageInfo_t tag;
 
-    dprintf(INFO, "Entering syscall loop!\n");
-
+    /* Wait for the first message */
+    tag = seL4_Recv(server_ep, &badge);
     for (;;) {
+        /* Handle the received message */
         should_reply = true;
-        tag = seL4_Recv(server_ep, &badge);
-#if ZX_SERVER_BENCH
-        uint64_t bench_start = server_get_ticks();
-#endif
         if (badge & ZxSyscallBadge) {
             seL4_Word syscall = seL4_MessageInfo_get_label(tag);
             if (unlikely(syscall >= NUM_SYSCALLS)) {
                 /* syscall doesn't exist */
-                sys_reply(ZX_ERR_BAD_SYSCALL);
+                tag = get_reply(ZX_ERR_BAD_SYSCALL);
             } else {
                 ret = DO_SYSCALL(syscall, tag, badge);
-#if ZX_SERVER_BENCH
-        server_bench_time += (server_get_ticks() - bench_start);
-#endif
                 /* nearly all syscalls reply immediately */
                 if (likely(should_reply)) {
-                    sys_reply(ret);
+                    tag = get_reply(ret);
                 }
             }
         } else if (badge & ZxFaultBadge) {
-            seL4_Word fault_type = seL4_MessageInfo_get_label(tag);
-            dprintf(SPEW, "Received fault, type %lu\n", fault_type);
-            handle_fault(tag, badge);
+            /* We expect that most faults are VM faults and can be handled */
+            should_reply = handle_fault(tag, badge);
+            if (likely(should_reply)) {
+                /* Fault successfully handled, we can reply to thread */
+                tag = seL4_MessageInfo_new(0, 0, 0, 0);
+            }
         } else if (badge == timer_badge) {
             /* Handle timer interrupt */
             handle_timer(badge);
+            should_reply = false;
         } else {
-            dprintf(INFO, "Received non-zircon IPC!\n");
+            /* We got some other message. For now, we ignore caller, and
+               don't respond. This can be modified later to allow for
+               communication with native seL4 processes. */
+            should_reply = false;
+        }
+
+        /* Reply to previous caller if required, and wait for next event */
+        if (should_reply) {
+            tag = seL4_ReplyRecv(server_ep, tag, &badge);
+        } else {
+            tag = seL4_Recv(server_ep, &badge);
         }
     }
 }
