@@ -16,7 +16,6 @@ extern "C" {
 #include "listable.h"
 
 class ZxObject;
-class ZxProcess;
 
 class Handle : public Listable<Handle> {
 public:

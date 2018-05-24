@@ -15,9 +15,9 @@
 
 //#include <mini-process/mini-process.h>
 
-#define NUM_WARMUP  10u
+#define NUM_WARMUP  1000u
 #define NUM_RUNS    10000u
-#define NUM_ITER    100u
+#define NUM_ITER    5u
 
 #define MAX_BUF_SIZE    65536u
 
@@ -28,7 +28,14 @@ double result1[NUM_RUNS];
 double result2[NUM_RUNS];
 
 double mean, stddev, min, max, overhead;
-double server_bench_overhead;
+double no_loop_overhead;
+
+__attribute__((noreturn))
+void thread_ep_func(uintptr_t arg1, uintptr_t arg2)
+{
+    zx_thread_exit();
+    while(1) ;
+}
 
 void calc_results(const char *test, double *result)
 {
@@ -70,23 +77,20 @@ void rand_write_buf(char *buf, size_t numbytes)
 void run_benchmarks(void)
 {
     uint64_t start, end;
-    uint64_t util_buf;
     srand(6123129);
 
-    zx_start_server_bench();
-    zx_end_server_bench(&util_buf);
-    printf("server bench time: %lu\n", util_buf);
+    zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
 
-    /* Server util overhead */
+    /* no loop overhead */
     for (size_t i = 0; i < NUM_RUNS; ++i) {
-        start = zx_ticks_get();
-        zx_start_server_bench();
-        zx_end_server_bench(&util_buf);
-        end = zx_ticks_get();
+        for (size_t j = 0; j < NUM_WARMUP; ++j) {
+            start = zx_ticks_get();
+            end = zx_ticks_get();
+        }
         result1[i] = (end - start);
     }
-    calc_results("server bench overhead", result1);
-    server_bench_overhead = mean;
+    calc_results("no loop overhead", result1);
+    no_loop_overhead = mean;
 
     /* Calc loop overhead */
     for (size_t i = 0; i < NUM_RUNS; ++i) {
@@ -173,7 +177,7 @@ void run_benchmarks(void)
 
         start = zx_ticks_get();
         for (size_t j = 0; j < NUM_ITER; ++j) {
-           zx_handle_close(dup[j]);
+            zx_handle_close(dup[j]);
         }
         end = zx_ticks_get();
         result2[i] = (end - start - overhead) / NUM_ITER;
@@ -316,6 +320,9 @@ void run_benchmarks(void)
     }
     calc_results("zx_thread_create", result1);
 
+#ifdef CONFIG_HAVE_SEL4ZIRCON
+
+#endif
 
     while (1);
 }

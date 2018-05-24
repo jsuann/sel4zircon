@@ -19,7 +19,7 @@ static inline seL4_MessageInfo_t get_reply(uint64_t res)
 #define SYS_CHECK_NUM_ARGS(tag, n) \
     do { \
         if (unlikely(seL4_MessageInfo_get_length(tag) != n)) { \
-            return ZX_ERR_INVALID_ARGS; \
+            return ZX_ERR_BAD_SYSCALL; \
         } \
     } while (0)
 
