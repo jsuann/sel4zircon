@@ -143,7 +143,6 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     /* If frame not yet allocated, alloc & map into server */
     if (frames_[index].cptr == 0) {
         /* Allocate a frame object */
-        /* TODO at paddr, maybe device? */
         err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
         //err = vka_alloc_frame_maybe_device(vka, seL4_PageBits, true, &frames_[index]);
         if (err) {

@@ -6,8 +6,8 @@ namespace PageAllocCxx {
 constexpr size_t kNumPageBuf = 4096;
 constexpr size_t kPageSize = 1 << seL4_PageBits;
 
-/* Allocate pages with adjacent guard pages */
-constexpr size_t kBufBlockSize = (1 << seL4_PageBits) * 2;
+/* Size of page block (allows for guard page) */
+constexpr size_t kBufBlockSize = (1 << seL4_PageBits) * 1;
 
 struct BufBlock {
     char mem[kBufBlockSize];
@@ -58,7 +58,7 @@ void *page_alloc()
     using namespace PageAllocCxx;
 
     uint32_t index;
-    if(!page_buf_table.alloc(index)) {
+    if (!page_buf_table.alloc(index)) {
         dprintf(CRITICAL, "Ran out of page bufs!\n");
         return NULL;
     }
@@ -73,7 +73,7 @@ void *page_alloc_zero()
     if (p != NULL) {
         memset(p, 0, kPageSize);
     }
-    dprintf(SPEW, "Allocd page at %p\n", p);
+    //dprintf(SPEW, "Allocd page at %p\n", p);
     return p;
 }
 
@@ -81,7 +81,7 @@ void page_free(void *page)
 {
     using namespace PageAllocCxx;
 
-    dprintf(SPEW, "Freeing page at %p\n", page);
+    //dprintf(SPEW, "Freeing page at %p\n", page);
     uint32_t index = get_page_index(page);
     page_buf_table.free(index);
 }

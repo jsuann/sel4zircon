@@ -1,18 +1,18 @@
 #pragma once
 
 /* Zircon server address space allocation */
-#define ZX_HANDLE_TABLE_START       0x60000000ul
-#define ZX_PROCESS_TABLE_START      0x70000000ul
-#define ZX_THREAD_TABLE_START       0x80000000ul
-#define ZX_PAGE_BUF_START           0x90000000ul
+#define ZX_HANDLE_TABLE_START       0x20000000ul
+#define ZX_PROCESS_TABLE_START      0x20800000ul
+#define ZX_THREAD_TABLE_START       0x21000000ul
+#define ZX_PAGE_BUF_START           0x21800000ul
 
-#define ZX_VMO_SERVER_MAP_START     0x400000000ul
+#define ZX_VMO_SERVER_MAP_START     0x200000000ul
 
 /* VMOs can be max 8gb (incl guard page) */
 #define ZX_VMO_SERVER_MAP_SIZE      0x200000000ul
 
 /* End of low vaddr space */
-#define ZX_VMO_SERVER_MAP_END       0x800000000000ul
+#define ZX_VMO_SERVER_MAP_END       0x400000000000ul
 
 /* Functions for allocating VMO mappings on server */
 void init_vmo_kmap(void);

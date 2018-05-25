@@ -17,7 +17,7 @@
 
 #define NUM_WARMUP  1000u
 #define NUM_RUNS    10000u
-#define NUM_ITER    5u
+#define NUM_ITER    20u
 
 #define MAX_BUF_SIZE    65536u
 
@@ -291,8 +291,37 @@ void run_benchmarks(void)
     assert(!zx_handle_close(ch1));
     assert(!zx_handle_close(sock0));
     assert(!zx_handle_close(sock1));
-    free(writebuf);
-    free(readbuf);
+
+    /* VMO read/write */
+    zx_handle_t vmo;
+    uint64_t actual;
+    assert(!zx_vmo_create(VMO_SIZE, 0, &vmo));
+    numbytes = MAX_BUF_SIZE;
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        rand_write_buf(writebuf, numbytes);
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            assert(!zx_vmo_write(vmo, writebuf, 0, numbytes, &actual));
+        }
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            assert(!zx_vmo_read(vmo, readbuf, 0, numbytes, &actual));
+            assert(!memcmp(writebuf, readbuf, numbytes));
+        }
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            zx_vmo_write(vmo, writebuf, 0, numbytes, &actual);
+        }
+        end = zx_ticks_get();
+        result1[i] = (end - start - overhead) / NUM_ITER;
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            zx_vmo_read(vmo, readbuf, 0, numbytes, &actual);
+        }
+        end = zx_ticks_get();
+        result2[i] = (end - start - overhead) / NUM_ITER;
+        assert(!memcmp(writebuf, readbuf, numbytes));
+    }
+    calc_results("zx_vmo_write", result1);
+    calc_results("zx_vmo_read", result2);
 
     /*
      *  Thread create
@@ -324,5 +353,7 @@ void run_benchmarks(void)
 
 #endif
 
+    free(writebuf);
+    free(readbuf);
     while (1);
 }

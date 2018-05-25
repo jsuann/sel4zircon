@@ -43,7 +43,7 @@ private:
         PageBuf *next_ = NULL;
         uint32_t off_ = 0u;
         uint32_t len_ = 0u;
-        uint8_t data_[kPayloadSize] = {0};
+        uint8_t data_[kPayloadSize];
 
         size_t rem() const {
             return kPayloadSize - (off_ + len_);

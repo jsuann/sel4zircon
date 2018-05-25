@@ -43,14 +43,16 @@ zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
 
     /* Alloc page bufs and write to them */
     for (uint32_t i = 0; i < num_buf; ++i) {
-        /* Alloc the page */
-        PageBuf *pb = new (page_alloc()) PageBuf();
+        /* Alloc the page. Don't use new, as it clears the data array which we dont need */
+        PageBuf *pb = (PageBuf *)page_alloc();
+        pb->next_ = NULL;
+        pb->off_ = 0;
 
         /* Write to pb */
         size_t nbytes = (len > PageBuf::kPayloadSize) ? PageBuf::kPayloadSize : len;
         memcpy(&pb->data_[0], src, nbytes);
         src += nbytes;
-        pb->len_ += nbytes;
+        pb->len_ = nbytes;
         len -= nbytes;
 
         /* Append to mbuf */

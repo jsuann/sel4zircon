@@ -59,8 +59,8 @@ UNUSED static sel4utils_alloc_data_t data;
 #define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 6000)
 #define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
 
-#define ZX_SERVER_STACK_START           0x40000000ul
-#define ZX_SERVER_STACK_NUM_PAGES       14
+#define ZX_SERVER_STACK_START           0x1f000000ul
+#define ZX_SERVER_STACK_NUM_PAGES       16
 
 /* Use a bigger static heap for the server vs. other processes.
    Requires libsel4muslcsys patch. */
