@@ -142,6 +142,7 @@ private:
     /* Non-null if we are waiting on 1+ objects */
     Waiter *waiting_on_ = NULL;
     uint32_t num_waiting_on_ = 0;
+    bool wait_forever_ = false;
 
     /* State */
     State state_ = State::INITIAL;

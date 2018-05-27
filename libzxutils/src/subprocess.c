@@ -14,8 +14,7 @@
 //#endif
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
-        int *i = NULL;
-        *i = 0;
+        while (1);
         // In this mode we don't have a VDSO so we don't care what the handle is
         // and therefore we busy-loop. Unless external steps are taken this will
         // saturate one core.
@@ -23,6 +22,9 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
         while (val) {
             val += 2u;
         }
+    } else if (fnptr == 1) {
+        int *i = NULL;
+        *i = 0;
     } else {
         // In this mode we do have a VDSO but we are not a real ELF program so
         // we need to receive from the parent the address of the syscalls we can

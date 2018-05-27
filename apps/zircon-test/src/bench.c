@@ -8,12 +8,17 @@
 #include <zircon/syscalls.h>
 #include <zircon/process.h>
 
+#ifdef CONFIG_HAVE_SEL4ZIRCON
 #include <sel4/sel4.h>
-#include <sel4/benchmark_utilisation_types.h>
-#include <sel4zircon/debug.h>
 #include <sel4zircon/cspace.h>
+#include <sel4zircon/endpoint.h>
+#include <sel4zircon/debug.h>
+#include <sel4zircon/elf.h>
+#else
+#include <launchpad/launchpad.h>
+#endif
 
-//#include <mini-process/mini-process.h>
+#include <mini-process/mini-process.h>
 
 #define NUM_WARMUP  1000u
 #define NUM_RUNS    10000u
@@ -203,7 +208,7 @@ void run_benchmarks(void)
     }
     calc_results("zx_object_signal", result1);
 
-    assert(!zx_handle_close(event));
+    //assert(!zx_handle_close(event));
 
 
     /*
@@ -326,6 +331,7 @@ void run_benchmarks(void)
     /*
      *  Thread create
      */
+    /*
     zx_handle_t *thrd = malloc(NUM_ITER * sizeof(zx_handle_t));
     assert(thrd != NULL);
     for (size_t i = 0; i < NUM_RUNS; ++i) {
@@ -348,10 +354,64 @@ void run_benchmarks(void)
         }
     }
     calc_results("zx_thread_create", result1);
+    */
+
+    /* Mini process test */
+    zx_handle_t process;
+    zx_handle_t thrd;
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        for (size_t j = 0; j < 5; ++j) {
+            zx_handle_t dup;
+            zx_status_t err;
+            assert(!zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup));
+            start = zx_ticks_get();
+            err = start_mini_process(zx_job_default(), dup, &process, &thrd);
+            end = zx_ticks_get();
+            assert(!err);
+            assert(!zx_task_kill(process));
+            assert(!zx_handle_close(process));
+            assert(!zx_handle_close(thrd));
+        }
+        result1[i] = (end - start - no_loop_overhead);
+    }
+    calc_results("mini-process", result1);
+    /*
+    */
+
+    /* Ping pong test */
+    zx_handle_t channel;
+    numbytes = 64;
 
 #ifdef CONFIG_HAVE_SEL4ZIRCON
-
+    assert(!run_zircon_app("hello-world", &process, &channel, 0));
+#else
+    /* Use a modified mini-process */
+    zx_handle_t pp_thread, pp_vmar;
+    assert(!zx_process_create(zx_job_default(), "minipr", 6u, 0u, &process, &pp_vmar));
+    assert(!zx_thread_create(process, "minith", 6u, 0, &pp_thread));
+    assert(start_mini_process_etc(process, pp_thread, pp_vmar, event, &channel) == ZX_OK);
+    assert(channel);
 #endif
+
+    for (size_t i = 0; i < NUM_RUNS; ++i) {
+        rand_write_buf(writebuf, numbytes);
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            assert(!zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0));
+            assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+            assert(!zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
+            assert(!memcmp(writebuf, readbuf, numbytes));
+        }
+        start = zx_ticks_get();
+        for (size_t j = 0; j < NUM_ITER; ++j) {
+            zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0);
+            zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
+            zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
+        }
+        end = zx_ticks_get();
+        assert(!memcmp(writebuf, readbuf, numbytes));
+        result1[i] = (end - start - overhead) / NUM_ITER;
+    }
+    calc_results("IPC ping pong", result1);
 
     free(writebuf);
     free(readbuf);

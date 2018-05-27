@@ -83,7 +83,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         // Simple mode /////////////////////////////////////////////////////////////
         // Don't map the VDSO, so the only thing the mini-process can do is busy-loop.
         // The handle sent to the process is just the caller's handle.
-        status = zx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
+        //status = zx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
 
     } else {
         // Complex mode ////////////////////////////////////////////////////////////

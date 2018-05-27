@@ -261,8 +261,13 @@ void ZxThread::wait(timer_callback_func cb, void *data, uint64_t expire_time)
     }
 
     /* Set callback & add timer */
-    timer_.set_callback(cb, data);
-    add_timer(&timer_, expire_time, 0, 0);
+    if (expire_time != ZX_TIME_INFINITE) {
+        timer_.set_callback(cb, data);
+        add_timer(&timer_, expire_time, 0, 0);
+        wait_forever_ = false;
+    } else {
+        wait_forever_ = true;
+    }
 }
 
 zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
@@ -340,7 +345,7 @@ void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
     }
 
     /* If this isn't a timeout, remove timer */
-    if (ret != ZX_ERR_TIMED_OUT) {
+    if (ret != ZX_ERR_TIMED_OUT && !wait_forever_) {
         remove_timer(&timer_);
     }
 

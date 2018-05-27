@@ -27,6 +27,8 @@ void update_timeout(uint64_t expire_time)
 
 } /* namespace ClockCxx */
 
+#define ZX_USE_TICKLESS_TIMER      1
+
 void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
         seL4_CPtr server_tcb, seL4_Word *timer_badge)
 {
@@ -48,6 +50,10 @@ void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
 
     /* Store server timer */
     server_timer = timer;
+
+#if !ZX_USE_TICKLESS_TIMER
+    update_timeout(get_system_time() + kTimerMin);
+#endif
 }
 
 bool has_timer_expired(TimerNode *t, uint64_t time)
@@ -87,10 +93,15 @@ void handle_timer(seL4_Word badge)
         progress = true;
     }
 
+#if ZX_USE_TICKLESS_TIMER
     /* Update timeout if head changed */
     if (progress && head != NULL) {
         update_timeout(head->expire_time_);
     }
+#else
+    (void)progress;
+    update_timeout(curr_time + kTimerMin);
+#endif
 }
 
 void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags)
@@ -147,10 +158,12 @@ void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flag
     t->next_ = *pt;
     *pt = t;
 
+#if ZX_USE_TICKLESS_TIMER
     /* If new timer at head, update the timeout */
     if (t == head) {
         update_timeout(t->expire_time_);
     }
+#endif
 }
 
 void remove_timer(TimerNode *t)

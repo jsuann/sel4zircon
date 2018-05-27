@@ -2,19 +2,19 @@
 #include <zircon/types.h>
 #include <assert.h>
 
-#define CHANNEL_BUF_SIZE    10000
+#define CHANNEL_BUF_SIZE    64 //10000
 
 void entry(zx_handle_t channel, uintptr_t fnptr)
 {
-    char *hello_msg = "Hello world!";
-    zx_debug_write((void *)hello_msg, 12);
+    //char *hello_msg = "Hello world!";
+    //zx_debug_write((void *)hello_msg, 12);
 
-    char buf[CHANNEL_BUF_SIZE] = {0};
+    char buf[CHANNEL_BUF_SIZE];// = {0};
 
     while (1) {
         zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
         zx_channel_read(channel, 0, buf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL);
-        zx_debug_write("Replying...", 12);
+        //zx_debug_write("Replying...", 12);
         zx_channel_write(channel, 0, buf, CHANNEL_BUF_SIZE, NULL, 0);
     }
 
