@@ -20,9 +20,9 @@
 
 #include <mini-process/mini-process.h>
 
-#define NUM_WARMUP  1000u
+#define NUM_WARMUP  100u
 #define NUM_RUNS    10000u
-#define NUM_ITER    20u
+#define NUM_ITER    10u
 
 #define MAX_BUF_SIZE    65536u
 
@@ -62,12 +62,12 @@ void calc_results(const char *test, double *result)
     }
     stddev /= NUM_RUNS;
     stddev = sqrt(stddev);
-    printf("=== %s results ===\n", test);
-    printf("mean: %f\n", mean);
-    printf("stddev: %f\n", stddev);
-    printf("stddev/mean: %f\n", (stddev / mean));
-    printf("min: %f\n", min);
-    printf("max: %f\n", max);
+    printf("%s,%f,%f,%f,%f\n", test, mean, stddev, min, max);
+    //printf("mean: %f\n", mean);
+    //printf("stddev: %f\n", stddev);
+    //printf("stddev/mean: %f\n", (stddev / mean));
+    //printf("min: %f\n", min);
+    //printf("max: %f\n", max);
     fflush(stdout);
 }
 
@@ -224,10 +224,11 @@ void run_benchmarks(void)
     zx_handle_t sock0, sock1;
     assert(!zx_socket_create(ZX_SOCKET_STREAM, &sock0, &sock1));
 
-    size_t numbytes = 64;
+    size_t numbytes = 200;
     char str_buf[100];
 
-    while (numbytes <= MAX_BUF_SIZE) {
+    //while (numbytes <= MAX_BUF_SIZE) {
+    while (numbytes <= 10000) {
         for (size_t i = 0; i < NUM_RUNS; ++i) {
             rand_write_buf(writebuf, numbytes);
             /* Do untimed test run with sanity checks */
@@ -253,9 +254,9 @@ void run_benchmarks(void)
             assert(!memcmp(writebuf, readbuf, numbytes));
             result2[i] = (end - start - overhead) / NUM_ITER;
         }
-        sprintf(str_buf, "channel write %lu", numbytes);
+        sprintf(str_buf, "zx_channel_write,%lu", numbytes);
         calc_results(str_buf, result1);
-        sprintf(str_buf, "channel read %lu", numbytes);
+        sprintf(str_buf, "zx_channel_read,%lu", numbytes);
         calc_results(str_buf, result2);
 
         for (size_t i = 0; i < NUM_RUNS; ++i) {
@@ -283,12 +284,12 @@ void run_benchmarks(void)
             assert(!memcmp(writebuf, readbuf, numbytes));
             result2[i] = (end - start - overhead) / NUM_ITER;
         }
-        sprintf(str_buf, "socket write %lu", numbytes);
+        sprintf(str_buf, "zx_socket_write,%lu", numbytes);
         calc_results(str_buf, result1);
-        sprintf(str_buf, "socket read %lu", numbytes);
+        sprintf(str_buf, "zx_socket_read,%lu", numbytes);
         calc_results(str_buf, result2);
 
-        numbytes *= 4;
+        numbytes += 200;
     }
 
     /* Close channels & sockets */
@@ -301,32 +302,40 @@ void run_benchmarks(void)
     zx_handle_t vmo;
     uint64_t actual;
     assert(!zx_vmo_create(VMO_SIZE, 0, &vmo));
-    numbytes = MAX_BUF_SIZE;
-    for (size_t i = 0; i < NUM_RUNS; ++i) {
-        rand_write_buf(writebuf, numbytes);
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            assert(!zx_vmo_write(vmo, writebuf, 0, numbytes, &actual));
-        }
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            assert(!zx_vmo_read(vmo, readbuf, 0, numbytes, &actual));
+    numbytes = 200;
+    //while (numbytes <= MAX_BUF_SIZE) {
+    while (numbytes <= 10000) {
+        for (size_t i = 0; i < NUM_RUNS; ++i) {
+            rand_write_buf(writebuf, numbytes);
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_vmo_write(vmo, writebuf, 0, numbytes, &actual));
+            }
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_vmo_read(vmo, readbuf, 0, numbytes, &actual));
+                assert(!memcmp(writebuf, readbuf, numbytes));
+            }
+            start = zx_ticks_get();
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_vmo_write(vmo, writebuf, 0, numbytes, &actual);
+            }
+            end = zx_ticks_get();
+            result1[i] = (end - start - overhead) / NUM_ITER;
+            start = zx_ticks_get();
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_vmo_read(vmo, readbuf, 0, numbytes, &actual);
+            }
+            end = zx_ticks_get();
+            result2[i] = (end - start - overhead) / NUM_ITER;
             assert(!memcmp(writebuf, readbuf, numbytes));
         }
-        start = zx_ticks_get();
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            zx_vmo_write(vmo, writebuf, 0, numbytes, &actual);
-        }
-        end = zx_ticks_get();
-        result1[i] = (end - start - overhead) / NUM_ITER;
-        start = zx_ticks_get();
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            zx_vmo_read(vmo, readbuf, 0, numbytes, &actual);
-        }
-        end = zx_ticks_get();
-        result2[i] = (end - start - overhead) / NUM_ITER;
-        assert(!memcmp(writebuf, readbuf, numbytes));
+        sprintf(str_buf, "zx_vmo_write,%lu", numbytes);
+        calc_results(str_buf, result1);
+        sprintf(str_buf, "zx_vmo_read,%lu", numbytes);
+        calc_results(str_buf, result2);
+
+        //numbytes *= 2;
+        numbytes += 200;
     }
-    calc_results("zx_vmo_write", result1);
-    calc_results("zx_vmo_read", result2);
 
     /*
      *  Thread create
@@ -358,6 +367,7 @@ void run_benchmarks(void)
 
     /* Mini process test */
     zx_handle_t process;
+    /*
     zx_handle_t thrd;
     for (size_t i = 0; i < NUM_RUNS; ++i) {
         for (size_t j = 0; j < 5; ++j) {
@@ -375,12 +385,11 @@ void run_benchmarks(void)
         result1[i] = (end - start - no_loop_overhead);
     }
     calc_results("mini-process", result1);
-    /*
     */
 
     /* Ping pong test */
     zx_handle_t channel;
-    numbytes = 64;
+    numbytes = 200;
 
 #ifdef CONFIG_HAVE_SEL4ZIRCON
     assert(!run_zircon_app("hello-world", &process, &channel, 0));
@@ -393,25 +402,31 @@ void run_benchmarks(void)
     assert(channel);
 #endif
 
-    for (size_t i = 0; i < NUM_RUNS; ++i) {
-        rand_write_buf(writebuf, numbytes);
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            assert(!zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0));
-            assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
-            assert(!zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
+    while (numbytes <= 10000u) {
+        for (size_t i = 0; i < NUM_RUNS; ++i) {
+            rand_write_buf(writebuf, numbytes);
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                assert(!zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0));
+                assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+                assert(!zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
+                assert(!memcmp(writebuf, readbuf, numbytes));
+            }
+            start = zx_ticks_get();
+            for (size_t j = 0; j < NUM_ITER; ++j) {
+                zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0);
+                zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
+                zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
+            }
+            end = zx_ticks_get();
             assert(!memcmp(writebuf, readbuf, numbytes));
+            result1[i] = (end - start - overhead) / NUM_ITER;
         }
-        start = zx_ticks_get();
-        for (size_t j = 0; j < NUM_ITER; ++j) {
-            zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0);
-            zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
-            zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
-        }
-        end = zx_ticks_get();
-        assert(!memcmp(writebuf, readbuf, numbytes));
-        result1[i] = (end - start - overhead) / NUM_ITER;
+        sprintf(str_buf, "IPC echo,%lu", numbytes);
+        calc_results(str_buf, result1);
+
+        //numbytes *= 2;
+        numbytes += 200;
     }
-    calc_results("IPC ping pong", result1);
 
     free(writebuf);
     free(readbuf);

@@ -12,7 +12,7 @@
 
 #define ELF_VMO_SIZE    0x200000
 #define PAGE_MASK       ~((1 << seL4_PageBits) - 1)
-#define STACK_SIZE      (16 * (1 << seL4_PageBits))
+#define STACK_SIZE      (20 * (1 << seL4_PageBits))
 
 zx_status_t run_zircon_app(const char *filename, zx_handle_t *process,
         zx_handle_t *channel, uint64_t arg)
