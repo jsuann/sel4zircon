@@ -1,17 +1,42 @@
-From d2e5c5edd983211194b6ec60279329a91447c5a6 Mon Sep 17 00:00:00 2001
+From 18977171d2d14d07b75ebc6754a2ff70902d9b67 Mon Sep 17 00:00:00 2001
 From: Jack Suann <jacksuann@hotmail.com>
 Date: Thu, 17 May 2018 01:08:54 +1000
 Subject: [PATCH] Zircon uapp: sel4zircon-test
 
-Will be used for benchmarking
+Plus other benchmarking changes
 ---
- make/engine.mk                       |  2 +-
- system/uapp/sel4zircon-test/main.c   | 61 ++++++++++++++++++++++++++++
- system/uapp/sel4zircon-test/rules.mk | 23 +++++++++++
- 3 files changed, 85 insertions(+), 1 deletion(-)
+ kernel/object/include/object/mbuf.h     |   2 +-
+ make/engine.mk                          |   2 +-
+ system/uapp/ping-pong/main.c            |   8 +
+ system/uapp/ping-pong/rules.mk          |  22 ++
+ system/uapp/sel4zircon-test/bench.c     | 434 ++++++++++++++++++++++++++++++++
+ system/uapp/sel4zircon-test/bench.h     |   1 +
+ system/uapp/sel4zircon-test/main.c      |  33 +++
+ system/uapp/sel4zircon-test/rules.mk    |  26 ++
+ system/ulib/fdio/logger.c               |   4 +
+ system/ulib/mini-process/mini-process.c |  11 +-
+ system/ulib/mini-process/subprocess.c   |  10 +
+ 11 files changed, 546 insertions(+), 7 deletions(-)
+ create mode 100644 system/uapp/ping-pong/main.c
+ create mode 100644 system/uapp/ping-pong/rules.mk
+ create mode 100644 system/uapp/sel4zircon-test/bench.c
+ create mode 100644 system/uapp/sel4zircon-test/bench.h
  create mode 100644 system/uapp/sel4zircon-test/main.c
  create mode 100644 system/uapp/sel4zircon-test/rules.mk
 
+diff --git a/kernel/object/include/object/mbuf.h b/kernel/object/include/object/mbuf.h
+index ff823814a..7e6311507 100644
+--- a/kernel/object/include/object/mbuf.h
++++ b/kernel/object/include/object/mbuf.h
+@@ -49,7 +49,7 @@ private:
+     };
+     static_assert(sizeof(MBuf) == MBuf::kMallocSize, "");
+ 
+-    static constexpr size_t kSizeMax = 128 * MBuf::kPayloadSize;
++    static constexpr size_t kSizeMax = 8192 * MBuf::kPayloadSize;
+ 
+     MBuf* AllocMBuf();
+     void FreeMBuf(MBuf* buf);
 diff --git a/make/engine.mk b/make/engine.mk
 index 89a704cf7..4a8097a36 100644
 --- a/make/engine.mk
@@ -25,12 +50,501 @@ index 89a704cf7..4a8097a36 100644
  DEBUG_HARD ?= false
  ENABLE_BUILD_LISTFILES ?= false
  ENABLE_BUILD_SYSROOT ?= false
+diff --git a/system/uapp/ping-pong/main.c b/system/uapp/ping-pong/main.c
+new file mode 100644
+index 000000000..1a14680ce
+--- /dev/null
++++ b/system/uapp/ping-pong/main.c
+@@ -0,0 +1,8 @@
++#include <zircon/syscalls.h>
++#include <zircon/processargs.h>
++
++int main(int argc, const char** argv) {
++
++    while (1);
++    return 0;
++}
+diff --git a/system/uapp/ping-pong/rules.mk b/system/uapp/ping-pong/rules.mk
+new file mode 100644
+index 000000000..c0793c19a
+--- /dev/null
++++ b/system/uapp/ping-pong/rules.mk
+@@ -0,0 +1,22 @@
++# Copyright 2017 The Fuchsia Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++LOCAL_DIR := $(GET_LOCAL_DIR)
++
++MODULE := $(LOCAL_DIR)
++
++MODULE_TYPE := userapp
++MODULE_GROUP := core
++
++MODULE_NAME := ping-pong
++
++# app main
++MODULE_SRCS := \
++    $(LOCAL_DIR)/main.c
++
++MODULE_LIBS := \
++    system/ulib/zircon \
++    system/ulib/c
++
++include make/module.mk
+diff --git a/system/uapp/sel4zircon-test/bench.c b/system/uapp/sel4zircon-test/bench.c
+new file mode 100644
+index 000000000..7d487149c
+--- /dev/null
++++ b/system/uapp/sel4zircon-test/bench.c
+@@ -0,0 +1,434 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++#include <math.h>
++
++#include <zircon/types.h>
++#include <zircon/syscalls.h>
++#include <zircon/process.h>
++
++#ifdef CONFIG_HAVE_SEL4ZIRCON
++#include <sel4/sel4.h>
++#include <sel4zircon/cspace.h>
++#include <sel4zircon/endpoint.h>
++#include <sel4zircon/debug.h>
++#include <sel4zircon/elf.h>
++#else
++#include <launchpad/launchpad.h>
++#endif
++
++#include <mini-process/mini-process.h>
++
++#define NUM_WARMUP  100u
++#define NUM_RUNS    10000u
++#define NUM_ITER    10u
++
++#define MAX_BUF_SIZE    65536u
++
++#define VMO_SIZE        16777216u
++
++/* Array for storing bench results */
++double result1[NUM_RUNS];
++double result2[NUM_RUNS];
++
++double mean, stddev, min, max, overhead;
++double no_loop_overhead;
++
++__attribute__((noreturn))
++void thread_ep_func(uintptr_t arg1, uintptr_t arg2)
++{
++    zx_thread_exit();
++    while(1) ;
++}
++
++void calc_results(const char *test, double *result)
++{
++    mean = stddev = 0;
++    min = max = result[0];
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        mean += result[i];
++        if (result[i] < min) {
++            min = result[i];
++        }
++        if (result[i] > max) {
++            max = result[i];
++        }
++    }
++    mean /= NUM_RUNS;
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        double x = (result[i] - mean);
++        stddev += x * x;
++    }
++    stddev /= NUM_RUNS;
++    stddev = sqrt(stddev);
++    printf("%s,%f,%f,%f,%f\n", test, mean, stddev, min, max);
++    //printf("mean: %f\n", mean);
++    //printf("stddev: %f\n", stddev);
++    //printf("stddev/mean: %f\n", (stddev / mean));
++    //printf("min: %f\n", min);
++    //printf("max: %f\n", max);
++    fflush(stdout);
++}
++
++void rand_write_buf(char *buf, size_t numbytes)
++{
++    for (size_t j = 0; j < numbytes; j += sizeof(int)) {
++        int *val = (int *)&buf[j];
++        *val = rand();
++    }
++}
++
++void run_benchmarks(void)
++{
++    uint64_t start, end;
++    srand(6123129);
++
++    zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
++
++    /* no loop overhead */
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            start = zx_ticks_get();
++            end = zx_ticks_get();
++        }
++        result1[i] = (end - start);
++    }
++    calc_results("no loop overhead", result1);
++    no_loop_overhead = mean;
++
++    /* Calc loop overhead */
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            __asm__ volatile("");
++        }
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            __asm__ volatile("");
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start);
++    }
++    calc_results("empty loop overhead", result1);
++
++    /* Save the mean overhead */
++    overhead = mean;
++
++    /*
++     *  Test syscall bench
++     */
++
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            zx_syscall_test_0();
++        }
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_syscall_test_0();
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++    }
++    calc_results("zx_syscall_test_0", result1);
++
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            zx_syscall_test_8(1,2,3,4,5,6,7,8);
++        }
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_syscall_test_8(1,2,3,4,5,6,7,8);
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++    }
++    calc_results("zx_syscall_test_8", result1);
++
++    /*
++     *  Handle dup, replace, close bench
++     */
++    zx_handle_t event;
++    assert(!zx_event_create(0, &event));
++    zx_handle_t *dup = malloc(NUM_ITER * sizeof(zx_handle_t));
++    assert(dup != NULL);
++
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            assert(!zx_handle_replace(event, ZX_RIGHT_SAME_RIGHTS, &event));
++        }
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_handle_replace(event, ZX_RIGHT_SAME_RIGHTS, &event);
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++    }
++    calc_results("zx_handle_replace", result1);
++
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            assert(!zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[j]));
++        }
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            assert(!zx_handle_close(dup[j]));
++        }
++
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup[j]);
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_handle_close(dup[j]);
++        }
++        end = zx_ticks_get();
++        result2[i] = (end - start - overhead) / NUM_ITER;
++    }
++    calc_results("zx_handle_duplicate", result1);
++    calc_results("zx_handle_close", result2);
++
++    free(dup);
++
++    /*
++     *  Event signal bench
++     */
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_WARMUP; ++j) {
++            assert(!zx_object_signal(event, 0, ZX_EVENT_SIGNALED));
++        }
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_object_signal(event, 0, ZX_EVENT_SIGNALED);
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++    }
++    calc_results("zx_object_signal", result1);
++
++    //assert(!zx_handle_close(event));
++
++
++    /*
++     *  Channel/socket read/write bench
++     */
++    char *writebuf = malloc(MAX_BUF_SIZE);
++    char *readbuf = malloc(MAX_BUF_SIZE);
++    assert(writebuf != NULL && readbuf != NULL);
++
++    zx_handle_t ch0, ch1;
++    assert(!zx_channel_create(0, &ch0, &ch1));
++
++    zx_handle_t sock0, sock1;
++    assert(!zx_socket_create(ZX_SOCKET_STREAM, &sock0, &sock1));
++
++    size_t numbytes = 200;
++    char str_buf[100];
++
++    //while (numbytes <= MAX_BUF_SIZE) {
++    while (numbytes <= 10000) {
++        for (size_t i = 0; i < NUM_RUNS; ++i) {
++            rand_write_buf(writebuf, numbytes);
++            /* Do untimed test run with sanity checks */
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_channel_write(ch0, 0, writebuf, numbytes, NULL, 0));
++            }
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_channel_read(ch1, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
++                assert(!memcmp(writebuf, readbuf, numbytes));
++            }
++            /* Now time it */
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_channel_write(ch0, 0, writebuf, numbytes, NULL, 0);
++            }
++            end = zx_ticks_get();
++            result1[i] = (end - start - overhead) / NUM_ITER;
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_channel_read(ch1, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
++            }
++            end = zx_ticks_get();
++            assert(!memcmp(writebuf, readbuf, numbytes));
++            result2[i] = (end - start - overhead) / NUM_ITER;
++        }
++        sprintf(str_buf, "zx_channel_write,%lu", numbytes);
++        calc_results(str_buf, result1);
++        sprintf(str_buf, "zx_channel_read,%lu", numbytes);
++        calc_results(str_buf, result2);
++
++        for (size_t i = 0; i < NUM_RUNS; ++i) {
++            rand_write_buf(writebuf, numbytes);
++            /* Do untimed test run with sanity checks */
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_socket_write(sock0, 0, writebuf, numbytes, NULL));
++            }
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_socket_read(sock1, 0, readbuf, numbytes, NULL));
++                assert(!memcmp(writebuf, readbuf, numbytes));
++            }
++            /* Now time it */
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_socket_write(sock0, 0, writebuf, numbytes, NULL);
++            }
++            end = zx_ticks_get();
++            result1[i] = (end - start - overhead) / NUM_ITER;
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_socket_read(sock1, 0, readbuf, numbytes, NULL);
++            }
++            end = zx_ticks_get();
++            assert(!memcmp(writebuf, readbuf, numbytes));
++            result2[i] = (end - start - overhead) / NUM_ITER;
++        }
++        sprintf(str_buf, "zx_socket_write,%lu", numbytes);
++        calc_results(str_buf, result1);
++        sprintf(str_buf, "zx_socket_read,%lu", numbytes);
++        calc_results(str_buf, result2);
++
++        numbytes += 200;
++    }
++
++    /* Close channels & sockets */
++    assert(!zx_handle_close(ch0));
++    assert(!zx_handle_close(ch1));
++    assert(!zx_handle_close(sock0));
++    assert(!zx_handle_close(sock1));
++
++    /* VMO read/write */
++    zx_handle_t vmo;
++    uint64_t actual;
++    assert(!zx_vmo_create(VMO_SIZE, 0, &vmo));
++    numbytes = 200;
++    //while (numbytes <= MAX_BUF_SIZE) {
++    while (numbytes <= 10000) {
++        for (size_t i = 0; i < NUM_RUNS; ++i) {
++            rand_write_buf(writebuf, numbytes);
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_vmo_write(vmo, writebuf, 0, numbytes, &actual));
++            }
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_vmo_read(vmo, readbuf, 0, numbytes, &actual));
++                assert(!memcmp(writebuf, readbuf, numbytes));
++            }
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_vmo_write(vmo, writebuf, 0, numbytes, &actual);
++            }
++            end = zx_ticks_get();
++            result1[i] = (end - start - overhead) / NUM_ITER;
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_vmo_read(vmo, readbuf, 0, numbytes, &actual);
++            }
++            end = zx_ticks_get();
++            result2[i] = (end - start - overhead) / NUM_ITER;
++            assert(!memcmp(writebuf, readbuf, numbytes));
++        }
++        sprintf(str_buf, "zx_vmo_write,%lu", numbytes);
++        calc_results(str_buf, result1);
++        sprintf(str_buf, "zx_vmo_read,%lu", numbytes);
++        calc_results(str_buf, result2);
++
++        //numbytes *= 2;
++        numbytes += 200;
++    }
++
++    /*
++     *  Thread create
++     */
++    /*
++    zx_handle_t *thrd = malloc(NUM_ITER * sizeof(zx_handle_t));
++    assert(thrd != NULL);
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            assert(!zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[j]));
++        }
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            assert(!zx_handle_close(thrd[j]));
++        }
++
++        start = zx_ticks_get();
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++            zx_thread_create(zx_process_self(), "thrd", 4, 0, &thrd[j]);
++        }
++        end = zx_ticks_get();
++        result1[i] = (end - start - overhead) / NUM_ITER;
++
++        for (size_t j = 0; j < NUM_ITER; ++j) {
++           zx_handle_close(thrd[j]);
++        }
++    }
++    calc_results("zx_thread_create", result1);
++    */
++
++    /* Mini process test */
++    zx_handle_t process;
++    /*
++    zx_handle_t thrd;
++    for (size_t i = 0; i < NUM_RUNS; ++i) {
++        for (size_t j = 0; j < 5; ++j) {
++            zx_handle_t dup;
++            zx_status_t err;
++            assert(!zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &dup));
++            start = zx_ticks_get();
++            err = start_mini_process(zx_job_default(), dup, &process, &thrd);
++            end = zx_ticks_get();
++            assert(!err);
++            assert(!zx_task_kill(process));
++            assert(!zx_handle_close(process));
++            assert(!zx_handle_close(thrd));
++        }
++        result1[i] = (end - start - no_loop_overhead);
++    }
++    calc_results("mini-process", result1);
++    */
++
++    /* Ping pong test */
++    zx_handle_t channel;
++    numbytes = 200;
++
++#ifdef CONFIG_HAVE_SEL4ZIRCON
++    assert(!run_zircon_app("hello-world", &process, &channel, 0));
++#else
++    /* Use a modified mini-process */
++    zx_handle_t pp_thread, pp_vmar;
++    assert(!zx_process_create(zx_job_default(), "minipr", 6u, 0u, &process, &pp_vmar));
++    assert(!zx_thread_create(process, "minith", 6u, 0, &pp_thread));
++    assert(start_mini_process_etc(process, pp_thread, pp_vmar, event, &channel) == ZX_OK);
++    assert(channel);
++#endif
++
++    while (numbytes <= 10000u) {
++        for (size_t i = 0; i < NUM_RUNS; ++i) {
++            rand_write_buf(writebuf, numbytes);
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                assert(!zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0));
++                assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
++                assert(!zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL));
++                assert(!memcmp(writebuf, readbuf, numbytes));
++            }
++            start = zx_ticks_get();
++            for (size_t j = 0; j < NUM_ITER; ++j) {
++                zx_channel_write(channel, 0, writebuf, numbytes, NULL, 0);
++                zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
++                zx_channel_read(channel, 0, readbuf, NULL, numbytes, 0, NULL, NULL);
++            }
++            end = zx_ticks_get();
++            assert(!memcmp(writebuf, readbuf, numbytes));
++            result1[i] = (end - start - overhead) / NUM_ITER;
++        }
++        sprintf(str_buf, "IPC echo,%lu", numbytes);
++        calc_results(str_buf, result1);
++
++        //numbytes *= 2;
++        numbytes += 200;
++    }
++
++    free(writebuf);
++    free(readbuf);
++    while (1);
++}
+diff --git a/system/uapp/sel4zircon-test/bench.h b/system/uapp/sel4zircon-test/bench.h
+new file mode 100644
+index 000000000..4eb94889c
+--- /dev/null
++++ b/system/uapp/sel4zircon-test/bench.h
+@@ -0,0 +1 @@
++void run_benchmarks(void);
 diff --git a/system/uapp/sel4zircon-test/main.c b/system/uapp/sel4zircon-test/main.c
 new file mode 100644
-index 000000000..a88841abd
+index 000000000..45c72ef24
 --- /dev/null
 +++ b/system/uapp/sel4zircon-test/main.c
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,33 @@
 +#include <stdio.h>
 +#include <stdlib.h>
 +#include <string.h>
@@ -42,7 +556,7 @@ index 000000000..a88841abd
 +#include <zircon/syscalls.h>
 +#include <zircon/syscalls/log.h>
 +
-+#define NUM_WARMUP  10u
++#include "bench.h"
 +
 +int main(int argc, const char** argv) {
 +
@@ -54,50 +568,22 @@ index 000000000..a88841abd
 +    close(1);
 +    fdio_bind_to_fd(logger, 1, 0);
 +
-+    const char *str = "Hello world!\n";
-+    zx_debug_write(str, strlen(str));
++    //const char *str = "Hello world!\n";
++    //zx_debug_write(str, strlen(str));
 +
-+    printf("Hello world!\n");
++    printf("Starting bench...\n");
++    run_benchmarks();
 +
-+    uint64_t start, end;
-+
-+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-+        start = zx_ticks_get();
-+        end = zx_ticks_get();
-+    }
-+    printf("Got ticks: %lu\n", (end - start));
-+
-+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-+        start = zx_ticks_get();
-+        zx_syscall_test_0();
-+        end = zx_ticks_get();
-+    }
-+    printf("Got ticks: %lu\n", (end - start));
-+
-+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-+        start = zx_ticks_get();
-+        zx_syscall_test_1(1);
-+        end = zx_ticks_get();
-+    }
-+    printf("Got ticks: %lu\n", (end - start));
-+
-+    for (size_t i = 0; i < NUM_WARMUP; ++i) {
-+        start = zx_ticks_get();
-+        zx_syscall_test_8(1,2,3,4,5,6,7,8);
-+        end = zx_ticks_get();
-+    }
-+    printf("Got ticks: %lu\n", (end - start));
 +
 +    while (1);
-+
 +    return 0;
 +}
 diff --git a/system/uapp/sel4zircon-test/rules.mk b/system/uapp/sel4zircon-test/rules.mk
 new file mode 100644
-index 000000000..8bb7c8147
+index 000000000..e0ae72620
 --- /dev/null
 +++ b/system/uapp/sel4zircon-test/rules.mk
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,26 @@
 +# Copyright 2017 The Fuchsia Authors. All rights reserved.
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
@@ -114,13 +600,115 @@ index 000000000..8bb7c8147
 +# app main
 +MODULE_SRCS := \
 +    $(LOCAL_DIR)/main.c \
++    $(LOCAL_DIR)/bench.c 
 +
 +MODULE_LIBS := \
 +    system/ulib/zircon \
 +    system/ulib/fdio \
++    system/ulib/mini-process \
++    system/ulib/launchpad \
 +    system/ulib/c
 +
 +include make/module.mk
+diff --git a/system/ulib/fdio/logger.c b/system/ulib/fdio/logger.c
+index de5614ce0..1f5a14204 100644
+--- a/system/ulib/fdio/logger.c
++++ b/system/ulib/fdio/logger.c
+@@ -23,6 +23,7 @@ struct fdio_log {
+ #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
+ 
+ static ssize_t log_write(fdio_t* io, const void* _data, size_t len) {
++/*
+     static thread_local struct {
+         unsigned next;
+         char data[LOGBUF_MAX];
+@@ -57,6 +58,9 @@ static ssize_t log_write(fdio_t* io, const void* _data, size_t len) {
+         }
+     }
+     return r;
++    len = (len > 256) ? 256 : len;
++*/
++    return zx_debug_write(_data, len);
+ }
+ 
+ static zx_status_t log_close(fdio_t* io) {
+diff --git a/system/ulib/mini-process/mini-process.c b/system/ulib/mini-process/mini-process.c
+index 3ffff6bfc..e991a5df9 100644
+--- a/system/ulib/mini-process/mini-process.c
++++ b/system/ulib/mini-process/mini-process.c
+@@ -46,15 +46,15 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
+     // Allocate a single VMO for the child. It doubles as the stack on the top and
+     // as the executable code (minipr_thread_loop()) at the bottom. In theory, actual
+     // stack usage is minimal, like 160 bytes or less.
+-    uint64_t stack_size = 16 * 1024u;
++    uint64_t stack_size = 20 * 4096u;
+     zx_handle_t stack_vmo = ZX_HANDLE_INVALID;
+     zx_status_t status = zx_vmo_create(stack_size, 0, &stack_vmo);
+     if (status != ZX_OK)
+         return status;
+     // Try to set the name, but ignore any errors since it's purely for
+     // debugging and diagnostics.
+-    static const char vmo_name[] = "mini-process:stack";
+-    zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
++    //static const char vmo_name[] = "mini-process:stack";
++    //zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
+ 
+     // We assume that the code to execute is less than kSizeLimit bytes.
+     const uint32_t kSizeLimit = 1000;
+@@ -79,7 +79,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
+         // Simple mode /////////////////////////////////////////////////////////////
+         // Don't map the VDSO, so the only thing the mini-process can do is busy-loop.
+         // The handle sent to the process is just the caller's handle.
+-        status = zx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
++        //status = zx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
+ 
+     } else {
+         // Complex mode ////////////////////////////////////////////////////////////
+@@ -216,7 +216,8 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
+     if (status != ZX_OK)
+         goto exit;
+ 
+-    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
++    //status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
++    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, NULL);
+     // On success the transferred_handle gets consumed.
+ exit:
+     if (status != ZX_OK) {
+diff --git a/system/ulib/mini-process/subprocess.c b/system/ulib/mini-process/subprocess.c
+index 24c9537b8..5de7fa20d 100644
+--- a/system/ulib/mini-process/subprocess.c
++++ b/system/ulib/mini-process/subprocess.c
+@@ -5,6 +5,8 @@
+ #include "subprocess.h"
+ #include <mini-process/mini-process.h>
+ 
++#define CHANNEL_BUF_SIZE    16384u
++
+ // This function is the entire program that the child process will execute. It
+ // gets directly mapped into the child process via zx_vmo_write() so it must not
+ // reference any addressable entity outside it.
+@@ -14,6 +16,7 @@ __attribute__((no_sanitize("all")))
+ #endif
+ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
+     if (fnptr == 0) {
++        while (1);
+         // In this mode we don't have a VDSO so we don't care what the handle is
+         // and therefore we busy-loop. Unless external steps are taken this will
+         // saturate one core.
+@@ -48,6 +51,13 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
+         if (status != ZX_OK)
+             __builtin_trap();
+ 
++        char buf[CHANNEL_BUF_SIZE];
++        while (1) {
++            ctx.object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL);
++            ctx.channel_read(channel, 0, buf, NULL, CHANNEL_BUF_SIZE, 0, &actual, NULL);
++            ctx.channel_write(channel, 0, buf, actual, NULL, 0); 
++        }
++
+         do {
+             // wait for the next message.
+             status = ctx.object_wait_one(
 -- 
-2.17.0
+2.11.0
 
