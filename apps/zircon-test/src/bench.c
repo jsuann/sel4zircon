@@ -224,11 +224,10 @@ void run_benchmarks(void)
     zx_handle_t sock0, sock1;
     assert(!zx_socket_create(ZX_SOCKET_STREAM, &sock0, &sock1));
 
-    size_t numbytes = 200;
+    size_t numbytes = 16;
     char str_buf[100];
 
-    //while (numbytes <= MAX_BUF_SIZE) {
-    while (numbytes <= 10000) {
+    while (numbytes <= MAX_BUF_SIZE) {
         for (size_t i = 0; i < NUM_RUNS; ++i) {
             rand_write_buf(writebuf, numbytes);
             /* Do untimed test run with sanity checks */
@@ -289,7 +288,7 @@ void run_benchmarks(void)
         sprintf(str_buf, "zx_socket_read,%lu", numbytes);
         calc_results(str_buf, result2);
 
-        numbytes += 200;
+        numbytes *= 2;
     }
 
     /* Close channels & sockets */
@@ -302,9 +301,8 @@ void run_benchmarks(void)
     zx_handle_t vmo;
     uint64_t actual;
     assert(!zx_vmo_create(VMO_SIZE, 0, &vmo));
-    numbytes = 200;
-    //while (numbytes <= MAX_BUF_SIZE) {
-    while (numbytes <= 10000) {
+    numbytes = 16;
+    while (numbytes <= MAX_BUF_SIZE) {
         for (size_t i = 0; i < NUM_RUNS; ++i) {
             rand_write_buf(writebuf, numbytes);
             for (size_t j = 0; j < NUM_ITER; ++j) {
@@ -333,8 +331,7 @@ void run_benchmarks(void)
         sprintf(str_buf, "zx_vmo_read,%lu", numbytes);
         calc_results(str_buf, result2);
 
-        //numbytes *= 2;
-        numbytes += 200;
+        numbytes *= 2;
     }
 
     /*
@@ -389,7 +386,7 @@ void run_benchmarks(void)
 
     /* Ping pong test */
     zx_handle_t channel;
-    numbytes = 200;
+    numbytes = 16;
 
 #ifdef CONFIG_HAVE_SEL4ZIRCON
     assert(!run_zircon_app("hello-world", &process, &channel, 0));
@@ -402,7 +399,7 @@ void run_benchmarks(void)
     assert(channel);
 #endif
 
-    while (numbytes <= 10000u) {
+    while (numbytes <= 16384u) {
         for (size_t i = 0; i < NUM_RUNS; ++i) {
             rand_write_buf(writebuf, numbytes);
             for (size_t j = 0; j < NUM_ITER; ++j) {
@@ -424,8 +421,7 @@ void run_benchmarks(void)
         sprintf(str_buf, "IPC echo,%lu", numbytes);
         calc_results(str_buf, result1);
 
-        //numbytes *= 2;
-        numbytes += 200;
+        numbytes *= 2;
     }
 
     free(writebuf);

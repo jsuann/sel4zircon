@@ -23,7 +23,7 @@
 
 #include "bench.h"
 
-#define DO_BENCHMARK    1
+#define DO_BENCHMARK    0
 
 /* constants */
 #define TEST_EP_ID      0xfee
@@ -105,7 +105,9 @@ int main(int argc, char **argv) {
     zx_init_startup_handles(argv);
 #endif
 
+#if DO_BENCHMARK
     run_benchmarks();
+#endif
 
     zx_handle_t thrd_handle = zx_thread_self();
     zx_handle_t proc_handle = zx_process_self();

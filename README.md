@@ -1,15 +1,32 @@
-<!--
- Copyright 2017, Data61
- Commonwealth Scientific and Industrial Research Organisation (CSIRO)
- ABN 41 687 119 230.
-
- This software may be distributed and modified according to the terms of
- the BSD 2-Clause license. Note that NO WARRANTY is provided.
- See "LICENSE_BSD2.txt" for details.
-
- @TAG(DATA61_BSD)
--->
-
 # Zircon on seL4
 
 Zircon API on seL4.
+
+## Setup
+
+```
+mkdir sel4zircon
+cd sel4zircon
+repo init -u ssh://git@bitbucket:7999/~sua007/sel4zircon-manifest.git
+repo sync
+./projects/sel4zircon/apply-patches.sh
+```
+
+## Build
+
+```
+make x64_simulation_release_xml_defconfig
+make
+```
+
+## Run
+
+Run simulation with Qemu:
+```
+make simulate-x86_64
+```
+
+Run on machine queue (skylake):
+```
+make mqrun
+```
