@@ -1,4 +1,3 @@
-
 # Targets
 TARGETS := libzircon.a
 

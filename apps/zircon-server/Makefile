@@ -24,14 +24,8 @@ CXXFILES :=  $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/*.cxx))
 
 CXXFLAGS += -fno-rtti -fno-exceptions -fno-unwind-tables
 
-#CFILES   += $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/plat/${PLAT}/*.c))
-#CFILES   += $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/arch/${ARCH}/*.c))
-
 # CPIO archive
 OFILES := archive.o
-
-#ASMFILES := $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/arch/${ARCH}/*.S))
-#ASMFILES += $(patsubst $(SOURCE_DIR)/%,%,$(wildcard $(SOURCE_DIR)/src/plat/${PLAT}/*.S))
 
 HDRFILES := $(wildcard $(SOURCE_DIR)/include/*)
 
@@ -43,12 +37,6 @@ LIBS = c sel4 sel4muslcsys \
        cpio elf \
        utils sel4simple-default sel4debug zircon
 
-# extra cflag for sel4test
-CFLAGS += -Werror #-g
-#ifdef CONFIG_X86_64
-#CFLAGS += -mno-sse
-#endif
-
 include $(SEL4_COMMON)/common.mk
 
 # targets to generate CPIO archive of elf files
@@ -58,4 +46,3 @@ ${COMPONENTS}:
 archive.o: ${COMPONENTS}
 	$(Q)mkdir -p $(dir $@)
 	${COMMON_PATH}/files_to_obj.sh $@ _cpio_archive $^
-

@@ -16,6 +16,7 @@ TARGETS := $(notdir $(SOURCE_DIR)).bin
 # Move start of elf sections to after USER_ASPACE_BASE
 LDFLAGS += -Wl,--section-start=.text=1000120
 
+# Unset the default crt
 CONFIG_HAVE_CRT :=
 
 # Source files required to build the target
