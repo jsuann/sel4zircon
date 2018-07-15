@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SZX_PROJ="$(dirname "$(realpath "$0")")"
-BASE_DIR="$(dirname "$(dirname "${SZX_PROJ}")")"
+BASE_DIR="$(realpath "${SZX_PROJ}"/../..)"
 
 (cd "${BASE_DIR}"/kernel && \
     git am "${SZX_PROJ}"/patches/0001-Patch-make-fault-addr-word_t.patch)
