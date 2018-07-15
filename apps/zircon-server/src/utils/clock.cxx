@@ -34,7 +34,7 @@ void init_timer(seL4_timer_t *timer, seL4_CPtr ntfn,
 {
     using namespace ClockCxx;
 
-    /* XXX newer versions of QEMU seem to constantly fire interrupts, in addition
+    /* Newer versions of QEMU seem to constantly fire interrupts, in addition
        to when we program the hpet to fire. It's not too much of an issue since
        we don't use TIMEOUT_PERIODIC, which constantly reprograms hpet, causing
        it to never actually fire correctly in QEMU! */

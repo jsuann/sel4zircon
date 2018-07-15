@@ -103,7 +103,8 @@ bool ZxThread::init()
         return false;
     }
 
-    /* Create cspace */
+    /* Allocate cspace. We cache cspaces for reuse, since the VKA seems
+       to have issues after freeing them. Needs to be looked into more. */
     if (thread_cspaces[thread_index_].cptr == 0) {
         error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
         if (error) {
@@ -113,13 +114,6 @@ bool ZxThread::init()
     } else {
         cspace_ = thread_cspaces[thread_index_];
     }
-    /*
-    error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
-    if (error) {
-        return false;
-    }
-    */
-
 
     /* Get path to server ep */
     vka_cspace_make_path(vka, get_server_ep(), &src);
@@ -219,8 +213,6 @@ void ZxThread::destroy()
     if (cspace_.cptr != 0) {
         seL4_CNode_Delete(cspace_.cptr, ZX_THREAD_FAULT_SLOT, kThreadCspaceBits);
         seL4_CNode_Delete(cspace_.cptr, ZX_THREAD_SYSCALL_SLOT, kThreadCspaceBits);
-        /* Freeing messes up allocman? */
-        //vka_free_object(vka, &cspace_);
     }
 
     /* Delete tcb */

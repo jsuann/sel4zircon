@@ -74,7 +74,7 @@ ZxProcess *get_proc_from_badge(uint64_t badge)
     using namespace ProcessCxx;
 
     ZxThread *thrd = get_thread_from_badge(badge);
-    assert(thrd->get_owner() != NULL); // XXX sanity check
+    assert(thrd->get_owner() != NULL); /* sanity check */
     return (ZxProcess *)thrd->get_owner();
 }
 

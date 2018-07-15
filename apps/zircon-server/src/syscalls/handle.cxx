@@ -75,7 +75,7 @@ static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint
         proc->remove_handle(src);
         obj->destroy_handle(src);
         /* Since we just duped handle, we shouldn't be destroying the last! */
-        //assert(!obj->zero_handles());
+        assert(!obj->zero_handles());
     }
 
     return ZX_OK;

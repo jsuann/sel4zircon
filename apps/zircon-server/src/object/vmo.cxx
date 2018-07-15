@@ -128,7 +128,6 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
     delete vmap;
 }
 
-/* TODO cache attributes */
 bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 {
     int err;
@@ -144,7 +143,6 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     if (frames_[index].cptr == 0) {
         /* Allocate a frame object */
         err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
-        //err = vka_alloc_frame_maybe_device(vka, seL4_PageBits, true, &frames_[index]);
         if (err) {
             return false;
         }

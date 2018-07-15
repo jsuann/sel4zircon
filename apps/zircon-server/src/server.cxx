@@ -44,7 +44,6 @@ bool should_reply;
 
 } /* namespace ServerCxx */
 
-extern "C" void do_cpp_test(void);
 extern "C" void init_zircon_server(env_t *env);
 extern "C" void syscall_loop(void);
 
@@ -151,7 +150,7 @@ void syscall_loop(void)
 /*
  * We need to include other cxx files in subdirs, rather than compile
  * them separately. This is due to enums defined in sel4/sel4.h causing
- * linker issues. Namespaces are used to provided inter-file safety.
+ * linker issues. Namespaces are used to provide some inter-file safety.
  */
 #include "object/handle.cxx"
 #include "object/object.cxx"
@@ -195,59 +194,3 @@ void syscall_loop(void)
 #include "utils/init_test.cxx"
 #include "utils/page_alloc.cxx"
 #include "utils/system.cxx"
-
-#include "zxcpp/pagearray.h"
-
-#define ZX_DO_CPP_TEST 0
-
-/* Extra test function */
-void do_cpp_test(void)
-{
-    using namespace ServerCxx;
-
-#if ZX_DO_CPP_TEST
-    /* Test mbuf */
-    MBuf buf;
-
-    size_t len = 30;
-    char test[len] = {0};
-    char str[] = "HELLO HELLO HELLO";
-
-    for (size_t i = 0; i < 10000; ++i) {
-        assert(buf.write((uint8_t*)&str[0], strlen(str) + 1, true) == ZX_OK);
-    }
-
-    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
-
-    for (size_t i = 0; i < 10000; ++i) {
-        assert(buf.read((uint8_t*)&test[0], strlen(str) + 1) == ZX_OK);
-        assert(strcmp(str, &test[0]) == 0);
-        memset(&test[0], 0, strlen(str) + 1);
-    }
-
-    dprintf(SPEW, "mbuf size: %lu\n", buf.get_size());
-
-    /* Object type test */
-    ZxChannel ch;
-    assert(is_object_type<ZxChannel>(&ch));
-
-    /* Page array test */
-    PageArray<vka_object_t> test_pa;
-    size_t pa_size = 1 * 1024 * 1024; // 1MB of pages = 4GB
-    test_pa.init(pa_size);
-    test_pa.alloc(0);
-    test_pa.alloc(1);
-    test_pa.alloc(600000);
-    test_pa[0].cptr = 1;
-    dprintf(INFO, "%p %lu\n", &test_pa[0], test_pa[0].cptr);
-    dprintf(INFO, "%p %lu\n", &test_pa[1], test_pa[1].cptr);
-    dprintf(INFO, "%p %lu\n", &test_pa[600000], test_pa[600000].cptr);
-
-    assert(!test_pa.has(800000));
-
-    auto clean_func = [] (vka_object_t &frame) {
-        frame.cptr = 0;
-    };
-    test_pa.clear(clean_func);
-#endif
-}

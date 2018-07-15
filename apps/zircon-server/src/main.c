@@ -42,8 +42,6 @@
 #include "env.h"
 #include "debug.h"
 
-/* TODO make defined flags config options */
-
 /* Use a two level cspace to allow for higher memory usage */
 /* A patch for libsel4simple-default is required for this to work */
 #define ZX_USE_TWO_LEVEL_CSPACE         1
@@ -52,30 +50,12 @@
 #define ALLOCATOR_STATIC_POOL_SIZE      (BIT(seL4_PageBits) * 100)
 static char allocator_mem_pool[ALLOCATOR_STATIC_POOL_SIZE];
 
-/* static memory for virtual memory bootstrapping */
-UNUSED static sel4utils_alloc_data_t data;
-
 /* dimensions of virtual memory for the allocator to use */
 #define ALLOCATOR_VIRTUAL_POOL_SIZE     (BIT(seL4_PageBits) * 6000)
 #define ALLOCATOR_VIRTUAL_POOL_START    0x10000000ul
 
 #define ZX_SERVER_STACK_START           0x1f000000ul
 #define ZX_SERVER_STACK_NUM_PAGES       20
-
-/* Use a bigger static heap for the server vs. other processes.
-   Requires libsel4muslcsys patch. */
-#define ZX_USE_CUSTOM_HEAP              0
-
-#if ZX_USE_CUSTOM_HEAP
-/* Function in sys_morecore.c to change heap */
-extern void change_morecore_area(void *base, size_t size);
-
-/* Dimensions of heap */
-#define ZX_SERVER_HEAP_SIZE             0x2000000ul /* 32 MB */
-
-/* Heap decl */
-char server_heap[ZX_SERVER_HEAP_SIZE];
-#endif /* ZX_USE_CUSTOM_HEAP */
 
 /* server structs */
 seL4_BootInfo *info;
@@ -86,10 +66,8 @@ vspace_t vspace;
 seL4_timer_t timer;
 
 /* zircon server calls */
-extern void do_cpp_test(void);
 extern void init_zircon_server(env_t *env);
 extern uint64_t init_zircon_test(void);
-extern void send_zircon_test_data(seL4_CPtr ep_cap);
 extern void syscall_loop(void);
 
 void *main_continued(void *arg);
@@ -97,11 +75,7 @@ void *main_continued(void *arg);
 int main(void) {
     int error;
     vspace_new_pages_config_t config;
-
-#if ZX_USE_CUSTOM_HEAP
-    dprintf(SPEW, "Changing heap: base %p, size %lu\n", &server_heap, ZX_SERVER_HEAP_SIZE);
-    change_morecore_area(&server_heap, ZX_SERVER_HEAP_SIZE);
-#endif /* ZX_USE_CUSTOM_HEAP */
+    sel4utils_alloc_data_t data;
 
     /* get boot info */
     info = platsupport_get_bootinfo();
@@ -116,7 +90,7 @@ int main(void) {
     simple_default_init_bootinfo(&simple, info);
 
     /* print out bootinfo and other info about simple */
-    //simple_print(&simple);
+    /* simple_print(&simple); */
 
     /* Additional bootinfo cap prints */
 #ifdef SEL4_DEBUG_KERNEL
@@ -232,8 +206,6 @@ int main(void) {
 
 void *main_continued(void *arg UNUSED)
 {
-    do_cpp_test();
-
     /* Enter syscall loop */
     syscall_loop();
 
