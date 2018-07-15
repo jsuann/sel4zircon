@@ -152,6 +152,4 @@ zx_syscall_func sys_table[NUM_SYSCALLS] = {
     sys_endpoint_delete_cap,
     sys_get_elf_vmo,
     sys_get_ipc_buffer_addr,
-    sys_start_server_bench,
-    sys_end_server_bench,
 };

@@ -117,13 +117,3 @@ uint64_t zx_get_ipc_buffer_addr(void)
     ZX_SYSCALL_SEND(ZX_SYS_GET_IPC_BUFFER_ADDR, 0);
     return seL4_GetMR(0);
 }
-
-void zx_start_server_bench(void)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_START_SERVER_BENCH, 0);
-}
-
-void zx_end_server_bench(uint64_t *buf)
-{
-    ZX_SYSCALL_SEND(ZX_SYS_END_SERVER_BENCH, 1, buf);
-}

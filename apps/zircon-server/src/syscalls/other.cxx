@@ -42,8 +42,6 @@ uint64_t sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge)
     err = proc->uvaddr_to_kvaddr(user_ptr, len, buf);
     SYS_RET_IF_ERR(err);
 
-    //dprintf(ALWAYS, "(%s): ", proc->get_name());
-
     for (uint32_t i = 0; i < len; ++i) {
         putchar(((char *)buf)[i]);
     }
@@ -106,34 +104,6 @@ uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge)
     vmo->commit_range(0, elf_size);
     vmo->write(0, elf_size, elf_file);
     return ZX_OK;
-}
-
-uint64_t sys_start_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
-{
-    SYS_CHECK_NUM_ARGS(tag, 0);
-    //seL4_BenchmarkResetThreadUtilisation(seL4_CapInitThreadTCB);
-    //seL4_BenchmarkResetLog();
-    return 0;
-}
-
-uint64_t sys_end_server_bench(seL4_MessageInfo_t tag, uint64_t badge)
-{
-    SYS_CHECK_NUM_ARGS(tag, 1);
-    uintptr_t user_buf = seL4_GetMR(0);
-
-    zx_status_t err;
-    ZxProcess *proc = get_proc_from_badge(badge);
-
-    uint64_t *buf;
-    constexpr size_t buf_size = sizeof(uint64_t);
-    err = proc->uvaddr_to_kvaddr(user_buf, buf_size, (void *&)buf);
-    SYS_RET_IF_ERR(err);
-
-    //seL4_BenchmarkFinalizeLog();
-    //seL4_BenchmarkGetThreadUtilisation(seL4_CapInitThreadTCB);
-    //memcpy(buf, &(seL4_GetIPCBuffer()->msg[0]), buf_size);
-    *buf = 0;
-    return 0;
 }
 
 uint64_t sys_get_ipc_buffer_addr(seL4_MessageInfo_t tag, uint64_t badge)
