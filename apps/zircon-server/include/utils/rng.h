@@ -12,14 +12,12 @@
 
 unsigned int seed = 713281;
 
-static inline void
-init_prng(void)
+static inline void init_prng(void)
 {
     srand(seed);
 }
 
-static inline uint32_t
-get_handle_rand(void)
+static inline uint32_t get_handle_rand(void)
 {
     uint32_t secret = rand();
     /* Zircon clears top bit & bottom two bits */

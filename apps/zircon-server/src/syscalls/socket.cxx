@@ -32,10 +32,12 @@ uint64_t sys_socket_create(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *h0, *h1;
     h0 = create_handle_default_rights(sock0);
     h1 = create_handle_default_rights(sock1);
+
     if (h0 == NULL || h1 == NULL) {
         if (h0 != NULL) {
             sock0->destroy_handle(h0);
         }
+
         destroy_object(sock0);
         destroy_object(sock1);
         return ZX_ERR_NO_MEMORY;
@@ -75,13 +77,15 @@ uint64_t sys_socket_write(seL4_MessageInfo_t tag, uint64_t badge)
         if (size != 0) {
             return ZX_ERR_INVALID_ARGS;
         }
+
         return socket->shutdown(options & ZX_SOCKET_SHUTDOWN_MASK);
     }
 
-    void* buffer;
-    size_t* actual = NULL;
+    void *buffer;
+    size_t *actual = NULL;
     err = proc->uvaddr_to_kvaddr(user_buffer, size, buffer);
     SYS_RET_IF_ERR(err);
+
     if (user_actual != 0) {
         err = proc->get_kvaddr(user_actual, actual);
         SYS_RET_IF_ERR(err);
@@ -94,6 +98,7 @@ uint64_t sys_socket_write(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     size_t nwritten;
+
     if (options == ZX_SOCKET_CONTROL) {
         err = socket->get_peer()->write_control(buffer, size);
         nwritten = size;
@@ -126,10 +131,11 @@ uint64_t sys_socket_read(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    void* buffer;
-    size_t* actual = NULL;
+    void *buffer;
+    size_t *actual = NULL;
     err = proc->uvaddr_to_kvaddr(user_buffer, size, buffer);
     SYS_RET_IF_ERR(err);
+
     if (user_actual != 0) {
         err = proc->get_kvaddr(user_actual, actual);
         SYS_RET_IF_ERR(err);
@@ -140,6 +146,7 @@ uint64_t sys_socket_read(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     size_t nread;
+
     if (options == 0) {
         err = socket->read(buffer, size, &nread);
     } else if (options == ZX_SOCKET_CONTROL) {
@@ -180,6 +187,7 @@ uint64_t sys_socket_share(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *h = proc->get_handle(other);
     proc->remove_handle(h);
     err = socket->share(h);
+
     if (err != ZX_OK) {
         proc->add_handle(h);
     }
@@ -196,7 +204,7 @@ uint64_t sys_socket_accept(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    zx_handle_t* out_socket;
+    zx_handle_t *out_socket;
     err = proc->get_kvaddr(user_out, out_socket);
     SYS_RET_IF_ERR(err);
 

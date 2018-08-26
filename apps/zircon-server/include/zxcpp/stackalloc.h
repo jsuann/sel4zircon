@@ -23,16 +23,20 @@ public:
         if (count > stackAllocMaxNumElems) {
             return false;
         }
+
         free_list_ = (FreeListNode *)malloc(sizeof(FreeListNode) * count);
+
         if (free_list_ == NULL) {
             return false;
         }
+
         for (size_t i = 0; i < count - 1; ++i) {
-            free_list_[i].next = i+1;
+            free_list_[i].next = i + 1;
             free_list_[i].is_free = 1;
         }
-        free_list_[count-1].next = 0;
-        free_list_[count-1].is_free = 1;
+
+        free_list_[count - 1].next = 0;
+        free_list_[count - 1].is_free = 1;
 
         /* init other vals */
         pool_ = (T *)pool;
@@ -51,6 +55,7 @@ public:
         if (num_alloc_ == count_) {
             return false;
         }
+
         index = next_free_;
         //assert(free_list_[index].is_free);
         free_list_[index].is_free = 0;

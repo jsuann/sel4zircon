@@ -54,9 +54,11 @@ public:
     bool init(size_t size) {
         size_t num_top = (size + ItemPerTwoLvl - 1) / ItemPerTwoLvl;
         mid_ = (MidLevel **)calloc(num_top, sizeof(MidLevel *));
+
         if (mid_ == NULL) {
             return false;
         }
+
         size_ = size;
         return true;
     }
@@ -64,19 +66,25 @@ public:
     /* Ensure page alloc'd for access at index */
     bool alloc(uint64_t index) {
         uint64_t i = get_top(index);
+
         if (mid_[i] == NULL) {
             mid_[i] = (MidLevel *)page_alloc_zero();
+
             if (mid_[i] == NULL) {
                 return false;
             }
         }
+
         uint64_t j = get_mid(index);
+
         if (mid_[i]->bot_[j] == NULL) {
             mid_[i]->bot_[j] = (BotLevel *)page_alloc_zero();
+
             if (mid_[i]->bot_[j] == NULL) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -96,6 +104,7 @@ public:
     template <typename F>
     void clear(F &&cleanup_func) {
         size_t num_top = (size_ + ItemPerTwoLvl - 1) / ItemPerTwoLvl;
+
         for (size_t i = 0; i < num_top; ++i) {
             if (mid_[i] != NULL) {
                 for (size_t j = 0; j < PtrPerPage; ++j) {
@@ -103,9 +112,11 @@ public:
                         for (size_t k = 0; k < ItemPerPage; ++k) {
                             cleanup_func(mid_[i]->bot_[j]->item_[k]);
                         }
+
                         page_free(mid_[i]->bot_[j]);
                     }
                 }
+
                 page_free(mid_[i]);
             }
         }
@@ -146,9 +157,11 @@ public:
     bool init(size_t size) {
         size_t num_top = (size + ItemPerPage - 1) / ItemPerPage;
         bot_ = (BotLevel **)calloc(num_top, sizeof(BotLevel *));
+
         if (bot_ == NULL) {
             return false;
         }
+
         size_ = size;
         dprintf(SPEW, "Size of top level: %lu\n", num_top);
         return true;
@@ -157,12 +170,15 @@ public:
     /* Ensure page alloc'd for access at index */
     bool alloc(uint64_t index) {
         uint64_t i = get_top(index);
+
         if (bot_[i] == NULL) {
             bot_[i] = (BotLevel *)page_alloc_zero();
+
             if (bot_[i] == NULL) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -180,11 +196,13 @@ public:
     template <typename F>
     void clear(F &&cleanup_func) {
         size_t num_top = (size_ + ItemPerPage - 1) / ItemPerPage;
+
         for (size_t i = 0; i < num_top; ++i) {
             if (bot_[i] != NULL) {
                 for (size_t j = 0; j < ItemPerPage; ++j) {
                     cleanup_func(bot_[i]->item_[j]);
                 }
+
                 page_free(bot_[i]);
             }
         }

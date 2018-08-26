@@ -21,12 +21,14 @@
 #include <sel4zircon/debug.h>
 
 /* avoid main falling off the end of the world */
-void abort(void) {
+void abort(void)
+{
     while (1);
 }
 
 /* enable printf to use kernel debug printing */
-void __arch_putchar(int c) {
+void __arch_putchar(int c)
+{
 #ifdef CONFIG_DEBUG_BUILD
     seL4_DebugPutChar(c);
 #else
@@ -35,7 +37,8 @@ void __arch_putchar(int c) {
 }
 
 /* set a thread's name for debugging purposes */
-void name_thread(seL4_CPtr tcb, char *name) {
+void name_thread(seL4_CPtr tcb, char *name)
+{
 #ifdef SEL4_DEBUG_KERNEL
     seL4_DebugNameThread(tcb, name);
 #endif

@@ -30,7 +30,7 @@ class ZxJob;
 class ZxProcess final : public ZxObjectWaitable, public Listable<ZxProcess> {
 public:
     ZxProcess(ZxVmar *root_vmar, uint32_t proc_index) : handle_list_(this),
-            root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
+        root_vmar_{root_vmar}, thread_list_(this), proc_index_{proc_index} {
         handle_rand_ = get_handle_rand();
         root_vmar_->set_proc(this);
     }
@@ -48,13 +48,14 @@ public:
         if (state_ == State::RUNNING || state_ == State::KILLING) {
             return false;
         }
+
         /* Otherwise process can be destroyed once all threads removed */
         return (zero_handles() && thread_list_.empty());
     }
 
     void set_name(const char *name) {
         /* Silently truncate name */
-        strncpy(name_, name, ZX_MAX_NAME_LEN-1);
+        strncpy(name_, name, ZX_MAX_NAME_LEN - 1);
     }
 
     const char *get_name() const {
@@ -84,6 +85,7 @@ public:
         if (state_ == State::INITIAL) {
             state_ = State::RUNNING;
         }
+
         ++alive_count_;
     }
 
@@ -119,7 +121,7 @@ public:
     }
 
     void print_handles() {
-        auto print_func = [] (Handle *h) {
+        auto print_func = [](Handle * h) {
             dprintf(INFO, "Handle at %p:\n", h);
             dprintf(INFO, "proc: %p\tobj: %p\trights: %u\tvalue: %u\n",
                     h->get_owner(), h->get_object(), h->get_rights(), h->get_value());
@@ -159,9 +161,11 @@ public:
     template <typename T>
     zx_handle_t create_handle_get_uval(T *obj) {
         Handle *h = create_handle_default_rights<T>(obj);
+
         if (h == NULL) {
             return ZX_HANDLE_INVALID;
         }
+
         add_handle(h);
         return get_handle_user_val(h);
     }

@@ -1,7 +1,7 @@
 #include "object/job.h"
 
 namespace JobCxx {
-    ZxJob *root_job;
+ZxJob *root_job;
 };
 
 void init_root_job()
@@ -50,16 +50,18 @@ void ZxJob::kill()
     state_ = State::KILLING;
 
     /* Kill all processes */
-    proc_list_.for_each([] (ZxProcess *proc) {
+    proc_list_.for_each([](ZxProcess * proc) {
         proc->kill();
+
         if (proc->can_destroy()) {
             destroy_object(proc);
         }
     });
 
     /* Kill child jobs */
-    job_list_.for_each([] (ZxJob *job) {
+    job_list_.for_each([](ZxJob * job) {
         job->kill();
+
         if (job->can_destroy()) {
             destroy_object(job);
         }

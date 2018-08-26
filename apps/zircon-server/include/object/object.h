@@ -47,9 +47,10 @@ public:
     virtual void cancel_waiters(Handle *h) {}
 
     /* Override if object can store cookie */
-    virtual CookieJar* get_cookie_jar() { return NULL; }
+    virtual CookieJar *get_cookie_jar() { return NULL; }
 
-    virtual zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
+    virtual zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask,
+            bool peer);
 
     /* Helper for when can_destroy is overriden */
     bool zero_handles() const { return (handle_count_ == 0); }
@@ -58,9 +59,11 @@ public:
 
     Handle *create_handle(zx_rights_t rights) {
         Handle *h = allocate_handle(this, rights);
+
         if (h != NULL) {
             ++handle_count_;
         }
+
         return h;
     }
 

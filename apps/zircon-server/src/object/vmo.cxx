@@ -6,6 +6,7 @@ bool ZxVmo::init()
 {
     /* Get a kmap & set kaddr */
     kaddr_ = alloc_vmo_kmap();
+
     if (kaddr_ == 0) {
         return false;
     }
@@ -26,7 +27,7 @@ void ZxVmo::destroy()
     assert(map_list_.empty());
 
     /* Free any allocated frame objects */
-    auto free_func = [vka] (vka_object_t &frame) {
+    auto free_func = [vka](vka_object_t &frame) {
         if (frame.cptr != 0) {
             vka_free_object(vka, &frame);
         }
@@ -54,13 +55,15 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t base_addr, uint64_t offset,
 
     /* Alloc mem for vmap */
     void *vmap_mem = malloc(sizeof(VmoMapping));
+
     if (vmap_mem == NULL) {
         return NULL;
     }
 
     /* get frame access rights from mapping flags */
     seL4_CapRights_t rights;
-    bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
+    bool can_read = (flags & ZX_VM_FLAG_PERM_READ
+                    || flags & ZX_VM_FLAG_PERM_EXECUTE);
     bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
     rights = seL4_CapRights_new(0, can_read, can_write);
 
@@ -91,6 +94,7 @@ VmoMapping *ZxVmo::create_mapping(uintptr_t base_addr, uint64_t offset,
     /* If range flag set, try to map pages committed to vmo */
     if (flags & ZX_VM_FLAG_MAP_RANGE) {
         uint32_t vmap_end_page = vmap_start_page + vmap_num_pages;
+
         for (uint32_t i = vmap_start_page; i < vmap_end_page; ++i) {
             if (frames_.has(i) && frames_[i].cptr != 0) {
                 if (!commit_page(i, vmap)) {
@@ -110,7 +114,7 @@ void ZxVmo::delete_mapping(VmoMapping *vmap)
     assert(map_list_.contains(vmap));
 
     /* Clear all caps */
-    auto free_func = [vka] (seL4_CPtr &cap) {
+    auto free_func = [vka](seL4_CPtr & cap) {
         if (cap != 0) {
             cspacepath_t path;
             vka_cspace_make_path(vka, cap, &path);
@@ -143,6 +147,7 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
     if (frames_[index].cptr == 0) {
         /* Allocate a frame object */
         err = vka_alloc_frame(vka, seL4_PageBits, &frames_[index]);
+
         if (err) {
             return false;
         }
@@ -150,7 +155,8 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
         /* Map frame into kmap. We leak backing PTs for server */
         uintptr_t kvaddr = kaddr_ + (index * (1 << seL4_PageBits));
         err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
-                frames_[index].cptr, (void *)kvaddr, seL4_AllRights, 1);
+                        frames_[index].cptr, (void *)kvaddr, seL4_AllRights, 1);
+
         if (err) {
             vka_free_object(vka, &frames_[index]);
             memset(&frames_[index], 0, sizeof(vka_object_t));
@@ -165,6 +171,7 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 
         /* Check this index lies in mapping */
         uint32_t vmap_end_page = vmap->start_page_ + vmap->num_pages_;
+
         if (index < vmap->start_page_ || index >= vmap_end_page) {
             return false;
         }
@@ -178,13 +185,16 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
             /* src is kmap slot, dest is vmap slot */
             cspacepath_t src, dest;
             err = vka_cspace_alloc_path(vka, &dest);
+
             if (err) {
                 return false;
             }
+
             vka_cspace_make_path(vka, frames_[index].cptr, &src);
 
             /* Copy to dest slot */
             err = vka_cnode_copy(&dest, &src, seL4_AllRights);
+
             if (err) {
                 vka_cspace_free_path(vka, dest);
                 return false;
@@ -192,9 +202,11 @@ bool ZxVmo::commit_page(uint32_t index, VmoMapping *vmap)
 
             /* Map into proc addrspace */
             ZxProcess *proc = vmap->parent_->get_proc();
-            uintptr_t vaddr = vmap->base_addr_ + ((index - vmap->start_page_) * vmoPageSize);
+            uintptr_t vaddr = vmap->base_addr_ + ((index - vmap->start_page_) *
+                            vmoPageSize);
             //dprintf(SPEW, "Mapping page at %lx for proc %s\n", vaddr, proc->get_name());
             err = proc->map_page_in_vspace(dest.capPtr, (void *)vaddr, vmap->rights_, 1);
+
             if (err) {
                 vka_cnode_delete(&dest);
                 vka_cspace_free_path(vka, dest);
@@ -215,7 +227,7 @@ void ZxVmo::decommit_page(uint32_t index)
     assert(index < num_pages_);
 
     /* For each mapping, unmap page and delete cap */
-    auto unmap_func = [&vka, &index] (VmoMapping *vmap) {
+    auto unmap_func = [&vka, &index](VmoMapping * vmap) {
         if (vmap->caps_.has(index) && vmap->caps_[index] != 0) {
             cspacepath_t path;
             vka_cspace_make_path(vka, vmap->caps_[index], &path);
@@ -252,20 +264,23 @@ zx_status_t ZxVmo::resize(size_t new_num_pages)
 
     /* Make a new page array */
     PageArray<vka_object_t> new_pa;
+
     if (!new_pa.init(new_num_pages)) {
         return ZX_ERR_NO_MEMORY;
     }
 
     /* Copy over old vka objects */
     size_t to_copy = (new_num_pages < num_pages_) ? new_num_pages : num_pages_;
+
     for (size_t i = 0; i < to_copy; ++i) {
         if (frames_.has(i) && frames_[i].cptr != 0) {
             if (!new_pa.alloc(i)) {
                 /* Not enough pages for resize! Clear the new pagearray.
                    We don't need to do any internal cleanup. */
-                new_pa.clear([] (vka_object_t &frame) {});
+                new_pa.clear([](vka_object_t &frame) {});
                 return ZX_ERR_NO_MEMORY;
             }
+
             /* Copy the frame vka object */
             new_pa[i] = frames_[i];
         }
@@ -291,7 +306,8 @@ void VmoMapping::remap_pages(uint32_t flags)
 {
     /* Get the new rights */
     seL4_CapRights_t new_rights;
-    bool can_read = (flags & ZX_VM_FLAG_PERM_READ || flags & ZX_VM_FLAG_PERM_EXECUTE);
+    bool can_read = (flags & ZX_VM_FLAG_PERM_READ
+                    || flags & ZX_VM_FLAG_PERM_EXECUTE);
     bool can_write = (flags & ZX_VM_FLAG_PERM_WRITE);
     new_rights = seL4_CapRights_new(0, can_read, can_write);
 
@@ -301,6 +317,7 @@ void VmoMapping::remap_pages(uint32_t flags)
 
     /* Remap pages */
     uint32_t end_page = start_page_ + num_pages_;
+
     for (uint32_t i = start_page_; i < end_page; ++i) {
         if (caps_.has(i) && caps_[i] != 0) {
             proc->remap_page_in_vspace(caps_[i], new_rights, 1);

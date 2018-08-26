@@ -13,11 +13,11 @@ extern "C" {
 #include "object.h"
 
 class ZxFifo final : public ZxObjectWaitable {
-friend zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
-        ZxFifo *&fifo0, ZxFifo *&fifo1);
+    friend zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
+            ZxFifo *&fifo0, ZxFifo *&fifo1);
 public:
     ZxFifo(uint32_t elem_count, uint32_t elem_size) :
-            ZxObjectWaitable(ZX_FIFO_WRITABLE), elem_count_{elem_count}, elem_size_{elem_size} {}
+        ZxObjectWaitable(ZX_FIFO_WRITABLE), elem_count_{elem_count}, elem_size_{elem_size} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_FIFO; }
 

@@ -35,6 +35,7 @@ void task_kill_job(ZxJob *job)
 {
     /* Kill the job, check if destroy */
     job->kill();
+
     if (job->can_destroy()) {
         destroy_object(job);
     }
@@ -43,6 +44,7 @@ void task_kill_job(ZxJob *job)
 bool task_kill(ZxObject *obj)
 {
     zx_obj_type_t type = obj->get_object_type();
+
     if (type == ZX_OBJ_TYPE_JOB) {
         task_kill_job((ZxJob *)obj);
     } else if (type == ZX_OBJ_TYPE_PROCESS) {
@@ -52,5 +54,6 @@ bool task_kill(ZxObject *obj)
     } else {
         return false;
     }
+
     return true;
 }

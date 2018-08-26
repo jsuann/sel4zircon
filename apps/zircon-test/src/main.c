@@ -49,13 +49,17 @@ void run_hello_world(void)
 
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
         printf("Channel test with process %d\n", i);
+
         for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
             int *val = (int *)&writebuf[j];
             *val = rand();
         }
+
         assert(!zx_channel_write(channel, 0, writebuf, CHANNEL_BUF_SIZE, NULL, 0));
-        assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
-        assert(!zx_channel_read(channel, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
+        assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE,
+                        NULL));
+        assert(!zx_channel_read(channel, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL,
+                        NULL));
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
         //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
@@ -81,7 +85,8 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2)
     seL4_Recv(TEST_EP_SLOT, &badge);
     printf("Thread got msg %lx, badge %lu\n", seL4_GetMR(0), badge);
 
-    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_3, ZX_TIME_INFINITE, NULL));
+    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_3, ZX_TIME_INFINITE,
+                    NULL));
 
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
         assert(!zx_object_wait_one(ch1, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
@@ -90,10 +95,11 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2)
         assert(!zx_channel_write(ch1, 0, buf, CHANNEL_BUF_SIZE, NULL, 0));
     }
 
-    while (1) zx_nanosleep(zx_deadline_after(ZX_SEC(600)));
+    while (1) { zx_nanosleep(zx_deadline_after(ZX_SEC(600))); }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     seL4_MessageInfo_t tag;
 
     printf("=== Zircon Test ===\n");
@@ -121,13 +127,13 @@ int main(int argc, char **argv) {
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);
     assert(zx_syscall_test_1(1) == 1);
-    assert(zx_syscall_test_2(1,2) == 3);
-    assert(zx_syscall_test_3(1,2,3) == 6);
-    assert(zx_syscall_test_4(1,2,3,4) == 10);
-    assert(zx_syscall_test_5(1,2,3,4,5) == 15);
-    assert(zx_syscall_test_6(1,2,3,4,5,6) == 21);
-    assert(zx_syscall_test_7(1,2,3,4,5,6,7) == 28);
-    assert(zx_syscall_test_8(1,2,3,4,5,6,7,8) == 36);
+    assert(zx_syscall_test_2(1, 2) == 3);
+    assert(zx_syscall_test_3(1, 2, 3) == 6);
+    assert(zx_syscall_test_4(1, 2, 3, 4) == 10);
+    assert(zx_syscall_test_5(1, 2, 3, 4, 5) == 15);
+    assert(zx_syscall_test_6(1, 2, 3, 4, 5, 6) == 21);
+    assert(zx_syscall_test_7(1, 2, 3, 4, 5, 6, 7) == 28);
+    assert(zx_syscall_test_8(1, 2, 3, 4, 5, 6, 7, 8) == 36);
     assert(zx_syscall_test_wrapper(20, 20, 60) == 100);
 
     /* try an invalid syscall num */
@@ -152,7 +158,7 @@ int main(int argc, char **argv) {
     err = zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2);
     printf("fifo create: ret %d, fifo1 %u, fifo2 %u\n", err, fifo1, fifo2);
 
-    uint64_t arr1[8] = {1,2,3,4,5,6,7,8};
+    uint64_t arr1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint64_t arr2[8] = {0};
     uint32_t num;
     size_t size = 8 * sizeof(uint64_t);
@@ -161,6 +167,7 @@ int main(int argc, char **argv) {
 
     err = zx_fifo_read(fifo2, &arr2, size, &num);
     printf("fifo read: ret %d\n", err);
+
     for (int i = 0; i < 8; ++i) {
         assert(arr1[i] == arr2[i]);
     }
@@ -193,7 +200,8 @@ int main(int argc, char **argv) {
     /* Map the stack vmo in our vmar */
     uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     uint64_t mapped_addr;
-    assert(!zx_vmar_map(vmar_handle, 0, stack_vmo, 0, stack_size, map_flags, &mapped_addr));
+    assert(!zx_vmar_map(vmar_handle, 0, stack_vmo, 0, stack_size, map_flags,
+                    &mapped_addr));
     printf("Stack mapped in vmar at %lx\n", mapped_addr);
 
     /* Align the stack & start thread */
@@ -206,12 +214,15 @@ int main(int argc, char **argv) {
     printf("Created endpoint, handle %u\n", ep_handle);
 
     /* Mint a cap to each thread's cspace */
-    assert(!zx_endpoint_mint_cap(ep_handle, thrd_handle, TEST_EP_SLOT, 1, TEST_EP_RIGHTS));
-    assert(!zx_endpoint_mint_cap(ep_handle, new_thrd, TEST_EP_SLOT, 2, TEST_EP_RIGHTS));
+    assert(!zx_endpoint_mint_cap(ep_handle, thrd_handle, TEST_EP_SLOT, 1,
+                    TEST_EP_RIGHTS));
+    assert(!zx_endpoint_mint_cap(ep_handle, new_thrd, TEST_EP_SLOT, 2,
+                    TEST_EP_RIGHTS));
     printf("Minted endpoint caps.\n");
 
     /* Do a wait to sync with other thread */
-    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2, ZX_TIME_INFINITE, NULL));
+    assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_2, ZX_TIME_INFINITE,
+                    NULL));
     printf("Main thread woke from wait one.\n");
 
     /* Send a message to the other thread */
@@ -238,15 +249,19 @@ int main(int argc, char **argv) {
     srand(6123129);
 
     assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_3));
+
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
         printf("Channel test with thread %d\n", i);
+
         for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
             int *val = (int *)&writebuf[j];
             *val = rand();
         }
+
         assert(!zx_channel_write(ch0, 0, writebuf, CHANNEL_BUF_SIZE, NULL, 0));
         assert(!zx_object_wait_one(ch0, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
-        assert(!zx_channel_read(ch0, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
+        assert(!zx_channel_read(ch0, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL,
+                        NULL));
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
         //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
@@ -257,11 +272,14 @@ int main(int argc, char **argv) {
     /* Create a dummy process */
     printf("Creating dummy process...\n");
     zx_handle_t dummy_proc, dummy_thrd, dummy_vmar;
-    assert(!zx_process_create(job_handle, "minipr", 6, 0,  &dummy_proc, &dummy_vmar));
+    assert(!zx_process_create(job_handle, "minipr", 6, 0,  &dummy_proc,
+                    &dummy_vmar));
     assert(!zx_thread_create(dummy_proc, "minith", 6, 0, &dummy_thrd));
-    assert(!start_mini_process_etc(dummy_proc, dummy_thrd, dummy_vmar, event_handle, NULL));
+    assert(!start_mini_process_etc(dummy_proc, dummy_thrd, dummy_vmar, event_handle,
+                    NULL));
     printf("Waiting for dummy process to fault...\n");
-    assert(!zx_object_wait_one(dummy_proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL));
+    assert(!zx_object_wait_one(dummy_proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE,
+                    NULL));
 
     /* Run actual process */
     printf("Running hello world / ping process\n");

@@ -20,7 +20,8 @@ void update_timeout(uint64_t expire_time)
     uint64_t next_timeout = (expire_time > min_time) ? expire_time : min_time;
 
     /* Set the next timeout */
-    if (ltimer_set_timeout(&server_timer->ltimer, next_timeout, TIMEOUT_ABSOLUTE) != 0) {
+    if (ltimer_set_timeout(&server_timer->ltimer, next_timeout,
+                    TIMEOUT_ABSOLUTE) != 0) {
         dprintf(CRITICAL, "Error setting timeout!\n");
     }
 }
@@ -74,8 +75,10 @@ void handle_timer(seL4_Word badge)
 
     /* Pop any expired timers */
     bool progress = false;
+
     for (;;) {
         TimerNode *t = head;
+
         /* Check if null, or not expired */
         if (!has_timer_expired(t, curr_time)) {
             break;
@@ -94,17 +97,20 @@ void handle_timer(seL4_Word badge)
     }
 
 #if ZX_USE_TICKLESS_TIMER
+
     /* Update timeout if head changed */
     if (progress && head != NULL) {
         update_timeout(head->expire_time_);
     }
+
 #else
     (void)progress;
     update_timeout(curr_time + kTimerMin);
 #endif
 }
 
-void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags)
+void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack,
+        uint32_t flags)
 {
     using namespace ClockCxx;
 
@@ -115,20 +121,25 @@ void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flag
     /* Set earliest & latest deadline based on slack */
     uint64_t early_deadline, late_deadline;
     early_deadline = late_deadline = expire_time;
+
     if (slack > 0u) {
         uint64_t late_slack = expire_time + slack;
         uint64_t early_slack = expire_time - slack;
+
         /* Check for overflow */
         if (late_slack < expire_time) {
             late_slack = UINT64_MAX - expire_time;
         }
+
         if (early_slack > expire_time) {
             early_slack = expire_time;
         }
+
         /* Adjust deadlines depending on flags */
         if (flags == ZX_TIMER_SLACK_EARLY || flags == ZX_TIMER_SLACK_CENTER) {
             early_deadline -= early_slack;
         }
+
         if (flags == ZX_TIMER_SLACK_LATE || flags == ZX_TIMER_SLACK_CENTER) {
             late_deadline += late_slack;
         }
@@ -137,32 +148,40 @@ void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flag
     /* Insert in order in timer list */
     TimerNode *curr;
     TimerNode **pt = &head;
+
     for (;;) {
         curr = *pt;
+
         if (!has_timer_expired(curr, late_deadline)) {
             break;
         }
+
         if (!has_timer_expired(curr, expire_time)) {
             /* Slack late: coalesce with this timer */
             t->expire_time_ = curr->expire_time_;
             break;
         }
+
         if (!has_timer_expired(curr, early_deadline) &&
                 !has_timer_expired(curr->next_, late_deadline)) {
             /* Slack early: coalesce with this timer */
             t->expire_time_ = curr->expire_time_;
             break;
         }
+
         pt = &curr->next_;
     }
+
     t->next_ = *pt;
     *pt = t;
 
 #if ZX_USE_TICKLESS_TIMER
+
     /* If new timer at head, update the timeout */
     if (t == head) {
         update_timeout(t->expire_time_);
     }
+
 #endif
 }
 
@@ -173,15 +192,19 @@ void remove_timer(TimerNode *t)
     /* Remove from list */
     TimerNode *curr;
     TimerNode **pt = &head;
+
     for (;;) {
         curr = *pt;
+
         if (curr == NULL) {
             assert(!"Attempt to remove timer not in timer list!");
         }
+
         if (t == curr) {
             *pt = t->next_;
             break;
         }
+
         pt = &curr->next_;
     }
 

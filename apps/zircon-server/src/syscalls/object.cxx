@@ -17,6 +17,7 @@ uint64_t sys_object_signal(seL4_MessageInfo_t tag, uint64_t badge)
     ZxProcess *proc = get_proc_from_badge(badge);
 
     Handle *h = proc->get_handle(handle_value);
+
     if (h == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -38,6 +39,7 @@ uint64_t sys_object_signal_peer(seL4_MessageInfo_t tag, uint64_t badge)
     ZxProcess *proc = get_proc_from_badge(badge);
 
     Handle *h = proc->get_handle(handle_value);
+
     if (h == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }

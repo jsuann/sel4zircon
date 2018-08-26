@@ -8,7 +8,8 @@ namespace ProcessCxx {
 constexpr size_t kMaxProcCount = 1024u;
 
 constexpr size_t kProcTableSize = sizeof(ZxProcess) * kMaxProcCount;
-constexpr size_t kProcTableNumPages = (kProcTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
+constexpr size_t kProcTableNumPages = (kProcTableSize + BIT(
+                        seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 StackAlloc<ZxProcess> proc_table;
 
@@ -22,9 +23,11 @@ constexpr size_t kIpcIndexAllocSize = kMaxThreadPerProc / 8;
 int assign_asid_pool(seL4_CPtr pd, seL4_CPtr *ret_pool)
 {
     int error = seL4_ARCH_ASIDPool_Assign(proc_asid_pool, pd);
+
     if (error) {
         dprintf(CRITICAL, "Failed to assign asid pool to process!\n");
     }
+
     *ret_pool = proc_asid_pool;
     return error;
 }
@@ -50,9 +53,10 @@ void init_proc_table(vspace_t *vspace)
     /* Create alloc object */
     assert(proc_table.init(proc_pool, kMaxProcCount));
 
-    dprintf(ALWAYS, "Proc table created at %p, %lu pages\n", proc_pool, kProcTableNumPages);
+    dprintf(ALWAYS, "Proc table created at %p, %lu pages\n", proc_pool,
+            kProcTableNumPages);
     dprintf(ALWAYS, "End of proc table at %p\n", (void *)(((uintptr_t)proc_pool)
-            + (kProcTableNumPages * BIT(seL4_PageBits))));
+                    + (kProcTableNumPages * BIT(seL4_PageBits))));
 }
 
 void init_asid_pool(vka_t *vka)
@@ -65,7 +69,7 @@ void init_asid_pool(vka_t *vka)
     assert(vka_alloc_untyped(vka, 12, &pool_ut) == 0);
     assert(vka_cspace_alloc_path(vka, &path) == 0);
     assert(seL4_ARCH_ASIDControl_MakePool(seL4_CapASIDControl, pool_ut.cptr,
-                path.root, path.capPtr, path.capDepth) == 0);
+                    path.root, path.capPtr, path.capDepth) == 0);
     proc_asid_pool = path.capPtr;
 }
 
@@ -86,9 +90,11 @@ ZxProcess *allocate_object<ZxProcess>(ZxVmar *root_vmar)
     using namespace ProcessCxx;
 
     uint32_t index;
+
     if (!proc_table.alloc(index)) {
         return NULL;
     }
+
     void *p = (void *)proc_table.get(index);
     return new (p) ZxProcess(root_vmar, index);
 }
@@ -123,12 +129,14 @@ bool ZxProcess::init()
 
     /* Create PD */
     error = vka_alloc_vspace_root(vka, &pd_);
+
     if (error) {
         return false;
     }
 
     /* Assign ASID pool */
     error = assign_asid_pool(pd_.cptr, &asid_pool_);
+
     if (error) {
         return false;
     }
@@ -164,8 +172,10 @@ void ZxProcess::destroy()
 
     /* Detach from the owning job */
     ZxJob *parent = (ZxJob *)get_owner();
+
     if (parent != NULL) {
         parent->remove_process(this);
+
         /* Parent job might have to be cleaned up */
         if (parent->can_destroy()) {
             return destroy_object(parent);
@@ -184,22 +194,27 @@ bool ZxProcess::add_thread(ZxThread *thrd)
 
     /* Get index for ipc buf */
     uint32_t ipc_index;
+
     if (!ipc_alloc_.alloc(ipc_index)) {
         return false;
     }
 
     /* Calc address of IPC buffer */
-    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * ipc_index * 2);
+    uintptr_t ipc_buf_addr = ZX_USER_IPC_BUFFER_BASE + (BIT(
+                            seL4_PageBits) * ipc_index * 2);
 
     /* Create IPC buffer frame */
     error = vka_alloc_frame(vka, seL4_PageBits, &ipc_frame);
+
     if (error) {
         ipc_alloc_.free(ipc_index);
         return false;
     }
 
     /* Map IPC frame into vspace */
-    error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights, 1);
+    error = map_page_in_vspace(ipc_frame.cptr, (void *)ipc_buf_addr, seL4_AllRights,
+                    1);
+
     if (error) {
         goto error_add_thread;
     }
@@ -209,6 +224,7 @@ bool ZxProcess::add_thread(ZxThread *thrd)
 
     /* Configure TCB */
     error = thrd->configure_tcb(pd_.cptr, ipc_buf_addr);
+
     if (error) {
         seL4_ARCH_Page_Unmap(ipc_frame.cptr);
         goto error_add_thread;
@@ -249,8 +265,9 @@ void ZxProcess::kill()
     state_ = State::KILLING;
 
     /* Kill all threads */
-    thread_list_.for_each([] (ZxThread *thrd) {
+    thread_list_.for_each([](ZxThread * thrd) {
         thrd->kill();
+
         if (thrd->can_destroy()) {
             /* It's safe for thrd to remove itself
                from linked list in for_each */
@@ -280,7 +297,8 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
 
     /* Attempt page mapping */
     error = sel4utils_map_page(vka, pd_.cptr, frame_cap, vaddr,
-            rights, cacheable, objects, &num_obj);
+                    rights, cacheable, objects, &num_obj);
+
     if (error) {
         return error;
     }
@@ -288,11 +306,14 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
     /* Store allocated PT objects */
     VkaObjectNode *head = pt_list_;
     int num_alloc = 0;
+
     for (int i = 0; i < num_obj; ++i) {
         head = new_vka_node(head, objects[i]);
+
         if (head == NULL) {
             break;
         }
+
         ++num_alloc;
     }
 
@@ -308,12 +329,14 @@ int ZxProcess::map_page_in_vspace(seL4_CPtr frame_cap,
 
     /* Free nodes & PT objects */
     VkaObjectNode *curr = head;
+
     for (int i = 0; i < num_alloc; ++i) {
         head = curr;
         curr = curr->next;
         vka_free_object(vka, &head->obj);
         free(head);
     }
+
     assert(curr == pt_list_);
 
     return -1;
@@ -323,7 +346,8 @@ void ZxProcess::remap_page_in_vspace(seL4_CPtr frame_cap,
         seL4_CapRights_t rights, int cacheable)
 {
     seL4_ARCH_VMAttributes attr;
-    attr = (cacheable) ? seL4_ARCH_Default_VMAttributes : seL4_ARCH_Uncached_VMAttributes;
+    attr = (cacheable) ? seL4_ARCH_Default_VMAttributes :
+            seL4_ARCH_Uncached_VMAttributes;
 
     /* Ignore any errors */
     seL4_ARCH_Page_Remap(frame_cap, pd_.cptr, rights, attr);
@@ -337,6 +361,7 @@ zx_status_t ZxProcess::uvaddr_to_kvaddr(uintptr_t uvaddr,
 
     /* Get the VMO mapping of uvaddr */
     VmoMapping *vmap = root_vmar_->get_vmap_from_addr(uvaddr);
+
     if (vmap == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -372,11 +397,13 @@ zx_status_t ZxProcess::get_object_with_rights(zx_handle_t handle_val,
     obj = NULL;
 
     Handle *h = get_handle(handle_val);
+
     if (h == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
 
     ZxObject *base = h->get_object();
+
     if (!is_object_type<T>(base)) {
         return ZX_ERR_WRONG_TYPE;
     }

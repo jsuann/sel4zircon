@@ -16,13 +16,17 @@ class Vector {
 private:
     bool resize() {
         size_t new_size = (size_ == 0) ? vectorBaseSize : (size_ * 2);
+
         if (new_size > vectorMaxSize) {
             return false;
         }
+
         T *mem = (T *)malloc(new_size * sizeof(T));
+
         if (mem == NULL) {
             return false;
         }
+
         memmove(mem, vec_, (size_ * sizeof(T)));
         free(vec_);
         vec_ = mem;
@@ -50,6 +54,7 @@ public:
                 return true;
             }
         }
+
         return false;
     }
 
@@ -63,11 +68,13 @@ public:
 
         /* Find insert location */
         size_t i = 0;
+
         for (; i < num_items_; ++i) {
             if (cmp(item, vec_[i])) {
                 break;
             }
         }
+
         assert(i <= num_items_);
 
         /* Make space for item at i */
@@ -82,11 +89,13 @@ public:
     bool remove(T item) {
         /* Find index of item */
         size_t i = 0;
+
         for (; i < num_items_; ++i) {
             if (item == vec_[i]) {
                 break;
             }
         }
+
         if (i == num_items_) {
             return false;
         }

@@ -14,11 +14,12 @@ typedef void (*timer_callback_func)(void *data);
 /* Base class for objects that can wait */
 class TimerNode {
 
-/* Timer funcs are all friends */
-friend void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags);
-friend void handle_timer(seL4_Word badge);
-friend void remove_timer(TimerNode *t);
-friend bool has_timer_expired(TimerNode *t, uint64_t time);
+    /* Timer funcs are all friends */
+    friend void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack,
+            uint32_t flags);
+    friend void handle_timer(seL4_Word badge);
+    friend void remove_timer(TimerNode *t);
+    friend bool has_timer_expired(TimerNode *t, uint64_t time);
 
 public:
     TimerNode() = default;
@@ -46,7 +47,8 @@ bool has_timer_expired(TimerNode *t, uint64_t time);
 
 void handle_timer(seL4_Word badge);
 
-void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack, uint32_t flags);
+void add_timer(TimerNode *t, uint64_t expire_time, uint64_t slack,
+        uint32_t flags);
 
 void remove_timer(TimerNode *t);
 

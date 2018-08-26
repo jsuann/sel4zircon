@@ -36,7 +36,7 @@ uint64_t sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    zx_handle_t* out;
+    zx_handle_t *out;
     err = proc->get_kvaddr(user_out, out);
     SYS_RET_IF_ERR(err);
 
@@ -45,6 +45,7 @@ uint64_t sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Create the vmo */
     ZxVmo *vmo = allocate_object<ZxVmo>(num_pages);
+
     if (vmo == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -57,6 +58,7 @@ uint64_t sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Create the handle */
     zx_handle_t vmo_handle = proc->create_handle_get_uval(vmo);
+
     if (vmo_handle == ZX_HANDLE_INVALID) {
         destroy_object(vmo);
         return ZX_ERR_NO_MEMORY;
@@ -66,7 +68,8 @@ uint64_t sys_vmo_create(seL4_MessageInfo_t tag, uint64_t badge)
     return ZX_OK;
 }
 
-static uint64_t sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool is_write)
+static uint64_t sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge,
+        bool is_write)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     zx_handle_t handle = seL4_GetMR(0);
@@ -99,7 +102,8 @@ static uint64_t sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool 
     }
 
     /* Work out how much we can actually read */
-    size_t actual_len = (len > vmo->get_size() - offset) ? (vmo->get_size() - offset) : len;
+    size_t actual_len = (len > vmo->get_size() - offset) ? (vmo->get_size() -
+                    offset) : len;
 
     /* Ensure required pages have been commited */
     if (!vmo->commit_range(offset, actual_len)) {
@@ -112,6 +116,7 @@ static uint64_t sys_vmo_read_write(seL4_MessageInfo_t tag, uint64_t badge, bool 
     } else {
         vmo->read(offset, actual_len, data);
     }
+
     *actual = actual_len;
 
     return ZX_OK;
@@ -136,7 +141,7 @@ uint64_t sys_vmo_get_size(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    uint64_t* size;
+    uint64_t *size;
     err = proc->get_kvaddr(user_size, size);
     SYS_RET_IF_ERR(err);
 
@@ -203,19 +208,23 @@ uint64_t sys_vmo_op_range(seL4_MessageInfo_t tag, uint64_t badge)
     switch (op) {
     case ZX_VMO_OP_COMMIT:
         return (vmo->commit_range(offset, size)) ? ZX_OK : ZX_ERR_NO_MEMORY;
+
     case ZX_VMO_OP_DECOMMIT:
         vmo->decommit_range(offset, size);
         return ZX_OK;
+
     case ZX_VMO_OP_LOCK:
     case ZX_VMO_OP_UNLOCK:
     case ZX_VMO_OP_LOOKUP:
         return ZX_ERR_NOT_SUPPORTED;
+
     case ZX_VMO_OP_CACHE_SYNC:
     case ZX_VMO_OP_CACHE_INVALIDATE:
     case ZX_VMO_OP_CACHE_CLEAN:
     case ZX_VMO_OP_CACHE_CLEAN_INVALIDATE:
         /* Do nothing on x86 */
         return ZX_OK;
+
     default:
         return ZX_ERR_INVALID_ARGS;
     }

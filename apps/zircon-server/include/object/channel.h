@@ -18,16 +18,16 @@ extern "C" {
 class ZxProcess;
 
 class ZxChannel final : public ZxObjectWaitable {
-friend zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
+    friend zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1);
 public:
     ZxChannel() : ZxObjectWaitable(ZX_CHANNEL_WRITABLE),
-            handle_list_{this}, msg_list_{this} {}
+        handle_list_{this}, msg_list_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
 
     void destroy() override;
 
-    zx_status_t write_msg(void* bytes, uint32_t num_bytes,
+    zx_status_t write_msg(void *bytes, uint32_t num_bytes,
             Handle **handles, uint32_t num_handles);
 
     zx_status_t read_msg(void *bytes, uint32_t *num_bytes,
@@ -42,7 +42,7 @@ private:
        handles/bytes written to their respective containers */
     struct Message : public Listable<Message> {
         Message(uint32_t num_handles, uint32_t num_bytes) :
-                num_handles_{num_handles}, num_bytes_{num_bytes} {}
+            num_handles_{num_handles}, num_bytes_{num_bytes} {}
         uint32_t num_handles_;
         uint32_t num_bytes_;
     };

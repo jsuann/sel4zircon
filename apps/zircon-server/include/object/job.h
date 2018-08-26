@@ -16,14 +16,14 @@ extern "C" {
 class ZxJob final : public ZxObjectWaitable, public Listable<ZxJob> {
 public:
     ZxJob() : ZxObjectWaitable(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
-            job_list_{this}, proc_list_{this} {}
+        job_list_{this}, proc_list_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_JOB; }
 
     bool can_destroy() override {
         /* End of life when no child jobs or procs, and we aren't killing them */
         return (zero_handles() && job_list_.empty() &&
-                proc_list_.empty() && !is_killing());
+                        proc_list_.empty() && !is_killing());
     }
 
     void destroy() override;
@@ -40,6 +40,7 @@ public:
 
     void add_process(ZxProcess *proc) {
         proc_list_.push_back(proc);
+
         if (proc_list_.size() == 1) {
             update_state(ZX_JOB_NO_PROCESSES, 0u);
         }
@@ -47,6 +48,7 @@ public:
 
     void add_job(ZxJob *job) {
         job_list_.push_back(job);
+
         if (job_list_.size() == 1) {
             update_state(ZX_JOB_NO_JOBS, 0u);
         }
@@ -54,6 +56,7 @@ public:
 
     void remove_process(ZxProcess *proc) {
         proc_list_.remove(proc);
+
         if (proc_list_.size() == 0) {
             update_state(0u, ZX_JOB_NO_PROCESSES);
         }
@@ -61,6 +64,7 @@ public:
 
     void remove_job(ZxJob *job) {
         job_list_.remove(job);
+
         if (job_list_.size() == 0) {
             update_state(0u, ZX_JOB_NO_JOBS);
         }

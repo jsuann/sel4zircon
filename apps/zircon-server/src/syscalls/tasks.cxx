@@ -31,7 +31,7 @@ uint64_t sys_job_create(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    zx_handle_t* out;
+    zx_handle_t *out;
     err = proc->get_kvaddr(user_out, out);
     SYS_RET_IF_ERR(err);
 
@@ -45,11 +45,13 @@ uint64_t sys_job_create(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     ZxJob *new_job = allocate_object<ZxJob>();
+
     if (new_job == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_handle_t job_handle = proc->create_handle_get_uval(new_job);
+
     if (job_handle == ZX_HANDLE_INVALID) {
         destroy_object(new_job);
         return ZX_ERR_NO_MEMORY;
@@ -98,6 +100,7 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
     /* Create the root vmar */
     ZxVmar *root_vmar;
     root_vmar = allocate_object<ZxVmar>();
+
     if (root_vmar == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -105,10 +108,12 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
     /* Create the new process */
     ZxProcess *new_proc;
     new_proc = allocate_object<ZxProcess>(root_vmar);
+
     if (new_proc == NULL) {
         free_object(root_vmar);
         return ZX_ERR_NO_MEMORY;
     }
+
     new_proc->set_name((char *)name_buf);
 
     if (!new_proc->init()) {
@@ -122,10 +127,12 @@ uint64_t sys_process_create(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *ph, *vh;
     vh = root_vmar->create_handle(root_vmar->get_rights());
     ph = create_handle_default_rights(new_proc);
+
     if (vh == NULL || ph == NULL) {
         if (vh != NULL) {
             root_vmar->destroy_handle(vh);
         }
+
         destroy_object(new_proc);
         return ZX_ERR_NO_MEMORY;
     }
@@ -175,11 +182,13 @@ uint64_t sys_process_start(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Transfer arg1 handle to target proc */
     Handle *arg_handle = proc->get_handle(arg1);
+
     if (arg_handle == NULL) {
         return ZX_ERR_BAD_HANDLE;
     } else if (!arg_handle->has_rights(ZX_RIGHT_TRANSFER)) {
         return ZX_ERR_ACCESS_DENIED;
     }
+
     proc->remove_handle(arg_handle);
 
     zx_handle_t arg_uval;
@@ -213,7 +222,8 @@ uint64_t sys_process_exit(seL4_MessageInfo_t tag, uint64_t badge)
     return 0;
 }
 
-static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge, bool is_write)
+static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge,
+        bool is_write)
 {
     SYS_CHECK_NUM_ARGS(tag, 5);
     zx_handle_t proc_handle = seL4_GetMR(0);
@@ -239,6 +249,7 @@ static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge, bo
     /* Get the process we want to r/w from. */
     ZxProcess *target_proc;
     zx_rights_t req_rights = ZX_RIGHT_WRITE;
+
     if (!is_write) {
         req_rights |= ZX_RIGHT_READ;
     }
@@ -248,6 +259,7 @@ static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge, bo
 
     /* Get the vmo mapping in proc */
     VmoMapping *vmap = target_proc->get_root_vmar()->get_vmap_from_addr(vaddr);
+
     if (vmap == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -259,6 +271,7 @@ static uint64_t sys_process_rw_memory(seL4_MessageInfo_t tag, uint64_t badge, bo
 
     /* Ensure backing pages are committed */
     ZxVmo *vmo = (ZxVmo *)vmap->get_owner();
+
     if (!vmo->commit_range(offset, len)) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -315,9 +328,11 @@ uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     ZxThread *thrd;
     thrd = allocate_object<ZxThread>();
+
     if (thrd == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
+
     thrd->set_name((char *)name_buf);
 
     /* Init thread, add to target proc */
@@ -328,6 +343,7 @@ uint64_t sys_thread_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Create handle */
     zx_handle_t thrd_handle = proc->create_handle_get_uval(thrd);
+
     if (thrd_handle == ZX_HANDLE_INVALID) {
         destroy_object(thrd);
         return ZX_ERR_NO_MEMORY;
@@ -360,6 +376,7 @@ uint64_t sys_thread_start(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Make sure this isn't the first thread (use zx_process_start) */
     ZxProcess *owner_proc = (ZxProcess *)thrd->get_owner();
+
     if (!owner_proc->is_running()) {
         return ZX_ERR_BAD_STATE;
     }
@@ -396,6 +413,7 @@ uint64_t sys_task_kill(seL4_MessageInfo_t tag, uint64_t badge)
     ZxProcess *proc = get_proc_from_badge(badge);
 
     Handle *h = proc->get_handle(handle);
+
     if (h == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }

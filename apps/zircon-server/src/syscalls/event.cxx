@@ -26,11 +26,13 @@ uint64_t sys_event_create(seL4_MessageInfo_t tag, uint64_t badge)
 
     ZxEvent *event;
     event = allocate_object<ZxEvent>();
+
     if (event == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_handle_t event_handle = proc->create_handle_get_uval(event);
+
     if (event_handle == ZX_HANDLE_INVALID) {
         destroy_object(event);
         return ZX_ERR_NO_MEMORY;
@@ -67,10 +69,12 @@ uint64_t sys_eventpair_create(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *h0, *h1;
     h0 = create_handle_default_rights(ep0);
     h1 = create_handle_default_rights(ep1);
+
     if (h0 == NULL || h1 == NULL) {
         if (h0 != NULL) {
             ep0->destroy_handle(h0);
         }
+
         destroy_object(ep0);
         destroy_object(ep1);
         return ZX_ERR_NO_MEMORY;

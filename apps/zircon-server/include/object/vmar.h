@@ -19,7 +19,7 @@ class ZxProcess;
 class VmoMapping;
 
 class ZxVmar final : public ZxObject, public VmRegion {
-friend void deactivate_maybe_destroy_vmar(ZxVmar *root);
+    friend void deactivate_maybe_destroy_vmar(ZxVmar *root);
 public:
     static constexpr uint32_t baseVmarFlags =
             ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ |
@@ -27,11 +27,11 @@ public:
 
     /* Root vmar constructor */
     ZxVmar() : parent_{NULL}, base_{ZX_USER_ASPACE_BASE},
-            size_{ZX_USER_ASPACE_SIZE}, flags_{baseVmarFlags} {}
+        size_{ZX_USER_ASPACE_SIZE}, flags_{baseVmarFlags} {}
 
     /* Child vmar constructor */
     ZxVmar(ZxVmar *parent, uintptr_t base, size_t size, uint32_t flags) :
-            parent_{parent}, base_{base}, size_{size}, flags_{flags & baseVmarFlags} {
+        parent_{parent}, base_{base}, size_{size}, flags_{flags & baseVmarFlags} {
         proc_ = parent->get_proc();
     }
 
@@ -82,15 +82,19 @@ public:
        handle rights for this vmar */
     zx_rights_t get_rights() const {
         zx_rights_t rights = ZX_DEFAULT_VMAR_RIGHTS;
+
         if (flags_ & ZX_VM_FLAG_CAN_MAP_READ) {
             rights |= ZX_RIGHT_READ;
         }
+
         if (flags_ & ZX_VM_FLAG_CAN_MAP_WRITE) {
             rights |= ZX_RIGHT_WRITE;
         }
+
         if (flags_ & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
             rights |= ZX_RIGHT_EXECUTE;
         }
+
         return rights;
     }
 
@@ -105,7 +109,7 @@ private:
     bool is_active_ = true;
 
     /* List of child vmars & mapped vmos */
-    Vector<VmRegion*> children_;
+    Vector<VmRegion *> children_;
 
     /* start and end of addr space */
     uintptr_t base_;

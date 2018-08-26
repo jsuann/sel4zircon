@@ -38,10 +38,12 @@ uint64_t sys_fifo_create(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *h0, *h1;
     h0 = create_handle_default_rights(fifo0);
     h1 = create_handle_default_rights(fifo1);
+
     if (h0 == NULL || h1 == NULL) {
         if (h0 != NULL) {
             fifo0->destroy_handle(h0);
         }
+
         destroy_object(fifo0);
         destroy_object(fifo1);
         return ZX_ERR_NO_MEMORY;

@@ -43,10 +43,12 @@ uint64_t sys_channel_create(seL4_MessageInfo_t tag, uint64_t badge)
     Handle *h0, *h1;
     h0 = create_handle_default_rights(ch0);
     h1 = create_handle_default_rights(ch1);
+
     if (h0 == NULL || h1 == NULL) {
         if (h0 != NULL) {
             ch0->destroy_handle(h0);
         }
+
         destroy_object(ch0);
         destroy_object(ch1);
         return ZX_ERR_NO_MEMORY;
@@ -84,17 +86,19 @@ uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    void* bytes;
-    zx_handle_t* handles;
+    void *bytes;
+    zx_handle_t *handles;
+
     if (num_bytes > 0) {
         err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
         SYS_RET_IF_ERR(err);
     } else if (user_bytes != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+
     if (num_handles > 0) {
         err = proc->uvaddr_to_kvaddr(user_handles,
-                sizeof(zx_handle_t) * num_handles, (void *&)handles);
+                        sizeof(zx_handle_t) * num_handles, (void *&)handles);
         SYS_RET_IF_ERR(err);
     } else if (user_handles != 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -112,6 +116,7 @@ uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Take out handles from proc so they can be added to the channel */
     Handle *h[ZX_CHANNEL_MAX_MSG_HANDLES];
+
     if (num_handles > 0) {
         err = take_handles_from_proc(proc, channel, num_handles, handles, &h[0]);
         SYS_RET_IF_ERR(err);
@@ -119,11 +124,13 @@ uint64_t sys_channel_write(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Write to the peer of the channel */
     err = channel->get_peer()->write_msg(bytes, num_bytes, &h[0], num_handles);
+
     if (err != ZX_OK) {
         /* Return handles to proc. */
         for (size_t i = 0; i < num_handles; ++i) {
             proc->add_handle(h[i]);
         }
+
         return err;
     }
 
@@ -159,16 +166,18 @@ uint64_t channel_read_common(seL4_MessageInfo_t tag, uint64_t badge,
     ZxProcess *proc = get_proc_from_badge(badge);
 
     /* Get the ptr translations. If num to read is zero, ensure ptrs are NULL */
-    void* bytes;
+    void *bytes;
+
     if (num_bytes > 0) {
         err = proc->uvaddr_to_kvaddr(user_bytes, num_bytes, bytes);
         SYS_RET_IF_ERR(err);
     } else if (user_bytes != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+
     if (num_handles > 0) {
         err = proc->uvaddr_to_kvaddr(user_handles,
-                sizeof(T) * num_handles, (void *&)handle_info);
+                        sizeof(T) * num_handles, (void *&)handle_info);
         SYS_RET_IF_ERR(err);
     } else if (user_handles != 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -177,10 +186,12 @@ uint64_t channel_read_common(seL4_MessageInfo_t tag, uint64_t badge,
     /* Actual bytes/handles ptrs can also be null */
     uint32_t *actual_bytes, *actual_handles;
     actual_bytes = actual_handles = NULL;
+
     if (user_actual_bytes != 0) {
         err = proc->get_kvaddr(user_actual_bytes, actual_bytes);
         SYS_RET_IF_ERR(err);
     }
+
     if (user_actual_handles != 0) {
         err = proc->get_kvaddr(user_actual_handles, actual_handles);
         SYS_RET_IF_ERR(err);
@@ -194,6 +205,7 @@ uint64_t channel_read_common(seL4_MessageInfo_t tag, uint64_t badge,
     /* Attempt the read */
     bool may_discard = (options & ZX_CHANNEL_READ_MAY_DISCARD);
     err = channel->read_msg(bytes, &num_bytes, handles, &num_handles, may_discard);
+
     /* Special case for ZX_ERR_BUFFER_TOO_SMALL: return size of next message */
     if (err != ZX_OK && err != ZX_ERR_BUFFER_TOO_SMALL) {
         return err;
@@ -222,6 +234,7 @@ uint64_t sys_channel_read(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     ZxProcess *proc = get_proc_from_badge(badge);
+
     for (size_t i = 0; i < num; ++i) {
         /* Cancel waiters on handle */
         h[i]->get_object()->cancel_waiters(h[i]);
@@ -247,6 +260,7 @@ uint64_t sys_channel_read_etc(seL4_MessageInfo_t tag, uint64_t badge)
     SYS_RET_IF_ERR(err);
 
     ZxProcess *proc = get_proc_from_badge(badge);
+
     for (size_t i = 0; i < num; ++i) {
         /* Cancel waiters on handle */
         h[i]->get_object()->cancel_waiters(h[i]);
@@ -273,6 +287,7 @@ zx_status_t take_handles_from_proc(ZxProcess *proc, ZxChannel *channel,
     /* Get handle ptrs, validate */
     for (size_t i = 0; i < num; ++i) {
         Handle *h = proc->get_handle(in[i]);
+
         if (h == NULL) {
             return ZX_ERR_BAD_HANDLE;
         }
@@ -297,8 +312,10 @@ zx_status_t take_handles_from_proc(ZxProcess *proc, ZxChannel *channel,
             for (size_t j = 0; j < i; ++j) {
                 proc->add_handle(out[j]);
             }
+
             return ZX_ERR_INVALID_ARGS;
         }
+
         proc->remove_handle(out[i]);
     }
 

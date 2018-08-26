@@ -12,6 +12,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
         if (datagram) {
             return ZX_ERR_SHOULD_WAIT;
         }
+
         /* Otherwise do a short write */
         len = kSizeMax - size_;
     }
@@ -19,6 +20,7 @@ zx_status_t MBuf::write(uint8_t *src, size_t len, bool datagram)
     /* Figure out how many page bufs we need to allocate */
     size_t rem = (tail_ != NULL) ? tail_->rem() : 0;
     uint32_t num_buf = 0;
+
     if (len > rem) {
         num_buf += (len - rem + PageBuf::kPayloadSize - 1) / PageBuf::kPayloadSize;
     }
@@ -121,6 +123,7 @@ void MBuf::discard(size_t len)
     if (len > size_) {
         len = size_;
     }
+
     size_t bytes_discarded = len;
 
     while (len > 0) {

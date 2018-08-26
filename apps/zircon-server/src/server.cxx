@@ -105,16 +105,20 @@ void syscall_loop(void)
 
     /* Wait for the first message */
     tag = seL4_Recv(server_ep, &badge);
+
     for (;;) {
         /* Handle the received message */
         should_reply = true;
+
         if (badge & ZxSyscallBadge) {
             seL4_Word syscall = seL4_MessageInfo_get_label(tag);
+
             if (unlikely(syscall >= NUM_SYSCALLS)) {
                 /* syscall doesn't exist */
                 tag = get_reply(ZX_ERR_BAD_SYSCALL);
             } else {
                 ret = DO_SYSCALL(syscall, tag, badge);
+
                 /* nearly all syscalls reply immediately */
                 if (likely(should_reply)) {
                     tag = get_reply(ret);
@@ -123,6 +127,7 @@ void syscall_loop(void)
         } else if (badge & ZxFaultBadge) {
             /* We expect that most faults are VM faults and can be handled */
             should_reply = handle_fault(tag, badge);
+
             if (likely(should_reply)) {
                 /* Fault successfully handled, we can reply to thread */
                 tag = seL4_MessageInfo_new(0, 0, 0, 0);

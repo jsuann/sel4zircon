@@ -16,23 +16,23 @@ extern "C" {
 #include "mbuf.h"
 
 class ZxSocket final : public ZxObjectWaitable {
-friend zx_status_t create_socket_pair(uint32_t flags, ZxSocket *&sock0,
-        ZxSocket *&sock1);
+    friend zx_status_t create_socket_pair(uint32_t flags, ZxSocket *&sock0,
+            ZxSocket *&sock1);
 public:
     ZxSocket(zx_signals_t starting_signals, uint32_t flags) :
-            ZxObjectWaitable(starting_signals), flags_{flags}, datagrams_{this} {}
+        ZxObjectWaitable(starting_signals), flags_{flags}, datagrams_{this} {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_SOCKET; }
 
     void destroy() override;
 
     /* read/write to socket buffer */
-    zx_status_t write(void *src, size_t len, size_t* written);
-    zx_status_t read(void *dest, size_t len, size_t* nread);
+    zx_status_t write(void *src, size_t len, size_t *written);
+    zx_status_t read(void *dest, size_t len, size_t *nread);
 
     /* read/write to control plane */
     zx_status_t write_control(void *src, size_t len);
-    zx_status_t read_control(void *dest, size_t len, size_t* nread);
+    zx_status_t read_control(void *dest, size_t len, size_t *nread);
 
     /* share/accept socket handle */
     zx_status_t check_shareable(ZxSocket *to_send);

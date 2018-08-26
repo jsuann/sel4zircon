@@ -18,7 +18,7 @@ extern "C" {
 class ZxEndpoint final : public ZxObject {
 public:
     ZxEndpoint(uint64_t id, bool is_extern) :
-            id_{id}, is_extern_{is_extern} {}
+        id_{id}, is_extern_{is_extern} {}
     ~ZxEndpoint() final {}
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_ENDPOINT; }

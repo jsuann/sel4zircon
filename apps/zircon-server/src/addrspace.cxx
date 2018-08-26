@@ -11,7 +11,8 @@ extern "C" {
 #include "addrspace.h"
 #include "zxcpp/stackalloc.h"
 
-constexpr size_t kNumVmoBlocks = (ZX_VMO_SERVER_MAP_END - ZX_VMO_SERVER_MAP_START) / ZX_VMO_SERVER_MAP_SIZE;
+constexpr size_t kNumVmoBlocks = (ZX_VMO_SERVER_MAP_END -
+                ZX_VMO_SERVER_MAP_START) / ZX_VMO_SERVER_MAP_SIZE;
 
 /* define a struct with the size of a VMO block to use with Stack Alloc */
 struct VmoBlock {
@@ -29,10 +30,13 @@ void init_vmo_kmap(void)
 uintptr_t alloc_vmo_kmap(void)
 {
     uint32_t index;
+
     if (!vtable.alloc(index)) {
         return 0;
     }
-    dprintf(SPEW, "Vtable allocated VMO kmap region at %p\n", (void *)vtable.get(index));
+
+    dprintf(SPEW, "Vtable allocated VMO kmap region at %p\n",
+            (void *)vtable.get(index));
     return (uintptr_t)vtable.get(index);
 }
 

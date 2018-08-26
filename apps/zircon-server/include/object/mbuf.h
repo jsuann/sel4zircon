@@ -60,15 +60,18 @@ private:
         } else {
             tail_->next_ = pb;
         }
+
         tail_ = pb;
     }
 
     PageBuf *pop() {
         PageBuf *pb = head_;
         head_ = pb->next_;
+
         if (head_ == NULL) {
             tail_ = NULL;
         }
+
         return pb;
     }
 

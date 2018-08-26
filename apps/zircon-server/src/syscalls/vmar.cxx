@@ -71,12 +71,15 @@ uint64_t sys_vmar_allocate(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Convert desired mapping rights to handle rights */
     zx_rights_t vmar_rights = 0u;
+
     if (map_flags & ZX_VM_FLAG_CAN_MAP_READ) {
         vmar_rights |= ZX_RIGHT_READ;
     }
+
     if (map_flags & ZX_VM_FLAG_CAN_MAP_WRITE) {
         vmar_rights |= ZX_RIGHT_WRITE;
     }
+
     if (map_flags & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
         vmar_rights |= ZX_RIGHT_EXECUTE;
     }
@@ -94,6 +97,7 @@ uint64_t sys_vmar_allocate(seL4_MessageInfo_t tag, uint64_t badge)
     /* If not doing a specific mapping, allocate an offset */
     if (!(map_flags & ZX_VM_FLAG_SPECIFIC)) {
         offset = parent->allocate_vm_region_base(size, map_flags);
+
         if (offset == 0) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -107,12 +111,14 @@ uint64_t sys_vmar_allocate(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Now allocate the vmar */
     ZxVmar *new_vmar = allocate_object<ZxVmar>(parent, offset, size, map_flags);
+
     if (new_vmar == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
     /* Create a handle to new vmar */
     Handle *h = new_vmar->create_handle(new_vmar->get_rights());
+
     if (h == NULL) {
         free_object(new_vmar);
         return ZX_ERR_NO_MEMORY;
@@ -166,6 +172,7 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
     if (len == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+
     len = (len + SysVmar::align_mask) & ~SysVmar::align_mask;
 
     zx_status_t err;
@@ -177,12 +184,15 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Get rights required by both vmar & vmo */
     zx_rights_t req_rights = 0u;
+
     if (map_flags & ZX_VM_FLAG_PERM_READ) {
         req_rights |= ZX_RIGHT_READ;
     }
+
     if (map_flags & ZX_VM_FLAG_PERM_WRITE) {
         req_rights |= ZX_RIGHT_WRITE;
     }
+
     if (map_flags & ZX_VM_FLAG_PERM_EXECUTE) {
         req_rights |= ZX_RIGHT_EXECUTE;
     }
@@ -208,6 +218,7 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
     /* If not doing a specific mapping, allocate an offset */
     if (!(map_flags & ZX_VM_FLAG_SPECIFIC)) {
         vmar_offset = vmar->allocate_vm_region_base(len, map_flags);
+
         if (vmar_offset == 0) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -221,7 +232,8 @@ uint64_t sys_vmar_map(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Create the vmo mapping. This will also add the mapping to the vmar */
     VmoMapping *vmap = vmo->create_mapping(vmar_offset, vmo_offset, len,
-            vmar, map_flags, map_rights);
+                    vmar, map_flags, map_rights);
+
     if (vmap == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -307,12 +319,15 @@ uint64_t sys_vmar_protect(seL4_MessageInfo_t tag, uint64_t badge)
 
     /* Get required vmar flags */
     zx_rights_t vmar_rights = 0u;
+
     if (prot_flags & ZX_VM_FLAG_CAN_MAP_READ) {
         vmar_rights |= ZX_RIGHT_READ;
     }
+
     if (prot_flags & ZX_VM_FLAG_CAN_MAP_WRITE) {
         vmar_rights |= ZX_RIGHT_WRITE;
     }
+
     if (prot_flags & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
         vmar_rights |= ZX_RIGHT_EXECUTE;
     }

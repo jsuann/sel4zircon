@@ -20,6 +20,7 @@ ZxEndpoint **allocate_ep_slot(uint64_t id)
     using namespace EndpointCxx;
 
     ZxEndpoint **first_free = NULL;
+
     for (size_t i = 0; i < kMaxNumEndpoints; ++i) {
         /* Check that the id we want to use isn't taken */
         if (ep_table[i] != NULL && ep_table[i]->get_id() == id) {
@@ -28,6 +29,7 @@ ZxEndpoint **allocate_ep_slot(uint64_t id)
             first_free = &ep_table[i];
         }
     }
+
     return first_free;
 }
 
@@ -40,6 +42,7 @@ ZxEndpoint *get_ep_in_table(uint64_t id)
             return ep_table[i];
         }
     }
+
     return NULL;
 }
 
@@ -64,6 +67,7 @@ bool ZxEndpoint::init()
     vka_t *vka = get_server_vka();
 
     error = vka_alloc_endpoint(vka, &ep_);
+
     if (error) {
         return false;
     }

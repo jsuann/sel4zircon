@@ -45,6 +45,7 @@ uint64_t sys_debug_write(seL4_MessageInfo_t tag, uint64_t badge)
     for (uint32_t i = 0; i < len; ++i) {
         putchar(((char *)buf)[i]);
     }
+
     putchar('\n');
 
     return len;
@@ -91,6 +92,7 @@ uint64_t sys_get_elf_vmo(seL4_MessageInfo_t tag, uint64_t badge)
 
     uint64_t elf_size;
     char *elf_file = get_elf_file(filename, &elf_size);
+
     if (elf_file == NULL) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -110,5 +112,6 @@ uint64_t sys_get_ipc_buffer_addr(seL4_MessageInfo_t tag, uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 0);
     ZxThread *thrd = get_thread_from_badge(badge);
-    return ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd->get_ipc_index() * 2);
+    return ZX_USER_IPC_BUFFER_BASE + (BIT(seL4_PageBits) * thrd->get_ipc_index() *
+                    2);
 }

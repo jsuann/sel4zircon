@@ -53,9 +53,11 @@ void init_zircon_test(void)
 
     /* Create VMOs for elf segments */
     int num_vmos;
-    uintptr_t entry = load_elf_segments(test_proc, "zircon-test", num_vmos, elf_vmos);
+    uintptr_t entry = load_elf_segments(test_proc, "zircon-test", num_vmos,
+                    elf_vmos);
     assert(entry != 0);
     assert(elf_vmos != NULL);
+
     for (int i = 0; i < num_vmos; ++i) {
         assert(elf_vmos[i] != NULL);
     }
@@ -65,7 +67,8 @@ void init_zircon_test(void)
     stack_vmo = allocate_object<ZxVmo>(TestStackNumPages);
     assert(stack_vmo->init());
     VmoMapping *stack_map = stack_vmo->create_mapping(TestStackBaseAddr, 0,
-            stack_vmo->get_size(), test_vmar, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, 0);
+                    stack_vmo->get_size(), test_vmar, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                    0);
     assert(stack_map != NULL);
     assert(stack_vmo->commit_all_pages(NULL));
 
@@ -95,7 +98,7 @@ void init_zircon_test(void)
 
     /* Start test process */
     assert(spawn_zircon_proc(test_thread, stack_vmo, stack_map->get_base(),
-            "zircon-test", entry, channel_handle));
+                    "zircon-test", entry, channel_handle));
     test_proc->thread_started();
 
     /* Destroy ch0 */

@@ -8,7 +8,8 @@ constexpr size_t kMaxThreadCount = 4096u;
 /* Thread table dimensions */
 constexpr uint32_t kThreadIndexMask = kMaxThreadCount - 1;
 constexpr size_t kThreadTableSize = sizeof(ZxThread) * kMaxThreadCount;
-constexpr size_t kThreadTableNumPages = (kThreadTableSize + BIT(seL4_PageBits) - 1) / BIT(seL4_PageBits);
+constexpr size_t kThreadTableNumPages = (kThreadTableSize + BIT(
+                        seL4_PageBits) - 1) / BIT(seL4_PageBits);
 
 /* Thread cspace size. Should be as small as possible */
 constexpr size_t kThreadCspaceBits = 3;
@@ -39,15 +40,17 @@ void init_thread_table(vspace_t *vspace)
     vspace_new_pages_config_set_vaddr((void *)ZX_THREAD_TABLE_START, &config);
 
     /* Allocate thread pool */
-    void *thread_pool = vspace_new_pages_with_config(vspace, &config, seL4_AllRights);
+    void *thread_pool = vspace_new_pages_with_config(vspace, &config,
+                    seL4_AllRights);
     assert(thread_pool != NULL);
 
     /* Create alloc object */
     assert(thread_table.init(thread_pool, kMaxThreadCount));
 
-    dprintf(ALWAYS, "Thread table created at %p, %lu pages\n", thread_pool, kThreadTableNumPages);
+    dprintf(ALWAYS, "Thread table created at %p, %lu pages\n", thread_pool,
+            kThreadTableNumPages);
     dprintf(ALWAYS, "End of thread table at %p\n", (void *)(((uintptr_t)thread_pool)
-            + (kThreadTableNumPages * BIT(seL4_PageBits))));
+                    + (kThreadTableNumPages * BIT(seL4_PageBits))));
 }
 
 ZxThread *get_thread_from_badge(uint64_t badge)
@@ -66,9 +69,11 @@ ZxThread *allocate_object<ZxThread>()
     using namespace ThreadCxx;
 
     uint32_t index;
+
     if (!thread_table.alloc(index)) {
         return NULL;
     }
+
     void *p = (void *)thread_table.get(index);
     return new (p) ZxThread(index);
 }
@@ -99,6 +104,7 @@ bool ZxThread::init()
 
     /* Create TCB */
     error = vka_alloc_tcb(vka, &tcb_);
+
     if (error) {
         return false;
     }
@@ -107,9 +113,11 @@ bool ZxThread::init()
        to have issues after freeing them. Needs to be looked into more. */
     if (thread_cspaces[thread_index_].cptr == 0) {
         error = vka_alloc_cnode_object(vka, kThreadCspaceBits, &cspace_);
+
         if (error) {
             return false;
         }
+
         thread_cspaces[thread_index_] = cspace_;
     } else {
         cspace_ = thread_cspaces[thread_index_];
@@ -121,7 +129,8 @@ bool ZxThread::init()
     /* Mint fault ep cap */
     set_dest_slot(&dest, cspace_.cptr, ZX_THREAD_FAULT_SLOT);
     error = vka_cnode_mint(&dest, &src, seL4_NoRead,
-            seL4_CapData_Badge_new(ZxFaultBadge | thread_index_));
+                    seL4_CapData_Badge_new(ZxFaultBadge | thread_index_));
+
     if (error) {
         return false;
     }
@@ -129,13 +138,15 @@ bool ZxThread::init()
     /* Mint syscall ep cap */
     set_dest_slot(&dest, cspace_.cptr, ZX_THREAD_SYSCALL_SLOT);
     error = vka_cnode_mint(&dest, &src, seL4_NoRead,
-            seL4_CapData_Badge_new(ZxSyscallBadge | thread_index_));
+                    seL4_CapData_Badge_new(ZxSyscallBadge | thread_index_));
+
     if (error) {
         return false;
     }
 
     /* Allocate reply cap slot */
     error = vka_cspace_alloc(vka, &reply_cap_);
+
     if (error) {
         reply_cap_ = 0;
         return false;
@@ -150,10 +161,12 @@ int ZxThread::configure_tcb(seL4_CNode pd, uintptr_t ipc_buffer_addr)
 {
     using namespace ThreadCxx;
 
-    seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0, seL4_WordBits - kThreadCspaceBits);
+    seL4_CapData_t cspace_root_data = seL4_CapData_Guard_new(0,
+                    seL4_WordBits - kThreadCspaceBits);
     seL4_CapData_t null_cap_data = {{0}};
-    return seL4_TCB_Configure(tcb_.cptr, ZX_THREAD_FAULT_SLOT, seL4_PrioProps_new(0,0), cspace_.cptr,
-                        cspace_root_data, pd, null_cap_data, ipc_buffer_addr, ipc_buffer_frame_.cptr);
+    return seL4_TCB_Configure(tcb_.cptr, ZX_THREAD_FAULT_SLOT, seL4_PrioProps_new(0,
+                            0), cspace_.cptr,
+                    cspace_root_data, pd, null_cap_data, ipc_buffer_addr, ipc_buffer_frame_.cptr);
 }
 
 int ZxThread::start_execution(uintptr_t entry, uintptr_t stack,
@@ -170,9 +183,11 @@ int ZxThread::start_execution(uintptr_t entry, uintptr_t stack,
 
     /* Note that we always resume the thread */
     int err = seL4_TCB_WriteRegisters(tcb_.cptr, 1, 0, context_size, &context);
+
     if (!err) {
         state_ = State::RUNNING;
     }
+
     return err;
 #else
     return -1;
@@ -185,6 +200,7 @@ void ZxThread::kill()
     if (state_ == State::DEAD) {
         return;
     }
+
     /* Suspend execution if running */
     suspend();
     /* Mark state as dead */
@@ -205,6 +221,7 @@ void ZxThread::destroy()
     /* Remove from the parent process. This will also clean
        up the IPC buffer */
     ZxProcess *parent = (ZxProcess *)get_owner();
+
     if (parent != NULL) {
         parent->remove_thread(this);
     }
@@ -248,6 +265,7 @@ void ZxThread::wait(timer_callback_func cb, void *data, uint64_t expire_time)
     vka_cspace_make_path(vka, reply_cap_, &path);
 
     int error = vka_cnode_saveCaller(&path);
+
     if (error) {
         dprintf(CRITICAL, "Save caller returned %d\n", error);
     }
@@ -267,6 +285,7 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
 {
     /* Allocate a waiter */
     StateWaiter *sw = allocate_object<StateWaiter>((ZxObject *)this);
+
     if (sw == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -287,10 +306,11 @@ zx_status_t ZxThread::obj_wait_one(Handle *h, zx_signals_t signals,
 }
 
 zx_status_t ZxThread::obj_wait_many(Handle **handles, uint32_t count,
-            zx_time_t deadline, zx_wait_item_t* items)
+        zx_time_t deadline, zx_wait_item_t *items)
 {
     /* Allocate array of waiters */
     StateWaiter *sw = (StateWaiter *)malloc(sizeof(StateWaiter) * count);
+
     if (sw == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -318,20 +338,24 @@ void ZxThread::obj_wait_resume(StateWaiter *sw, zx_status_t ret)
     if (num_waiting_on_ == 0) {
         /* Set the ret val */
         zx_signals_t *observed = (zx_signals_t *)sw->get_data();
+
         if (observed != NULL) {
             *observed = sw->get_observed();
         }
+
         /* Clean up waiter */
         delete sw;
     } else {
         /* We have a wait many. Reset sw so it is at start
            of waiters, then loop through */
         sw = (StateWaiter *)waiting_on_;
+
         for (uint32_t i = 0; i < num_waiting_on_; ++i) {
             /* Set the ret val */
             zx_wait_item_t *item = (zx_wait_item_t *)sw->get_data();
             item->pending = sw[i].get_observed();
         }
+
         /* Clean up waiter array */
         delete[] sw;
     }
@@ -356,7 +380,8 @@ int ZxThread::mint_cap(cspacepath_t *src, seL4_CPtr slot,
     return vka_cnode_mint(&dest, src, rights, seL4_CapData_Badge_new(badge));
 }
 
-int ZxThread::copy_cap(cspacepath_t *src, seL4_CPtr slot, seL4_CapRights_t rights)
+int ZxThread::copy_cap(cspacepath_t *src, seL4_CPtr slot,
+        seL4_CapRights_t rights)
 {
     using namespace ThreadCxx;
     assert(slot >= ZX_THREAD_FIRST_FREE && slot < kThreadCspaceSlots);

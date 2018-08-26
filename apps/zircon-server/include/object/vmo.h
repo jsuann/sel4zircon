@@ -26,7 +26,7 @@ public:
     }
 
     zx_obj_type_t get_object_type() const final { return ZX_OBJ_TYPE_VMO; }
-    CookieJar* get_cookie_jar() override { return &cookie_jar_; }
+    CookieJar *get_cookie_jar() override { return &cookie_jar_; }
 
     uintptr_t get_base() const {
         return kaddr_;
@@ -65,6 +65,7 @@ public:
                 return false;
             }
         }
+
         return true;
     }
 
@@ -72,11 +73,13 @@ public:
         uint32_t start_page = offset / vmoPageSize;
         /* We round up len to next page */
         uint32_t end_page = (offset + len + vmoPageSize - 1) / vmoPageSize;
+
         for (uint32_t i = start_page; i < end_page; ++i) {
             if (!commit_page(i, NULL)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -84,6 +87,7 @@ public:
         uint32_t start_page = offset / vmoPageSize;
         /* We round up len to next page */
         uint32_t end_page = (offset + len + vmoPageSize - 1) / vmoPageSize;
+
         for (uint32_t i = start_page; i < end_page; ++i) {
             decommit_page(i);
         }
@@ -149,6 +153,7 @@ public:
                 !(map_rights_ & ZX_RIGHT_EXECUTE)) {
             return false;
         }
+
         return true;
     }
 

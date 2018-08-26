@@ -22,7 +22,7 @@ extern "C" {
 #include "../addrspace.h"
 
 class ZxThread final : public ZxObjectWaitable, public Listable<ZxThread> {
-friend void obj_wait_cb(void *data);
+    friend void obj_wait_cb(void *data);
 public:
     ZxThread(uint32_t thread_index) : thread_index_{thread_index} {}
     ~ZxThread() final {}
@@ -31,7 +31,7 @@ public:
 
     void set_name(const char *name) {
         /* Silently truncate name */
-        strncpy(name_, name, ZX_MAX_NAME_LEN-1);
+        strncpy(name_, name, ZX_MAX_NAME_LEN - 1);
     }
 
     /* Init & destroy seL4 data */
@@ -43,6 +43,7 @@ public:
         if (state_ == State::RUNNING || state_ == State::SUSPENDED) {
             return false;
         }
+
         /* Otherwise when initial state or dead, destroy on zero handles.
            Destructor will detach thread from parent process. */
         return zero_handles();
@@ -110,7 +111,7 @@ public:
     zx_status_t obj_wait_one(Handle *h, zx_signals_t signals,
             zx_time_t deadline, zx_signals_t *observed);
     zx_status_t obj_wait_many(Handle **handles, uint32_t count,
-            zx_time_t deadline, zx_wait_item_t* items);
+            zx_time_t deadline, zx_wait_item_t *items);
 
     /* Resume from obj wait one/many, whether success,
        timeout, or handle deleted. */

@@ -14,6 +14,7 @@ bool handle_fault(seL4_MessageInfo_t tag, uint64_t badge)
         ZxVmar *root_vmar = get_proc_from_badge(badge)->get_root_vmar();
         /* Find the vmo mapping for the faulting addr */
         VmoMapping *vmap = root_vmar->get_vmap_from_addr(vaddr);
+
         if (vmap != NULL) {
             if (vmap->commit_page_at_addr(vaddr)) {
                 /* Page mapped in, we can restart thread & return */

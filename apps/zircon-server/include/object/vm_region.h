@@ -17,13 +17,12 @@ public:
 };
 
 template <>
-bool cmp<VmRegion*>(VmRegion *a, VmRegion *b)
+bool cmp<VmRegion *>(VmRegion *a, VmRegion *b)
 {
     return (a->get_base() < b->get_base());
 }
 
-static inline uintptr_t
-vmr_get_end(VmRegion *vmr)
+static inline uintptr_t vmr_get_end(VmRegion *vmr)
 {
     return vmr->get_base() + vmr->get_size();
 }

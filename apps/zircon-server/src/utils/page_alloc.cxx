@@ -40,7 +40,7 @@ void init_page_alloc(vka_t *vka)
         assert(!err);
         /* Map the frame. Won't be unmapped so leak everything. */
         err = sel4utils_map_page_leaky(vka, seL4_CapInitThreadVSpace,
-                frame.cptr, (void *)addr, seL4_AllRights, 1);
+                        frame.cptr, (void *)addr, seL4_AllRights, 1);
         assert(!err);
     }
 
@@ -58,10 +58,12 @@ void *page_alloc()
     using namespace PageAllocCxx;
 
     uint32_t index;
+
     if (!page_buf_table.alloc(index)) {
         dprintf(CRITICAL, "Ran out of page bufs!\n");
         return NULL;
     }
+
     return (void *)page_buf_table.get(index);
 }
 
@@ -70,9 +72,11 @@ void *page_alloc_zero()
     using namespace PageAllocCxx;
 
     void *p = page_alloc();
+
     if (p != NULL) {
         memset(p, 0, kPageSize);
     }
+
     //dprintf(SPEW, "Allocd page at %p\n", p);
     return p;
 }

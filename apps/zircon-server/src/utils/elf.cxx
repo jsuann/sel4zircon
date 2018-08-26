@@ -18,12 +18,12 @@ extern "C" char _cpio_archive[];
 
 /* Wrappers for elf parsing functions CXX doesn't like */
 extern "C" {
-uint16_t get_num_elf_headers(void *elf_file);
-uint32_t get_elf_header_type(void *elf_file, uint16_t i);
-uint64_t get_elf_entry_point(void *elf_file);
-void get_elf_file_info(char *elf_file, uint16_t i,
-        char **source_addr, uint64_t *file_size,
-        uint64_t *segment_size, uint64_t *vaddr, uint64_t *flags);
+    uint16_t get_num_elf_headers(void *elf_file);
+    uint32_t get_elf_header_type(void *elf_file, uint16_t i);
+    uint64_t get_elf_entry_point(void *elf_file);
+    void get_elf_file_info(char *elf_file, uint16_t i,
+            char **source_addr, uint64_t *file_size,
+            uint64_t *segment_size, uint64_t *vaddr, uint64_t *flags);
 }
 
 /* constants */
@@ -42,9 +42,11 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
 
     /* Vmo start addr & size need to be rounded to page boundaries */
     uintptr_t vmo_start = (vaddr & kPageMask);
-    size_t vmo_size = ((vaddr + segment_size + kPageSize - 1) & kPageMask) - vmo_start;
+    size_t vmo_size = ((vaddr + segment_size + kPageSize - 1) & kPageMask) -
+            vmo_start;
     assert(vmo_size < ZX_VMO_SERVER_MAP_SIZE);
-    dprintf(INFO, "Creating elf vmo, size %lu num pages %lu\n", vmo_size, vmo_size/kPageSize);
+    dprintf(INFO, "Creating elf vmo, size %lu num pages %lu\n", vmo_size,
+            vmo_size / kPageSize);
 
     /* Create the vmo */
     size_t num_pages = vmo_size / kPageSize;
@@ -53,9 +55,11 @@ ZxVmo *create_elf_vmo(ZxVmar *vmar, unsigned long vaddr,
 
     /* Convert elf rights to zircon vmo flags */
     uint32_t vmo_flags = 0;
+
     if (permissions & PF_R || permissions & PF_X) {
         vmo_flags |= ZX_VM_FLAG_PERM_READ;
     }
+
     if (permissions & PF_W) {
         vmo_flags |= ZX_VM_FLAG_PERM_WRITE;
     }
@@ -103,7 +107,7 @@ char *get_elf_file(const char *image_name, unsigned long *elf_size)
 
 /* creates required VMOs and loads elf segments into them */
 uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
-        int &num_vmos, ZxVmo **&vmos)
+        int &num_vmos, ZxVmo ** &vmos)
 {
     using namespace ElfCxx;
 
@@ -112,6 +116,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
 
     unsigned long elf_size;
     char *elf_file = (char *)cpio_get_file(_cpio_archive, image_name, &elf_size);
+
     if (elf_file == NULL) {
         dprintf(INFO, "Failed to get elf file for %s\n", image_name);
         return 0;
@@ -129,12 +134,15 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
             ++num_vmos;
         }
     }
-    vmos = (ZxVmo **)calloc(num_vmos, sizeof(ZxVmo*));
+
+    vmos = (ZxVmo **)calloc(num_vmos, sizeof(ZxVmo *));
+
     if (vmos == NULL) {
         return 0;
     }
 
     int vmo_index = 0;
+
     for (uint16_t i = 0; i < num_headers; ++i) {
         char *source_addr;
         unsigned long flags, file_size, segment_size, vaddr;
@@ -149,6 +157,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
                     file_size, segment_size, vaddr, flags);
             /* Make a VMO for this segment */
             ZxVmo *elf_vmo = create_elf_vmo(root_vmar, vaddr, segment_size, flags);
+
             if (elf_vmo == NULL) {
                 dprintf(INFO, "Failed to create vmo for segment %u\n", i);
                 return 0;
@@ -163,6 +172,7 @@ uintptr_t load_elf_segments(ZxProcess *proc, const char *image_name,
             ++vmo_index;
         }
     }
+
     return entry_point;
 }
 
@@ -176,16 +186,19 @@ bool spawn_zircon_proc(ZxThread *thrd, ZxVmo *stack_vmo, uintptr_t stack_base,
     uintptr_t vsyscall = sel4utils_elf_get_vsyscall(image_name);
     uint32_t num_phdrs = sel4utils_elf_num_phdrs(image_name);
     Elf_Phdr *phdrs = (Elf_Phdr *)calloc(num_phdrs, sizeof(Elf_Phdr));
+
     if (phdrs == NULL) {
         return false;
     }
+
     sel4utils_elf_read_phdrs(image_name, num_phdrs, phdrs);
 
     /* Get stack pointer */
     uintptr_t stack_ptr = (stack_base + stack_vmo->get_size()) - sizeof(seL4_Word);
 
     /* Copy elf headers */
-    write_to_stack(stack_vmo, stack_base, &stack_ptr, phdrs, num_phdrs * sizeof(Elf_Phdr));
+    write_to_stack(stack_vmo, stack_base, &stack_ptr, phdrs,
+            num_phdrs * sizeof(Elf_Phdr));
     uintptr_t at_phdr = stack_ptr;
 
     /* Init aux vectors */

@@ -36,6 +36,7 @@ uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge)
         /* Endpoint was created by a native seL4
            process. Find it with id. */
         ZxEndpoint *ep = get_ep_in_table(id);
+
         if (ep == NULL) {
             return ZX_ERR_NOT_FOUND;
         }
@@ -46,6 +47,7 @@ uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge)
         }
 
         zx_handle_t ep_handle = proc->create_handle_get_uval(ep);
+
         if (ep_handle == ZX_HANDLE_INVALID) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -57,12 +59,14 @@ uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge)
     /* Allocate a slot in the ep table */
     ZxEndpoint **ep_slot;
     ep_slot = allocate_ep_slot(id);
+
     if (ep_slot == NULL) {
         return ZX_ERR_NO_RESOURCES;
     }
 
     /* Create the ep object */
     ZxEndpoint *ep = allocate_object<ZxEndpoint>(id, false);
+
     if (ep == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -74,7 +78,8 @@ uint64_t sys_endpoint_create(seL4_MessageInfo_t tag, uint64_t badge)
     }
 
     zx_handle_t ep_handle = proc->create_handle_get_uval(ep);
-        if (ep_handle == ZX_HANDLE_INVALID) {
+
+    if (ep_handle == ZX_HANDLE_INVALID) {
         destroy_object(ep);
         return ZX_ERR_NO_MEMORY;
     }
@@ -128,7 +133,8 @@ uint64_t sys_endpoint_mint_cap(seL4_MessageInfo_t tag, uint64_t badge)
     cspacepath_t src;
     vka_cspace_make_path(get_server_vka(), ep->get_ep_cap(), &src);
     err = target_thrd->mint_cap(&src, ep_slot, ep_badge,
-            seL4_CapRights_new(can_grant, can_read, can_write));
+                    seL4_CapRights_new(can_grant, can_read, can_write));
+
     if (err) {
         dprintf(INFO, "Mint cap returned %d\n", err);
         return ZX_ERR_BAD_STATE;
@@ -164,6 +170,7 @@ uint64_t sys_endpoint_delete_cap(seL4_MessageInfo_t tag, uint64_t badge)
     /* Attempt deletion of cap in thread cspace. If this fails, we
        assume it is due to the slot being empty. */
     err = target_thrd->delete_cap(ep_slot);
+
     if (err) {
         dprintf(INFO, "Delete cap returned %d\n", err);
         return ZX_ERR_BAD_STATE;

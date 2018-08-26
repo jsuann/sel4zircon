@@ -23,6 +23,7 @@ uint64_t sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
     ZxProcess *proc = get_proc_from_badge(badge);
 
     Handle *h = proc->get_handle(handle_value);
+
     if (h == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -32,7 +33,8 @@ uint64_t sys_handle_close(seL4_MessageInfo_t tag, uint64_t badge)
     return ZX_OK;
 }
 
-static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint64_t badge)
+static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag,
+        uint64_t badge)
 {
     SYS_CHECK_NUM_ARGS(tag, 3);
     zx_handle_t handle_val = seL4_GetMR(0);
@@ -48,6 +50,7 @@ static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint
     SYS_RET_IF_ERR(err);
 
     Handle *src = proc->get_handle(handle_val);
+
     if (src == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -65,9 +68,11 @@ static uint64_t handle_dup_replace(bool is_replace, seL4_MessageInfo_t tag, uint
     /* Create a duplicate */
     ZxObject *obj = src->get_object();
     Handle *dup = obj->create_handle(rights);
+
     if (dup == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
+
     proc->add_handle(dup);
     *out = proc->get_handle_user_val(dup);
 

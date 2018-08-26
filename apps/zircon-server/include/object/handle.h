@@ -20,7 +20,7 @@ class ZxObject;
 class Handle : public Listable<Handle> {
 public:
     Handle(ZxObject *obj, zx_rights_t rights, uint32_t base_value) :
-            obj_{obj}, rights_{rights}, base_value_{base_value} {}
+        obj_{obj}, rights_{rights}, base_value_{base_value} {}
 
     ZxObject *get_object() const { return obj_; }
     const zx_rights_t get_rights() const { return rights_; }

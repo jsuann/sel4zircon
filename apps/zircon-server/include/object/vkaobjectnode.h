@@ -25,23 +25,25 @@ struct VkaObjectNode {
     VkaObjectNode *next;
 };
 
-static inline VkaObjectNode *
-new_vka_node(VkaObjectNode *head, vka_object_t new_obj)
+static inline VkaObjectNode *new_vka_node(VkaObjectNode *head,
+        vka_object_t new_obj)
 {
     VkaObjectNode *n = (VkaObjectNode *)malloc(sizeof(VkaObjectNode));
+
     if (n == NULL) {
         return NULL;
     }
+
     n->obj = new_obj;
     n->next = head;
     dprintf(SPEW, "Added new node at %p, next %p\n", n, n->next);
     return n;
 }
 
-static inline void
-free_vka_nodes(vka_t *vka, VkaObjectNode *head)
+static inline void free_vka_nodes(vka_t *vka, VkaObjectNode *head)
 {
     VkaObjectNode *curr = head;
+
     while (curr != NULL) {
         dprintf(SPEW, "Deleting node at %p\n", curr);
         head = curr;

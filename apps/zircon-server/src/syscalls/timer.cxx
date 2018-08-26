@@ -25,16 +25,18 @@ uint64_t sys_timer_create(seL4_MessageInfo_t tag, uint64_t badge)
     zx_status_t err;
     ZxProcess *proc = get_proc_from_badge(badge);
 
-    zx_handle_t* out;
+    zx_handle_t *out;
     err = proc->get_kvaddr(user_out, out);
     SYS_RET_IF_ERR(err);
 
     ZxTimer *timer = allocate_object<ZxTimer>(options);
+
     if (timer == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_handle_t timer_handle = proc->create_handle_get_uval(timer);
+
     if (timer_handle == ZX_HANDLE_INVALID) {
         destroy_object(timer);
         return ZX_ERR_NO_MEMORY;

@@ -26,6 +26,7 @@ zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
     size_t data_size = count * elemsize;
     data0 = malloc(data_size);
     data1 = malloc(data_size);
+
     if (data0 == NULL || data1 == NULL) {
         goto error_create_fifo;
     }
@@ -33,6 +34,7 @@ zx_status_t create_fifo_pair(uint32_t count, uint32_t elemsize,
     /* allocate fifos */
     fifo0 = allocate_object<ZxFifo>(count, elemsize);
     fifo1 = allocate_object<ZxFifo>(count, elemsize);
+
     if (fifo0 == NULL || fifo1 == NULL) {
         goto error_create_fifo;
     }
@@ -61,6 +63,7 @@ void ZxFifo::destroy()
 {
     /* Let peer know we are being destroyed */
     ZxFifo *other = peer_;
+
     if (other != NULL) {
         other->peer_ = NULL;
         other->update_state(0u, ZX_FIFO_PEER_CLOSED);
@@ -73,12 +76,14 @@ void ZxFifo::destroy()
 zx_status_t ZxFifo::write(uint8_t *src, size_t len, uint32_t *actual)
 {
     size_t count = len / elem_size_;
+
     if (count == 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
     /* Work out num empty slots */
     size_t avail = elem_count_ - num_used_;
+
     if (avail == 0) {
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -92,6 +97,7 @@ zx_status_t ZxFifo::write(uint8_t *src, size_t len, uint32_t *actual)
     /* We won't fail from here */
     *actual = count;
     num_used_ += count;
+
     while (count > 0) {
         uint32_t offset = (write_index_ * elem_size_);
         memcpy(data_ + offset, src, elem_size_);
@@ -117,12 +123,14 @@ zx_status_t ZxFifo::write(uint8_t *src, size_t len, uint32_t *actual)
 zx_status_t ZxFifo::read(uint8_t *dest, size_t len, uint32_t *actual)
 {
     size_t count = len / elem_size_;
+
     if (count == 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
     /* Work out num empty slots */
     size_t avail = num_used_;
+
     if (avail == 0) {
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -136,6 +144,7 @@ zx_status_t ZxFifo::read(uint8_t *dest, size_t len, uint32_t *actual)
     /* We won't fail from here */
     *actual = count;
     num_used_ -= count;
+
     while (count > 0) {
         uint32_t offset = (read_index_ * elem_size_);
         memcpy(dest, data_ + offset, elem_size_);

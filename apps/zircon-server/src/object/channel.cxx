@@ -6,11 +6,13 @@ zx_status_t create_channel_pair(ZxChannel *&ch0, ZxChannel *&ch1)
     ch0 = ch1 = NULL;
 
     ch0 = allocate_object<ZxChannel>();
+
     if (ch0 == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
     ch1 = allocate_object<ZxChannel>();
+
     if (ch1 == NULL) {
         free_object(ch0);
         ch0 = NULL;
@@ -28,6 +30,7 @@ void ZxChannel::destroy()
 {
     /* Let peer know we are being destroyed */
     ZxChannel *other = peer_;
+
     if (other != NULL) {
         other->peer_ = NULL;
         other->update_state(0u, ZX_CHANNEL_PEER_CLOSED);
@@ -50,7 +53,7 @@ void ZxChannel::destroy()
 }
 
 /* Called by peer channel */
-zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
+zx_status_t ZxChannel::write_msg(void *bytes, uint32_t num_bytes,
         Handle **handles, uint32_t num_handles)
 {
     /* TODO check for waiters. If a msg has a matching txid, write
@@ -58,6 +61,7 @@ zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
 
     /* Allocate a new message packet */
     Message *msg = allocate_object<Message>(num_handles, num_bytes);
+
     if (msg == NULL) {
         dprintf(CRITICAL, "No memory for msg packet!\n");
         return ZX_ERR_NO_MEMORY;
@@ -65,6 +69,7 @@ zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
 
     /* Write to data buf */
     int err = data_buf_.write((uint8_t *)bytes, num_bytes, true);
+
     if (err != ZX_OK) {
         delete msg;
         return err;
@@ -72,6 +77,7 @@ zx_status_t ZxChannel::write_msg(void* bytes, uint32_t num_bytes,
 
     /* Bytes successfully written, add handles & msg */
     msg_list_.push_back(msg);
+
     for (size_t i = 0; i < num_handles; ++i) {
         handle_list_.push_back(handles[i]);
     }
@@ -98,19 +104,24 @@ zx_status_t ZxChannel::read_msg(void *bytes, uint32_t *num_bytes,
 
     /* Check the supplied buffers are large enough */
     zx_status_t rv = ZX_OK;
+
     if (*num_handles > max_handles || *num_bytes > max_bytes) {
         if (!may_discard) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
+
         /* Discard msg: destroy handles, discard bytes */
         data_buf_.discard(msg->num_bytes_);
+
         for (size_t i = 0; i < msg->num_handles_; ++i) {
             destroy_handle_maybe_object(handle_list_.pop_front());
         }
+
         rv = ZX_ERR_BUFFER_TOO_SMALL;
     } else {
         /* Read msg as normal */
         data_buf_.read((uint8_t *)bytes, msg->num_bytes_);
+
         for (size_t i = 0; i < msg->num_handles_; ++i) {
             handles[i] = handle_list_.pop_front();
         }

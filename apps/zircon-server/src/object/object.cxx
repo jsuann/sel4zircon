@@ -53,9 +53,11 @@ template <typename T, typename ... U>
 T *allocate_object(U ... args)
 {
     void *p = malloc(sizeof(T));
+
     if (p == NULL) {
         return NULL;
     }
+
     return new (p) T(args...);
 }
 
@@ -79,13 +81,16 @@ void destroy_object(ZxObject *obj)
     /* Free object memory */
     zx_obj_type_t type = obj->get_object_type();
     assert(type != ZX_OBJ_TYPE_NONE);
+
     switch (type) {
     case ZX_OBJ_TYPE_PROCESS:
         free_object<ZxProcess>((ZxProcess *)obj);
         break;
+
     case ZX_OBJ_TYPE_THREAD:
         free_object<ZxThread>((ZxThread *)obj);
         break;
+
     default:
         free_object(obj);
     }
@@ -95,6 +100,7 @@ void destroy_handle_maybe_object(Handle *h)
 {
     ZxObject *o = h->get_object();
     o->destroy_handle(h);
+
     if (o->can_destroy()) {
         /* Try to destroy object */
         destroy_object(o);
@@ -114,7 +120,8 @@ Handle *create_handle_default_rights(T *obj)
     return obj->create_handle(default_rights);
 }
 
-zx_status_t ZxObject::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
+zx_status_t ZxObject::user_signal(uint32_t clear_mask, uint32_t set_mask,
+        bool peer)
 {
     if (peer || !has_state_tracker()) {
         return ZX_ERR_NOT_SUPPORTED;
