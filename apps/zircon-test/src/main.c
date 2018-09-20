@@ -47,14 +47,19 @@ void run_hello_world(void)
     char writebuf[CHANNEL_BUF_SIZE];
     char readbuf[CHANNEL_BUF_SIZE];
 
+    printf("Starting ping-pong test with hello-world app...\n");
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
-        printf("Channel test with process %d\n", i);
+        printf("Sending message %d to hello-world...\n", i);
+        /* Write some random data to the buffer */
         for (int j = 0; j < CHANNEL_BUF_SIZE; j += sizeof(int)) {
             int *val = (int *)&writebuf[j];
             *val = rand();
         }
+        /* Send to hello world app */
         assert(!zx_channel_write(channel, 0, writebuf, CHANNEL_BUF_SIZE, NULL, 0));
+        /* Wait for response */
         assert(!zx_object_wait_one(channel, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
+        /* Get message and check contents match */
         assert(!zx_channel_read(channel, 0, readbuf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
         assert(!memcmp(writebuf, readbuf, CHANNEL_BUF_SIZE));
         //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
@@ -63,29 +68,34 @@ void run_hello_world(void)
     zx_task_kill(process);
 }
 
+/* Test thread function. Zircon threads map to seL4 threads. */
 __attribute__((noreturn))
 void thread_entry(uintptr_t arg1, uintptr_t arg2)
 {
-    printf("Thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
+    printf("Test thread entry! arg1: %lu, arg2 %lu\n", arg1, arg2);
 
     char buf[CHANNEL_BUF_SIZE] = {0};
     zx_status_t err = zx_socket_read(socket1, 0, buf, 50, NULL);
     assert(!err);
-    printf("socket message from main thread: %s\n", buf);
+    printf("Test thread: socket message from main thread: %s\n", buf);
 
+    /* Send signal to main thread */
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     assert(!zx_object_signal(event_handle, 0u, ZX_USER_SIGNAL_2));
 
-    printf("Thread wait for msg\n");
+    /* Endpoint test */
+    printf("Test thread: waiting for message...\n");
     seL4_Word badge;
     seL4_Recv(TEST_EP_SLOT, &badge);
-    printf("Thread got msg %lx, badge %lu\n", seL4_GetMR(0), badge);
+    printf("Test thread got msg %lx, badge %lu\n", seL4_GetMR(0), badge);
 
+    /* Wait for signal from main thread */
     assert(!zx_object_wait_one(event_handle, ZX_USER_SIGNAL_3, ZX_TIME_INFINITE, NULL));
 
+    /* Ping pong test with main thread */
     for (int i = 0; i < NUM_CHANNEL_RUNS; ++i) {
         assert(!zx_object_wait_one(ch1, ZX_CHANNEL_READABLE,  ZX_TIME_INFINITE, NULL));
-        printf("Thread received channel message %d\n", i);
+        printf("Test thread received channel message %d\n", i);
         assert(!zx_channel_read(ch1, 0, buf, NULL, CHANNEL_BUF_SIZE, 0, NULL, NULL));
         assert(!zx_channel_write(ch1, 0, buf, CHANNEL_BUF_SIZE, NULL, 0));
     }
@@ -109,6 +119,7 @@ int main(int argc, char **argv) {
     run_benchmarks();
 #endif
 
+    /* Get init handles */
     zx_handle_t thrd_handle = zx_thread_self();
     zx_handle_t proc_handle = zx_process_self();
     zx_handle_t vmar_handle = zx_vmar_root_self();
@@ -118,6 +129,7 @@ int main(int argc, char **argv) {
     printf("Received init handles: %u %u %u %u %u\n", vmar_handle, proc_handle,
             thrd_handle, rsrc_handle, job_handle);
 
+    /* Check test syscalls */
     zx_status_t err;
     assert(zx_syscall_test_0() == 0);
     assert(zx_syscall_test_1(1) == 1);
@@ -130,7 +142,11 @@ int main(int argc, char **argv) {
     assert(zx_syscall_test_8(1,2,3,4,5,6,7,8) == 36);
     assert(zx_syscall_test_wrapper(20, 20, 60) == 100);
 
-    /* try an invalid syscall num */
+    /*
+     * Try an invalid syscall number. This is how Zircon syscalls
+     * are performed on seL4 - each thread has an endpoint cap used for
+     * making the syscalls. See libzircon for the valid syscalls.
+     */
     tag = seL4_MessageInfo_new(10000, 0, 0, 0);
     seL4_Call(ZX_THREAD_SYSCALL_SLOT, tag);
     err = seL4_GetMR(0);
@@ -140,13 +156,14 @@ int main(int argc, char **argv) {
     assert(zx_handle_close(ZX_HANDLE_INVALID) == ZX_OK);
     assert(zx_handle_close(1) == ZX_ERR_BAD_HANDLE);
 
-    /* Try handle replace */
+    /* Handle replace test. Each replace returns a new handle value */
     zx_handle_t thrd_handle2 = 0;
     err = zx_handle_replace(thrd_handle, ZX_RIGHT_SAME_RIGHTS, &thrd_handle2);
-    printf("zx_handle_replace returned %d, new handle %u\n", err, thrd_handle2);
-    /* Re-replace to restore thrd_handle */
+    printf("zx_handle_replace returned %d, thrd_handle2 %u\n", err, thrd_handle2);
     assert(!zx_handle_replace(thrd_handle2, ZX_RIGHT_SAME_RIGHTS, &thrd_handle));
+    printf("zx_handle_replace returned %d, thrd_handle %u\n", err, thrd_handle);
 
+    /* Fifo test */
     printf("Test creation of a fifo\n");
     zx_handle_t fifo1, fifo2;
     err = zx_fifo_create(16, sizeof(uint64_t), 0, &fifo1, &fifo2);
@@ -231,7 +248,7 @@ int main(int argc, char **argv) {
     assert(!zx_endpoint_delete_cap(ep_handle, new_thrd, TEST_EP_SLOT));
     printf("Deleted endpoint caps.\n");
 
-    /* Ping pong messages with other thread using channel */
+    /* Ping pong messages with test thread using channel */
     assert(!zx_channel_create(0, &ch0, &ch1));
     char writebuf[CHANNEL_BUF_SIZE];
     char readbuf[CHANNEL_BUF_SIZE];
@@ -251,10 +268,10 @@ int main(int argc, char **argv) {
         //zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     }
 
-    /* Try to kill other thread */
+    /* Kill other thread */
     assert(!zx_task_kill(new_thrd));
 
-    /* Create a dummy process */
+    /* Create a dummy process with miniprocess library */
     printf("Creating dummy process...\n");
     zx_handle_t dummy_proc, dummy_thrd, dummy_vmar;
     assert(!zx_process_create(job_handle, "minipr", 6, 0,  &dummy_proc, &dummy_vmar));
@@ -263,10 +280,11 @@ int main(int argc, char **argv) {
     printf("Waiting for dummy process to fault...\n");
     assert(!zx_object_wait_one(dummy_proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL));
 
-    /* Run actual process */
+    /* Run an actual process */
     printf("Running hello world / ping process\n");
     run_hello_world();
 
+    /* After exiting, all resources will be destroyed, since no processes are running */
     printf("Zircon test exiting! This will kill the root job.\n");
     zx_process_exit(0);
 
